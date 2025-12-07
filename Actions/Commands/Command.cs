@@ -6,7 +6,10 @@ public abstract class Command(ILogger logger, BotMessageSender sender) : UserAct
 {
     public override bool IsMatch(string name)
     {
-        var commandText = name.Substring(0, name.IndexOf('@'));
-        return base.IsMatch(commandText);
+        var index = name.IndexOf('@');
+        if (index != -1)
+            return base.IsMatch(name.Substring(0, index));
+
+        return base.IsMatch(name);
     }
 }
