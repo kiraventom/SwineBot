@@ -9,7 +9,7 @@ namespace SwineBot;
 
 public class BotMessageSender(ILogger logger, ITelegramBotClient client)
 {
-    public async Task<Message> Send(UserContext userContext, int userId, BotMessage botMessage)
+    public async Task<Message> Send(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
     {
         var userModel = userContext.Users.First(u => u.UserId == userId);
 
@@ -31,7 +31,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
                 logger.Fatal(e.ToString());
 
                 var invalidMessage = new InvalidMessage(logger);
-                var sentMessage = await Send(userContext, userId, invalidMessage);
+                var sentMessage = await Send(userContext, chatId, userId, invalidMessage);
                 return sentMessage;
             }
         }
@@ -40,7 +40,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
         {
             var text = botMessage.Text.ToString();
 
-            message = await client.SendMessage(chatId: userModel.TelegramId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
+            message = await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
 
             logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, userModel.UserId, message.MessageId);
         }

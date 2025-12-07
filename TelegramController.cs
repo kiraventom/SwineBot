@@ -64,22 +64,22 @@ public class TelegramController(ILogger logger, IReadOnlyCollection<UserAction> 
 
         var user = userContext.GetOrAddUser(sender.Id, sender.FirstName, sender.Username);
 
-        logger.Information("Received message [{messageId}] with text '{text}' from user [{userId}] '{firstname}'", message.MessageId, message.Text, user.UserId, user.FirstName);
+        logger.Information("Received message [{messageId}] with text '{text}' in chat [{chatId}] from user [{userId}] '{firstname}'", message.MessageId, message.Text, message.Chat.Id, user.UserId, user.FirstName);
 
         var botCommand = message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
         if (botCommand is not null)
-            return await HandleBotCommandAsync(userContext, user, botCommand, message.Text);
+            return await HandleBotCommandAsync(userContext, message.Chat.Id, user, botCommand, message.Text);
 
         return false;
     }
 
-    private async Task<bool> HandleBotCommandAsync(UserContext userContext, Model.User user, MessageEntity botCommand, string messageText)
+    private async Task<bool> HandleBotCommandAsync(UserContext userContext, ChatId chatId, Model.User user, MessageEntity botCommand, string messageText)
     {
         var commandText = messageText.Substring(botCommand.Offset, botCommand.Length);
-        return await HandleUserActionAsync(userContext, user, commandText, messageText);
+        return await HandleUserActionAsync(userContext, chatId, user, commandText, messageText);
     }
 
-    private async Task<bool> HandleUserActionAsync(UserContext userContext, Model.User user, string actionText, string fullText)
+    private async Task<bool> HandleUserActionAsync(UserContext userContext, ChatId chatId, Model.User user, string actionText, string fullText)
     {
         var action = actions.FirstOrDefault(c => c.IsMatch(actionText));
         if (action is null)
@@ -88,7 +88,7 @@ public class TelegramController(ILogger logger, IReadOnlyCollection<UserAction> 
             return false;
         }
 
-        await action.ExecuteAsync(userContext, user, fullText);
+        await action.ExecuteAsync(userContext, chatId, user, fullText);
         return true;
     }
 
