@@ -8,7 +8,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace SwineBot;
 
-public class TelegramController(ILogger logger, BotMessageSender sender, IReadOnlyCollection<UserAction> actions)
+public class TelegramController(ILogger logger, IReadOnlyCollection<UserAction> actions)
 {
     private bool _started;
 
@@ -64,7 +64,7 @@ public class TelegramController(ILogger logger, BotMessageSender sender, IReadOn
 
         var user = userContext.GetOrAddUser(sender.Id, sender.FirstName, sender.Username);
 
-        logger.Information("Received message [{messageId}] with text '{text}' from user [{userId}] '{firstname}'{newUser}", message.MessageId, message.Text, user.UserId, user.FirstName);
+        logger.Information("Received message [{messageId}] with text '{text}' from user [{userId}] '{firstname}'", message.MessageId, message.Text, user.UserId, user.FirstName);
 
         var botCommand = message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
         if (botCommand is not null)

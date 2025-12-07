@@ -33,9 +33,9 @@ internal class Program
         }
 
         var sender = new BotMessageSender(logger, client);
-
         var commands = BuildCommands(logger, sender);
-        var telegramController = new TelegramController(logger, sender, commands.ToList());
+
+        var telegramController = new TelegramController(logger, commands.ToList());
         telegramController.StartReceiving(client);
 
         while (true)
@@ -100,7 +100,8 @@ internal class Program
 
    private static IEnumerable<UserAction> BuildCommands(ILogger logger, BotMessageSender sender)
    {
+      yield return new StartCommand(logger, sender);
       yield return new FeedCommand(logger, sender);
-      yield return new FeedCommand(logger, sender);
+      yield return new InfoCommand(logger, sender);
    }
 }

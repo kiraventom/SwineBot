@@ -40,7 +40,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
         {
             var text = botMessage.Text.ToString();
 
-            message = await client.SendMessage(chatId: userModel.TelegramId, text: text, parseMode: ParseMode.MarkdownV2);
+            message = await client.SendMessage(chatId: userModel.TelegramId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
 
             logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, userModel.UserId, message.MessageId);
         }

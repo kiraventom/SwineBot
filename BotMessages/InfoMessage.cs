@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.Model;
+using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
@@ -15,7 +16,7 @@ public class InfoMessage(ILogger logger) : BotMessage(logger)
 
         var owner = userContext.Users.First(u => u.UserId == userId);
 
-        var duels = userContext.DuelResults;
+        var duels = userContext.DuelResults.ToList();
         var wonDuels = duels.Count(d => d.WinnerId == swine.SwineId);
         var lostDuels = duels.Count(d => d.LoserId == swine.SwineId);
 
@@ -49,31 +50,15 @@ public class InfoMessage(ILogger logger) : BotMessage(logger)
         else if (diff.TotalHours < 1)
         {
             var totalMin = (int)diff.TotalMinutes;
-            var minutesDecl = GetDeclinatedNoun(totalMin, "минута", "минуты", "минут");
+            var minutesDecl = MessageTextUtils.GetDeclinatedNoun(totalMin, "минута", "минуты", "минут");
             return $"{totalMin} {minutesDecl} назад";
         }
         else
         {
             var totalHours = (int)diff.TotalHours;
-            var hoursDecl = GetDeclinatedNoun(totalHours, "час", "часа", "часов");
+            var hoursDecl = MessageTextUtils.GetDeclinatedNoun(totalHours, "час", "часа", "часов");
             return $"{totalHours} {hoursDecl} назад";
         }
-    }
-
-    private static string GetDeclinatedNoun(int days, string singular, string accusativeSingular, string accusativePlural)
-    {
-        var lastTwoDigits = days % 100;
-
-        if (lastTwoDigits is >= 10 and <= 20)
-            return accusativePlural;
-
-        var lastDigit = days % 10;
-        return lastDigit switch
-        {
-            1 => singular,
-            2 or 3 or 4 => accusativeSingular,
-            _ => accusativePlural,
-        };
     }
 }
 

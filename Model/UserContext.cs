@@ -107,6 +107,9 @@ public class Swine
 
     [InverseProperty(nameof(Feed.Swine))]
     public List<Feed> Feeds { get; } = new();
+
+    [InverseProperty(nameof(Feed.Swine))]
+    public List<WeightLoss> WeightLosses { get; } = new();
 }
 
 public class SwineInfo
@@ -143,6 +146,8 @@ public class WeightLoss
 
     public DateTime DateTime { get; set; }
     public int Amount { get; set; } // kg
+
+    public bool IsThrowUp { get; set; }
 }
 
 public class DuelRequest
@@ -169,7 +174,10 @@ public class DuelResult
     public int DefenderId { get; set; }
     public bool AttackerWon { get; set; }
 
+    [NotMapped]
     public int WinnerId => AttackerWon ? AttackerId : DefenderId;
+
+    [NotMapped]
     public int LoserId => AttackerWon ? DefenderId : AttackerId;
 
     [ForeignKey(nameof(AttackerId))]

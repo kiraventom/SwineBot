@@ -18,5 +18,21 @@ public static class MessageTextUtils
 
         return sb;
     }
+
+    public static string GetDeclinatedNoun(int days, string singular, string accusativeSingular, string accusativePlural)
+    {
+        var lastTwoDigits = days % 100;
+
+        if (lastTwoDigits is >= 10 and <= 20)
+            return accusativePlural;
+
+        var lastDigit = days % 10;
+        return lastDigit switch
+        {
+            1 => singular,
+            2 or 3 or 4 => accusativeSingular,
+            _ => accusativePlural,
+        };
+    }
 }
 
