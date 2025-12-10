@@ -12,7 +12,8 @@ public class SetNameCommand(ILogger logger, BotMessageSender sender) : Command(l
 
     public override Task ExecuteAsync(UserContext userContext, ChatId chatId, Model.User user, string actionText)
     {
-        var name = actionText.Substring(this.Name.Length);
+        var spaceIndex = actionText.IndexOf(' ');
+        var name = spaceIndex == -1 ? null : actionText.Substring(spaceIndex);
         var newNameMessage = new NewNameMessage(Logger, name);
         return Sender.Send(userContext, chatId, user.UserId, newNameMessage);
     }
