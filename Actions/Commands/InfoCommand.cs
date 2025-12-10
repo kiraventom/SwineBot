@@ -11,8 +11,7 @@ public class InfoCommand(ILogger logger, BotMessageSender sender) : Command(logg
 
     public override Task ExecuteAsync(UserContext userContext, ChatId chatId, Model.User user, string actionText)
     {
-        var startMessage = new InfoMessage(Logger);
-        return Sender.Send(userContext, chatId, user.UserId, startMessage);
+        var infoMessage = new InfoMessage(Logger);
+        return Sender.Send(userContext, chatId, user.UserId, infoMessage);
     }
 }
-

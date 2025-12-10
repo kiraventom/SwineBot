@@ -103,5 +103,6 @@ internal class Program
       yield return new StartCommand(logger, sender);
       yield return new FeedCommand(logger, sender);
       yield return new InfoCommand(logger, sender);
+      yield return new SetNameCommand(logger, sender);
    }
 }

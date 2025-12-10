@@ -95,7 +95,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             {
                 Text.Verbatim("К сожалению, ")
                     .Bold(swine.Name)
-                    .Verbatim(" сегодня ночью приснился кошмар, поэтому он весь день в плохом настроении и почти не ест...").LineBreak();
+                    .Verbatim(" сегодня ночью приснился кошмар, поэтому он выгдяжит угрюмым и почти не ест...").LineBreak();
             }
             else
             {
