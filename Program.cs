@@ -1,6 +1,7 @@
 ﻿using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+using SwineBot.Achievements;
 using SwineBot.Actions;
 using SwineBot.Actions.Commands;
 using Telegram.Bot;
@@ -33,10 +34,14 @@ internal class Program
         }
 
         var sender = new BotMessageSender(logger, client);
-        var commands = BuildCommands(logger, sender);
+        var commands = BuildCommands(logger);
 
-        var telegramController = new TelegramController(logger, commands.ToList());
+        var telegramController = new TelegramController(logger, sender, commands.ToList());
         telegramController.StartReceiving(client);
+        
+        var achievementController = new AchievementController(logger, sender);
+        telegramController.BeforeMessageSend += achievementController.OnBeforeMessageSend;
+
 
         while (true)
         {
@@ -98,11 +103,11 @@ internal class Program
         }
     }
 
-   private static IEnumerable<UserAction> BuildCommands(ILogger logger, BotMessageSender sender)
+   private static IEnumerable<UserAction> BuildCommands(ILogger logger)
    {
-      yield return new StartCommand(logger, sender);
-      yield return new FeedCommand(logger, sender);
-      yield return new InfoCommand(logger, sender);
-      yield return new SetNameCommand(logger, sender);
+      yield return new StartCommand(logger);
+      yield return new FeedCommand(logger);
+      yield return new InfoCommand(logger);
+      yield return new SetNameCommand(logger);
    }
 }

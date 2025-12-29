@@ -9,6 +9,10 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 {
     private const double OVERFEED_THROWUP_BASE_CHANCE = 0.01;
 
+    public int OldWeight { get; private set; }
+    public int Amount { get; private set; }
+    public int NewWeight => OldWeight + Amount;
+
     protected override Task InitInternal(UserContext userContext, int userId)
     {
         var swine = userContext.Swines
@@ -30,8 +34,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             return Task.CompletedTask;
         }
 
-        int oldWeight = swine.Weight;
-        int newWeight;
+        OldWeight = swine.Weight;
         var recentFeeds = swine.Feeds.Where(f => (now - f.DateTime).TotalHours < 24).ToList();
         bool isFirstFeed;
         if (recentFeeds.Any())
@@ -47,7 +50,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
         var luck = Random.Shared.Next(1, 21);
         var amountMod = Random.Shared.Next(-2, 3);
-        var amount = Math.Max(1, luck + amountMod);
+        Amount = Math.Max(1, luck + amountMod);
 
         if (!isFirstFeed)
         {
@@ -57,10 +60,10 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             Logger.Information("Overfeed: {overfeed} : {throwup}", overfeed, throwup);
             if (overfeed < throwup)
             {
-                var amountLost = Math.Min(oldWeight - 1, recentFeeds.Sum(f => f.Amount) + amount);
-                newWeight = oldWeight - amountLost;
+                var amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount) * -1;
+                Amount = amountLost * -1;
 
-                swine.Weight = newWeight;
+                swine.Weight = NewWeight;
                 swine.WeightLosses.Add(new WeightLoss()
                 {
                     DateTime = now,
@@ -74,22 +77,20 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
                     .Verbatim(" увидели еду, всё его тело содрогнулось в рвотном позыве... Заблевав всю кормушку, изрядно исхудавший хряк грустно вернулся в глубину хлева.")
                     .LineBreak()
                     .LineBreak()
-                    .Bold($"{oldWeight} кг - {amountLost} кг → {newWeight} кг");
+                    .Bold($"{OldWeight} кг - {amountLost} кг → {NewWeight} кг");
 
                 return Task.CompletedTask;
             }
         }
 
-        newWeight = oldWeight + amount;
-
-        swine.Weight = newWeight;
+        swine.Weight = NewWeight;
         swine.Feeds.Add(new Feed()
         {
             DateTime = now,
-            Amount = amount,
+            Amount = Amount,
         });
 
-        if (amount < 5)
+        if (Amount < 5)
         {
             if (isFirstFeed)
             {
@@ -102,7 +103,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
                 Text.Bold(swine.Name).Verbatim(", явно сытый, неохотно жуёт очередную порцию...").LineBreak();
             }
         }
-        else if (amount > 15)
+        else if (Amount > 15)
         {
             if (isFirstFeed)
             {
@@ -133,7 +134,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
         Text
             .LineBreak()
-            .Bold($"{oldWeight} кг + {amount} кг → {newWeight} кг");
+            .Bold($"{OldWeight} кг + {Amount} кг → {NewWeight} кг");
 
         if (!isFirstFeed)
         {

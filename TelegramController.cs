@@ -1,5 +1,6 @@
 using Serilog;
 using SwineBot.Actions;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -8,9 +9,11 @@ using Telegram.Bot.Types.Enums;
 
 namespace SwineBot;
 
-public class TelegramController(ILogger logger, IReadOnlyCollection<UserAction> actions)
+public class TelegramController(ILogger logger, BotMessageSender sender, IReadOnlyCollection<UserAction> actions)
 {
     private bool _started;
+
+    public event BeforeMessageSendDelegate BeforeMessageSend;
 
     public void StartReceiving(ITelegramBotClient client)
     {
@@ -88,9 +91,14 @@ public class TelegramController(ILogger logger, IReadOnlyCollection<UserAction> 
             return false;
         }
 
-        await action.ExecuteAsync(userContext, chatId, user, fullText);
+        var botMessage = action.Execute(fullText);
+        BeforeMessageSend?.Invoke(userContext, chatId, user.UserId, botMessage);
+        await sender.Send(userContext, chatId, user.UserId, botMessage);
         return true;
     }
 
     private static Task OnError(ITelegramBotClient client, Exception exception, CancellationToken ct) => Task.CompletedTask;
 }
+
+public delegate void BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
+

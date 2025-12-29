@@ -1,17 +1,17 @@
 using Serilog;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 using Telegram.Bot.Types;
 
 namespace SwineBot.Actions;
 
-public abstract class UserAction(ILogger logger, BotMessageSender sender)
+public abstract class UserAction(ILogger logger)
 {
     protected ILogger Logger { get; } = logger;
-    protected BotMessageSender Sender { get; } = sender;
 
     public abstract string Name { get; }
 
-    public abstract Task ExecuteAsync(UserContext userContext, ChatId chatId, Model.User user, string actionText);
+    public abstract BotMessage Execute(string actionText);
 
     public virtual bool IsMatch(string name) => name == Name;
 }

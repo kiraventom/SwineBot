@@ -5,13 +5,12 @@ using Telegram.Bot.Types;
 
 namespace SwineBot.Actions.Commands;
 
-public class InfoCommand(ILogger logger, BotMessageSender sender) : Command(logger, sender)
+public class InfoCommand(ILogger logger) : Command(logger)
 {
     public override string Name => "/info";
 
-    public override Task ExecuteAsync(UserContext userContext, ChatId chatId, Model.User user, string actionText)
+    public override BotMessage Execute(string actionText)
     {
-        var infoMessage = new InfoMessage(Logger);
-        return Sender.Send(userContext, chatId, user.UserId, infoMessage);
+        return new InfoMessage(Logger);
     }
 }

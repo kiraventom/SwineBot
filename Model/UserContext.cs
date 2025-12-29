@@ -13,6 +13,7 @@ public class UserContext : DbContext
     public DbSet<WeightLoss> WeightLosses { get; set; }
     public DbSet<DuelRequest> DuelRequests { get; set; }
     public DbSet<DuelResult> DuelResults { get; set; }
+    public DbSet<Achievement> Achievements { get; set; }
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
@@ -72,6 +73,7 @@ public class UserContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Achievement>().Property(e => e.Type).HasConversion<int>();
     }
 }
 
@@ -98,7 +100,7 @@ public class Swine
     [DeleteBehavior(DeleteBehavior.Cascade)]
     public User Owner { get; set; }
 
-    [InverseProperty(nameof(Stats.Swine))]
+    [InverseProperty(nameof(SwineInfo.Swine))]
     public SwineInfo Stats { get; set; }
 
     [Required] public string Name { get; set; }
@@ -108,7 +110,7 @@ public class Swine
     [InverseProperty(nameof(Feed.Swine))]
     public List<Feed> Feeds { get; } = new();
 
-    [InverseProperty(nameof(Feed.Swine))]
+    [InverseProperty(nameof(WeightLoss.Swine))]
     public List<WeightLoss> WeightLosses { get; } = new();
 }
 
@@ -120,6 +122,9 @@ public class SwineInfo
     [ForeignKey(nameof(SwineId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
     public Swine Swine { get; set; }
+
+    [InverseProperty(nameof(Achievement.SwineInfo))]
+    public List<Achievement> Achievements { get; } = new();
 }
 
 public class Feed
@@ -170,6 +175,7 @@ public class DuelRequest
 public class DuelResult
 {
     [Key] public int DuelResultId { get; set; }
+
     public int AttackerId { get; set; }
     public int DefenderId { get; set; }
     public bool AttackerWon { get; set; }
@@ -198,4 +204,28 @@ public class DuelResult
     public int WinnerWeightAfter { get; set; }
     public int LoserWeightBefore { get; set; }
     public int LoserWeightAfter { get; set; }
+}
+
+public enum AchievementType
+{
+    None = 0,
+    Weight = 0x1,
+    WeightGain = 0x2,
+    WeightLoss = 0x4,
+    Overfeed = 0x8,
+    NoOverfeed = 0x10,
+}
+
+public class Achievement
+{
+    [Key] public int AchievementId { get; set; }
+
+    public int SwineInfoId { get; set; }
+
+    [ForeignKey(nameof(SwineInfoId))]
+    [DeleteBehavior(DeleteBehavior.Cascade)]
+    public SwineInfo SwineInfo { get; set; }
+
+    public AchievementType Type { get; set; }
+    public int Value { get; set; }
 }
