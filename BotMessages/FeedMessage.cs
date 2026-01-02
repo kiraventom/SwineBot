@@ -7,7 +7,19 @@ namespace SwineBot.BotMessages;
 
 public class FeedMessage(ILogger logger) : BotMessage(logger)
 {
+    private const int THROWUP_COOLDOWN = 24;
+    private const int OVERFEED_COOLDOWN = 24;
+
+    private const int MIN_LUCK = 1;
+    private const int MAX_LUCK = 21;
+
+    private const int MIN_AMOUNT_MOD = -2;
+    private const int MAX_AMOUNT_MOD = 3;
+
     private const double OVERFEED_THROWUP_BASE_CHANCE = 0.01;
+    private const int OVERFEED_SCALE = 3;
+    private const int LOW_AMOUNT = 5;
+    private const int HIGH_AMOUNT = 15;
 
     public int OldWeight { get; private set; }
     public int Amount { get; private set; }
@@ -22,7 +34,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
         var now = DateTime.Now;
         var recentThrowups = swine.WeightLosses
-            .Where(wl => (now - wl.DateTime).TotalHours < 24)
+            .Where(wl => (now - wl.DateTime).TotalHours < THROWUP_COOLDOWN)
             .Where(wl => wl.IsThrowUp);
 
         if (recentThrowups.Any())
@@ -35,30 +47,21 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
         }
 
         OldWeight = swine.Weight;
-        var recentFeeds = swine.Feeds.Where(f => (now - f.DateTime).TotalHours < 24).ToList();
-        bool isFirstFeed;
-        if (recentFeeds.Any())
-        {
-            var lastFeedDT = recentFeeds.Max(f => f.DateTime);
-            var diff = (now - lastFeedDT).TotalHours;
-            isFirstFeed = diff > 24;
-        }
-        else
-        {
-            isFirstFeed = true;
-        }
+        var recentFeeds = swine.Feeds.Where(f => (now - f.DateTime).TotalHours < OVERFEED_COOLDOWN).ToList();
+        bool isFirstFeed = recentFeeds.Any() == false;
 
-        var luck = Random.Shared.Next(1, 21);
-        var amountMod = Random.Shared.Next(-2, 3);
+        var luck = Random.Shared.Next(MIN_LUCK, MAX_LUCK);
+        var amountMod = Random.Shared.Next(MIN_AMOUNT_MOD, MAX_AMOUNT_MOD);
         Amount = Math.Max(1, luck + amountMod);
 
         if (!isFirstFeed)
         {
-            var throwup = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(4, recentFeeds.Count - 1);
+            var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(OVERFEED_SCALE, recentFeeds.Count - 1);
+            throwupThreshold = Math.Min(0.99, throwupThreshold);
 
-            var overfeed = Random.Shared.NextDouble();
-            Logger.Information("Overfeed: {overfeed} : {throwup}", overfeed, throwup);
-            if (overfeed < throwup)
+            var overfeedChance = Random.Shared.NextDouble();
+            Logger.Information("Overfeed: {overfeed} / {throwup}", overfeedChance, throwupThreshold);
+            if (overfeedChance < throwupThreshold)
             {
                 var amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount) * -1;
                 Amount = amountLost * -1;
@@ -90,7 +93,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             Amount = Amount,
         });
 
-        if (Amount < 5)
+        if (Amount < LOW_AMOUNT)
         {
             if (isFirstFeed)
             {
@@ -103,7 +106,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
                 Text.Bold(swine.Name).Verbatim(", явно сытый, неохотно жуёт очередную порцию...").LineBreak();
             }
         }
-        else if (Amount > 15)
+        else if (Amount > HIGH_AMOUNT)
         {
             if (isFirstFeed)
             {
@@ -141,7 +144,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             var recentFeedsCount = recentFeeds.Count + 1;
             var feedDecl = MessageTextUtils.GetDeclinatedNoun(recentFeedsCount, "приём", "приёма", "приёмов");
             Text.LineBreak()
-                .Italic($"⚠ Перекорм! {recentFeedsCount} {feedDecl} пищи за последние 24 часа!");
+                .Italic($"⚠ Перекорм! {recentFeedsCount} {feedDecl} пищи за последние {OVERFEED_COOLDOWN} часа!");
         }
 
         return Task.CompletedTask;

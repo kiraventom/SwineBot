@@ -3,16 +3,16 @@ using SwineBot.Model;
 
 namespace SwineBot.Achievements;
 
-public class WeightAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
+public class WeightLossAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
 {
-    protected override AchievementType AchievementType => AchievementType.Weight;
+    protected override AchievementType AchievementType => AchievementType.WeightLoss;
 
     protected override CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
     {
         if (botMessage is not FeedMessage feedMessage)
             return CheckerResult.Break;
 
-        if (swine.Weight >= levelValue) // Checking if level applies
+        if (feedMessage.Amount <= levelValue) // Checking if level applies
         {
             if (swine.Weight == feedMessage.NewWeight) // Reacting only to last feed
             {

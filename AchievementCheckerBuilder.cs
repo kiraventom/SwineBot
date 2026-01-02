@@ -42,10 +42,10 @@ public class AchievementCheckerBuilder
         return _type switch
         {
             AchievementType.Weight => new WeightAchievementChecker(_levels),
-            // AchievementType.Weight => new WeightAchievementChecker(),
-            // AchievementType.Weight => new WeightAchievementChecker(),
-            // AchievementType.Weight => new WeightAchievementChecker(),
-            // AchievementType.Weight => new WeightAchievementChecker(),
+            AchievementType.WeightGain => new WeightGainAchievementChecker(_levels),
+            AchievementType.WeightLoss => new WeightLossAchievementChecker(_levels),
+            AchievementType.Overfeed => new OverfeedAchievementChecker(_levels),
+            AchievementType.NoOverfeed => new NoOverfeedAchievementChecker(_levels),
         };
     }
 }
