@@ -91,6 +91,8 @@ public class AchievementController
 
         var swine = userContext.Swines
             .Include(s => s.Stats).ThenInclude(s => s.Achievements)
+            .Include(s => s.Feeds)
+            .Include(s => s.WeightLosses)
             .First(s => s.OwnerId == userId);
 
         foreach (var checker in _checkers)

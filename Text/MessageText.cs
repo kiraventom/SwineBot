@@ -21,8 +21,10 @@ public class MessageText
         return this;
     }
 
-    public MessageText Verbatim(string text)
+    public MessageText Verbatim(object o)
     {
+        var text = o.ToString();
+
         if (text is null)
             return this;
 
@@ -40,8 +42,10 @@ public class MessageText
         return this;
     }
 
-    public MessageText Italic(string text)
+    public MessageText Italic(object obj)
     {
+        var text = obj.ToString();
+
         _sb.Append('_');
         Verbatim(text);
         _sb.Append('_');
