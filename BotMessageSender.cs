@@ -40,7 +40,17 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
         {
             var text = botMessage.Text.ToString();
 
-            message = await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
+            if (botMessage.PhotoFilePath is null)
+            {
+                message = await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
+
+            }
+            else
+            {
+                using var stream = File.OpenRead(botMessage.PhotoFilePath);
+                var photo = InputFile.FromStream(stream);
+                message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
+            }
 
             logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, userModel.UserId, message.MessageId);
         }

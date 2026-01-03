@@ -12,6 +12,8 @@ public abstract class BotMessage(ILogger logger)
 
     public MessageText Text { get; } = new();
 
+    public string PhotoFilePath { get; protected set; }
+
     public async Task Init(UserContext userContext, User user)
     {
         if (_isInited)
