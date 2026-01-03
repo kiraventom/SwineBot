@@ -14,7 +14,7 @@ public class TopMessage(ILogger logger) : BotMessage(logger)
         Text.Bold("Топ 10 свинов")
             .LineBreak().LineBreak();
 
-        int counter = 0;
+        int counter = 1;
         bool isSenderSwineInTop = false;
 
         var senderSwine = userContext.Swines.First(s => s.OwnerId == userId);
