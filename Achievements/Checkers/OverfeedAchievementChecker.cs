@@ -1,16 +1,17 @@
-﻿using SwineBot.BotMessages;
+﻿using Serilog;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 
-namespace SwineBot.Achievements;
+namespace SwineBot.Achievements.Checkers;
 
 public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
 {
-    protected override AchievementType AchievementType => AchievementType.Overfeed;
+    public override AchievementType Type => AchievementType.Overfeed;
 
-    protected override CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
+    protected override int? GetValue(BotMessage botMessage, Swine swine)
     {
         if (botMessage is not FeedMessage feedMessage)
-            return CheckerResult.Break;
+            return null;
 
         var lastThrowUp = swine.WeightLosses.Where(wl => wl.IsThrowUp).MaxBy(wl => wl.DateTime);
         var dateToCountFrom = lastThrowUp?.DateTime ?? DateTime.MinValue;
@@ -27,20 +28,20 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
                 break;
         }
 
-        if (overfeedCount >= levelValue) // Checking if level applies
-        {
-            if (swine.Weight == feedMessage.NewWeight) // Reacting only to last feed
-            {
-                return CheckerResult.Apply;
-            }
+        return overfeedCount;
+    }
 
-            return CheckerResult.ApplySilent; // levelValue is not too high, but weight was not achieved in last feed
+    protected override bool DoesLevelApply(int value, int level) => value >= level;
+
+    protected override bool IsSilentApply(BotMessage botMessage, Swine swine)
+    {
+        if (botMessage is not FeedMessage feedMessage)
+        {
+            Log.Error("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
+            return true;
         }
 
-        return CheckerResult.Continue; // levelValue too high
+        Log.Information("OVERFEED: {swineWeight} {newWeight}", swine.Weight, feedMessage.NewWeight);
+        return swine.Weight != feedMessage.NewWeight;
     }
 }
-
-
-
-

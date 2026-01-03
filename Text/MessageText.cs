@@ -6,6 +6,8 @@ namespace SwineBot.Text;
 public class MessageText
 {
     private readonly StringBuilder _sb = new();
+    private const string TAB = "   ";
+    private int _tabLevel = 0;
 
     public MessageText(string text = null)
     {
@@ -21,13 +23,23 @@ public class MessageText
         return this;
     }
 
+    public MessageText Tab(Action<MessageText> action)
+    {
+        ++_tabLevel;
+        action.Invoke(this);
+        --_tabLevel;
+
+        return this;
+    }
+
     public MessageText Verbatim(object o)
     {
-        var text = o.ToString();
+        var text = o?.ToString();
 
         if (text is null)
             return this;
 
+        ApplyTabLevel(_tabLevel, _sb);
         MessageTextUtils.EscapeString(text, _sb);
 
         return this;
@@ -35,6 +47,8 @@ public class MessageText
 
     public MessageText Bold(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append('*');
         Verbatim(text);
         _sb.Append('*');
@@ -44,6 +58,8 @@ public class MessageText
 
     public MessageText Italic(object obj)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         var text = obj.ToString();
 
         _sb.Append('_');
@@ -55,6 +71,8 @@ public class MessageText
 
     public MessageText ItalicBold(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append('*').Append('_');
         Verbatim(text);
         _sb.Append('_').Append('*');
@@ -64,6 +82,8 @@ public class MessageText
 
     public MessageText Strikethrough(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append('~');
         Verbatim(text);
         _sb.Append('~');
@@ -73,6 +93,8 @@ public class MessageText
 
     public MessageText Spoiler(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append("||");
         Verbatim(text);
         _sb.Append("||");
@@ -82,6 +104,8 @@ public class MessageText
 
     public MessageText InlineUrl(string text, string link)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append('[');
         Verbatim(text);
         _sb.Append(']');
@@ -93,6 +117,8 @@ public class MessageText
 
     public MessageText InlineMention(User user, string text = null)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         if (text is null)
             text = user.FirstName;
 
@@ -103,6 +129,8 @@ public class MessageText
 
     public MessageText InlineMention(string text, string tag)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+        
         _sb.Append('[');
         Verbatim(text);
         _sb.Append(']');
@@ -117,6 +145,8 @@ public class MessageText
 
     public MessageText InlineMention(string text, long userId)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append('[');
         Verbatim(text);
         _sb.Append(']');
@@ -131,6 +161,8 @@ public class MessageText
 
     public MessageText Monospace(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         _sb.Append('`');
         Verbatim(text);
         _sb.Append('`');
@@ -140,6 +172,8 @@ public class MessageText
 
     public MessageText Quote(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         // Empty bold definition to separate from previous quote
         _sb.Append("**");
         var lines = text.Split('\n');
@@ -159,10 +193,21 @@ public class MessageText
 
     public MessageText ExpandableQuote(string text)
     {
+        ApplyTabLevel(_tabLevel, _sb);
+
         Quote(text);
 
         _sb.Append("||");
         return this;
+    }
+
+    private static void ApplyTabLevel(int level, StringBuilder sb)
+    {
+        if (sb.Length == 0 || sb[sb.Length - 1] == '\n')
+        {
+            for (int i = 0; i < level; ++i)
+                sb.Append(TAB);
+        }
     }
 
     public override string ToString() => _sb.ToString();

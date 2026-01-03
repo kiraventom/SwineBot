@@ -17,7 +17,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
     private const int MAX_AMOUNT_MOD = 3;
 
     private const double OVERFEED_THROWUP_BASE_CHANCE = 0.01;
-    private const int OVERFEED_SCALE = 3;
+    private const double OVERFEED_SCALE = 2.5;
     private const int LOW_AMOUNT = 5;
     private const int HIGH_AMOUNT = 15;
 
@@ -56,14 +56,14 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
         if (!isFirstFeed)
         {
-            var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(OVERFEED_SCALE, recentFeeds.Count - 1);
+            var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(OVERFEED_SCALE, recentFeeds.Count);
             throwupThreshold = Math.Min(0.99, throwupThreshold);
 
             var overfeedChance = Random.Shared.NextDouble();
             Logger.Information("Overfeed: {overfeed} / {throwup}", overfeedChance, throwupThreshold);
             if (overfeedChance < throwupThreshold)
             {
-                var amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount) * -1;
+                var amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount);
                 Amount = amountLost * -1;
 
                 swine.Weight = NewWeight;
@@ -71,7 +71,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
                 {
                     DateTime = now,
                     IsThrowUp = true,
-                    Amount = amountLost
+                    Amount = Amount
                 });
 
                 Text

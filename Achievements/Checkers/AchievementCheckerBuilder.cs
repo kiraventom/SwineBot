@@ -1,6 +1,7 @@
-﻿using SwineBot.Model;
+﻿using Serilog;
+using SwineBot.Model;
 
-namespace SwineBot.Achievements;
+namespace SwineBot.Achievements.Checkers;
 
 public class AchievementCheckerBuilder
 {
@@ -11,7 +12,10 @@ public class AchievementCheckerBuilder
     public AchievementCheckerBuilder Type(AchievementType type)
     {
         if (_type != AchievementType.None)
-            throw new NotSupportedException();
+        {
+            Log.Error("Attempted to set type twice: old type {old}, new type {new}", _type.ToString(), type.ToString());
+            return this;
+        }
 
         _type = type;
         return this;
@@ -20,7 +24,10 @@ public class AchievementCheckerBuilder
     public AchievementCheckerBuilder Description(string descriptionFormat)
     {
         if (_descriptionFormat != null)
-            throw new NotSupportedException();
+        {
+            Log.Error("Attempted to set description format twice: old format {old}, new format {new}", _descriptionFormat, descriptionFormat);
+            return this;
+        }
 
         _descriptionFormat = descriptionFormat;
         return this;
@@ -29,16 +36,19 @@ public class AchievementCheckerBuilder
     public AchievementCheckerBuilder AddLevel(int value, string name)
     {
         if (_type == AchievementType.None)
-            throw new NotSupportedException();
+        {
+            Log.Error("Attempted to add level before setting type");
+            return this;
+        }
 
-        var description = string.Format(_descriptionFormat, value);
+        var description = string.Format(_descriptionFormat, Math.Abs(value));
         _levels.Add(new AchievementLevel(value, name, description));
         return this;
     }
 
     public AchievementChecker Build()
     {
-        _levels.Sort((a, b) => -1 * a.Value.CompareTo(b.Value));
+        _levels.Sort((a, b) => -1 * Math.Abs(a.Value).CompareTo(Math.Abs(b.Value)));
         return _type switch
         {
             AchievementType.Weight => new WeightAchievementChecker(_levels),
@@ -46,6 +56,7 @@ public class AchievementCheckerBuilder
             AchievementType.WeightLoss => new WeightLossAchievementChecker(_levels),
             AchievementType.Overfeed => new OverfeedAchievementChecker(_levels),
             AchievementType.NoOverfeed => new NoOverfeedAchievementChecker(_levels),
+            _ => new InvalidAchievementChecker(),
         };
     }
 }

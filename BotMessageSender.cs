@@ -9,35 +9,51 @@ namespace SwineBot;
 
 public class BotMessageSender(ILogger logger, ITelegramBotClient client)
 {
-    public async Task<Message> Send(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
+    public event BeforeMessageSendDelegate BeforeMessageSend;
+
+    private async Task<bool> InitMessage(UserContext userContext, int userId, BotMessage botMessage)
     {
-        var userModel = userContext.Users.First(u => u.UserId == userId);
-
-        Message message;
-
         try
         {
-            await botMessage.Init(userContext, userModel);
+            await botMessage.Init(userContext, userId);
+            return true;
         }
         catch (Exception e)
         {
             if (botMessage is InvalidMessage)
             {
                 logger.Fatal("Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
-                return null;
+                throw;
             }
             else
             {
                 logger.Fatal(e.ToString());
-
-                var invalidMessage = new InvalidMessage(logger);
-                var sentMessage = await Send(userContext, chatId, userId, invalidMessage);
-                return sentMessage;
+                return false;
             }
         }
+    }
+
+    public async Task<Message> Send(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
+    {
+        try
+        {
+            var didInit = await InitMessage(userContext, userId, botMessage);
+            if (didInit == false)
+            {
+                return await Send(userContext, chatId, userId, new InvalidMessage(logger));
+            }
+        }
+        catch
+        {
+            return null;
+        }
+
+        BeforeMessageSend?.Invoke(userContext, chatId, userId, botMessage);
 
         try
         {
+            Message message;
+
             var text = botMessage.Text.ToString();
 
             if (botMessage.PhotoFilePath is null)
@@ -52,14 +68,17 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
                 message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
             }
 
-            logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, userModel.UserId, message.MessageId);
+            logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, chatId, message.MessageId);
+
+            return message;
         }
         catch (Exception e)
         {
             logger.Fatal(e.ToString());
             return null;
         }
-
-        return message;
     }
 }
+
+public delegate void BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
+

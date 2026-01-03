@@ -14,12 +14,12 @@ public abstract class BotMessage(ILogger logger)
 
     public string PhotoFilePath { get; protected set; }
 
-    public async Task Init(UserContext userContext, User user)
+    public async Task Init(UserContext userContext, int userId)
     {
         if (_isInited)
             return;
 
-        await InitInternal(userContext, user.UserId);
+        await InitInternal(userContext, userId);
 
         _isInited = true;
     }

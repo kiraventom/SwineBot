@@ -34,13 +34,13 @@ internal class Program
         }
 
         var sender = new BotMessageSender(logger, client);
-        var commands = BuildCommands(logger);
+        var achievementController = new AchievementController(logger, sender);
+
+        var commands = BuildCommands(logger, achievementController);
 
         var telegramController = new TelegramController(logger, sender, commands.ToList());
         telegramController.StartReceiving(client);
         
-        var achievementController = new AchievementController(logger, sender);
-        telegramController.BeforeMessageSend += achievementController.OnBeforeMessageSend;
 
 
         while (true)
@@ -103,11 +103,11 @@ internal class Program
         }
     }
 
-   private static IEnumerable<UserAction> BuildCommands(ILogger logger)
+   private static IEnumerable<UserAction> BuildCommands(ILogger logger, AchievementController achievementController)
    {
       yield return new StartCommand(logger);
       yield return new FeedCommand(logger);
-      yield return new InfoCommand(logger);
+      yield return new InfoCommand(logger, achievementController);
       yield return new TopCommand(logger);
       yield return new HistoryCommand(logger);
       yield return new SetNameCommand(logger);

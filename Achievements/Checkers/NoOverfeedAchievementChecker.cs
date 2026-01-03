@@ -1,16 +1,17 @@
-﻿using SwineBot.BotMessages;
+﻿using Serilog;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 
-namespace SwineBot.Achievements;
+namespace SwineBot.Achievements.Checkers;
 
 public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
 {
-    protected override AchievementType AchievementType => AchievementType.NoOverfeed;
+    public override AchievementType Type => AchievementType.NoOverfeed;
 
-    protected override CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
+    protected override int? GetValue(BotMessage botMessage, Swine swine)
     {
         if (botMessage is not FeedMessage feedMessage)
-            return CheckerResult.Break;
+            return null;
 
         var lastThrowUp = swine.WeightLosses.Where(wl => wl.IsThrowUp).MaxBy(wl => wl.DateTime);
         var dateToCountFrom = lastThrowUp?.DateTime ?? DateTime.MinValue;
@@ -27,17 +28,21 @@ public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> 
                 break;
         }
 
-        if (noOverfeedCount >= levelValue) // Checking if level applies
-        {
-            if (swine.Weight == feedMessage.NewWeight) // Reacting only to last feed
-            {
-                return CheckerResult.Apply;
-            }
+        return noOverfeedCount;
+    }
 
-            return CheckerResult.ApplySilent; // levelValue is not too high, but weight was not achieved in last feed
+    protected override bool DoesLevelApply(int value, int level) => value >= level;
+
+
+    protected override bool IsSilentApply(BotMessage botMessage, Swine swine)
+    {
+        if (botMessage is not FeedMessage feedMessage)
+        {
+            Log.Error("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
+            return true;
         }
 
-        return CheckerResult.Continue; // levelValue too high
+        return swine.Weight != feedMessage.NewWeight;
     }
 }
 

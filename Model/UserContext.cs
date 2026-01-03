@@ -221,6 +221,8 @@ public class Achievement
     [Key] public int AchievementId { get; set; }
 
     public int SwineInfoId { get; set; }
+    
+    public DateTime DateTime { get; set; }
 
     [ForeignKey(nameof(SwineInfoId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]

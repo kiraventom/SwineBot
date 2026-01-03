@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 using Telegram.Bot.Types;
+using SwineBot.Achievements.Checkers;
 
 namespace SwineBot.Achievements;
 
@@ -17,6 +18,8 @@ public class AchievementController
     {
         _logger = logger;
         _sender = sender;
+
+        _sender.BeforeMessageSend += OnBeforeMessageSend;
 
         List<AchievementChecker> checkers = 
         [
@@ -37,24 +40,25 @@ public class AchievementController
                 .AddLevel(1580, "Вертикаль")
                 .AddLevel(1703, "Круче Петра")
                 .AddLevel(2000, "2K")
+                .AddLevel(2007, "Вернулся")
+                .AddLevel(2026, "It's me!")
                 .AddLevel(5000, "А хули вы хотели?")
                 .Build(),
 
             new AchievementCheckerBuilder()
                 .Type(AchievementType.WeightGain)
-                .Description("Набрать {0} килограмм")
+                .Description("Поесть на {0} килограмм")
                 .AddLevel(1, "Заморил червячка")
-                .AddLevel(10, "Десяток")
                 .AddLevel(22, "От пуза")
                 .Build(),
 
             new AchievementCheckerBuilder()
                 .Type(AchievementType.WeightLoss)
-                .Description("Схуднуть на {0} килограмм")
+                .Description("Похудеть на {0} килограмм")
                 .AddLevel(-1, "И не заметил")
                 .AddLevel(-20, "Серьёзный ущерб")
                 .AddLevel(-40, "Жадность фраера сгубила")
-                .AddLevel(-60, "He bought")
+                .AddLevel(-60, "he bought")
                 .AddLevel(-80, "После такого не встают")
                 .Build(),
 
@@ -84,7 +88,17 @@ public class AchievementController
         _checkers = checkers;
     }
 
-    public async void OnBeforeMessageSend(UserContext userContext, ChatId chatId, int userId, BotMessage message)
+    public AchievementLevel GetLevel(Achievement achievement)
+    {
+        var checker = _checkers.FirstOrDefault(c => c.Type == achievement.Type);
+        if (checker is null)
+            return null;
+
+        var level = checker.GetLevel(achievement);
+        return level;
+    }
+
+    private async void OnBeforeMessageSend(UserContext userContext, ChatId chatId, int userId, BotMessage message)
     {
         if (message is AchievementMessage)
             return;

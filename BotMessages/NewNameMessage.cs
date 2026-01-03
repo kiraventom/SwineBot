@@ -1,8 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Serilog;
+﻿using Serilog;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
-using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 

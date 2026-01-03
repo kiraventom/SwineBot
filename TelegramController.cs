@@ -13,8 +13,6 @@ public class TelegramController(ILogger logger, BotMessageSender sender, IReadOn
 {
     private bool _started;
 
-    public event BeforeMessageSendDelegate BeforeMessageSend;
-
     public void StartReceiving(ITelegramBotClient client)
     {
         if (_started)
@@ -92,13 +90,10 @@ public class TelegramController(ILogger logger, BotMessageSender sender, IReadOn
         }
 
         var botMessage = action.Execute(fullText);
-        BeforeMessageSend?.Invoke(userContext, chatId, user.UserId, botMessage);
         await sender.Send(userContext, chatId, user.UserId, botMessage);
         return true;
     }
 
     private static Task OnError(ITelegramBotClient client, Exception exception, CancellationToken ct) => Task.CompletedTask;
 }
-
-public delegate void BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
 

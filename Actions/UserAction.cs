@@ -1,7 +1,5 @@
 using Serilog;
 using SwineBot.BotMessages;
-using SwineBot.Model;
-using Telegram.Bot.Types;
 
 namespace SwineBot.Actions;
 
