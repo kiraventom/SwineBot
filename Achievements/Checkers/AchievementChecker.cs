@@ -22,7 +22,6 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
         if (value is null)
             return CheckerResult.Break;
 
-        Log.Information("{checker} {level} {value}", Type.ToString(), levelValue, value);
         if (DoesLevelApply(value.Value, levelValue))
         {
             return IsSilentApply(botMessage, swine) ? CheckerResult.ApplySilent : CheckerResult.Apply;

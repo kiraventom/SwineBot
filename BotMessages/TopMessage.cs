@@ -46,8 +46,7 @@ public class TopMessage(ILogger logger) : BotMessage(logger)
             .Verbatim(". ")
             .Bold(swine.Name)
             .Verbatim(": ")
-            .Italic(swine.Weight)
-            .Italic(" кг")
+            .Verbatim($"{swine.Weight} кг")
             .LineBreak();
     }
 }

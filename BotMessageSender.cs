@@ -63,9 +63,13 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
             }
             else
             {
-                using var stream = File.OpenRead(botMessage.PhotoFilePath);
-                var photo = InputFile.FromStream(stream);
-                message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
+                using (var stream = File.OpenRead(botMessage.PhotoFilePath))
+                {
+                    var photo = InputFile.FromStream(stream);
+                    message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
+                }
+
+                File.Delete(botMessage.PhotoFilePath);
             }
 
             logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, chatId, message.MessageId);

@@ -12,5 +12,3 @@ public class TopCommand(ILogger logger) : Command(logger)
         return new TopMessage(Logger);
     }
 }
-
-
