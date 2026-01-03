@@ -23,7 +23,7 @@ public class TopMessage(ILogger logger) : BotMessage(logger)
             if (swine == senderSwine)
                 isSenderSwineInTop = true;
 
-            OutputSwine(counter + 1, swine);
+            OutputSwine(counter++, swine);
         }
 
         if (isSenderSwineInTop == false)
