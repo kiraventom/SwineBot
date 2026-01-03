@@ -12,7 +12,9 @@ public class StartMessage(ILogger logger) : BotMessage(logger)
             .Italic("Доступные команды:").LineBreak()
             .Verbatim("/start — вывести это сообщение \U0001F928").LineBreak()
             .Verbatim("/feed — покормить своего свина \U0001F416").LineBreak()
-            .Verbatim("/info — получить инфу о своём свине \u2139\ufe0f").LineBreak();
+            .Verbatim("/info — получить инфу о своём свине \u2139\ufe0f").LineBreak()
+            .Verbatim("/top — топ свинов \U0001f4cb").LineBreak()
+            .Verbatim("/history — история веса свина \U0001f4c8").LineBreak();
 
         return Task.CompletedTask;
     }
