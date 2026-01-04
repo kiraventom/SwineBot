@@ -21,4 +21,10 @@
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Include="Fonts/Roboto-Regular.ttf">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
 </Project>

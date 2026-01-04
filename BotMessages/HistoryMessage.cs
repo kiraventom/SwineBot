@@ -23,10 +23,21 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
 
         var changes = feeds.Concat(losses).OrderBy(wc => wc.DateTime).ToList();
 
+        string path = GeneratePlotPng(changes);
+
+        PhotoFilePath = path;
+
+        Text.Italic("История веса ").Bold(swine.Name);
+
+        return Task.CompletedTask;
+    }
+
+    private static string GeneratePlotPng(IReadOnlyCollection<WeightChange> changes)
+    {
         var xValues = changes.Select(c => c.DateTime).ToList();
 
         var weight = 1;
-        var yValues = changes.Select(c => 
+        var yValues = changes.Select(c =>
         {
             weight += c.Amount;
             return weight;
@@ -35,6 +46,7 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         var path = System.IO.Path.GetTempFileName();
 
         ScottPlot.Plot plot = new();
+
         var sp = plot.Add.Scatter(xValues, yValues);
         sp.LineWidth = 2;
         sp.MarkerSize = 7;
@@ -47,13 +59,27 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         var tg = (DateTimeAutomatic)axis.TickGenerator;
         tg.LabelFormatter = dt => dt.ToString("d MMM", Common.RuCulture);
 
+        SetDefaultFont(plot);
+
         plot.SavePng(path, 1000, 1000);
+        return path;
+    }
 
-        PhotoFilePath = path;
+    private static void SetDefaultFont(Plot plot)
+    {
+        var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Roboto-Regular.ttf");
+        if (File.Exists(fontPath) == false)
+        {
+            Log.Error("Default font {path} was not found", fontPath);
+            return;
+        }
 
-        Text.Italic("История веса ").Bold(swine.Name);
+        Fonts.AddFontFile("Roboto", fontPath);
 
-        return Task.CompletedTask;
+        plot.Axes.Bottom.Label.FontName = "Roboto";
+        plot.Axes.Left.Label.FontName = "Roboto";
+        plot.Axes.Bottom.TickLabelStyle.FontName = "Roboto";
+        plot.Axes.Left.TickLabelStyle.FontName = "Roboto";
     }
 
     private record WeightChange(DateTime DateTime, int Amount);
