@@ -79,7 +79,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
         var newLevelAchiev = new Achievement()
         {
             Type = Type,
-            DateTime = DateTime.Now,
+            DateTime = DateTime.Now.ToUniversalTime(),
             Value = levelValue,
             SwineInfoId = swine.Stats.InfoId
         };

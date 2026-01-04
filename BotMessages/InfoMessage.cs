@@ -24,7 +24,7 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         var wonDuels = duels.Count(d => d.WinnerId == swine.SwineId);
         var lostDuels = duels.Count(d => d.LoserId == swine.SwineId);
 
-        var current = DateTime.Now;
+        var current = DateTime.Now.ToUniversalTime();
         var recentFeeds = swine.Feeds.Where(f => (current - f.DateTime).TotalHours < 24).ToList();
         string lastFeedDTStr = GetLastFeedStr(recentFeeds, current);
 

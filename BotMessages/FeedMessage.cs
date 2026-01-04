@@ -32,7 +32,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             .Include(s => s.WeightLosses)
             .First(s => s.OwnerId == userId);
 
-        var now = DateTime.Now;
+        var now = DateTime.Now.ToUniversalTime();
         var recentThrowups = swine.WeightLosses
             .Where(wl => (now - wl.DateTime).TotalHours < THROWUP_COOLDOWN)
             .Where(wl => wl.IsThrowUp);
