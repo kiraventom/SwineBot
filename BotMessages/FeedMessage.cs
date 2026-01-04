@@ -60,9 +60,9 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             throwupThreshold = Math.Min(0.99, throwupThreshold);
 
             var overfeedChance = Random.Shared.NextDouble();
-            Logger.Information("Overfeed: {overfeed} / {throwup}", overfeedChance, throwupThreshold);
             if (overfeedChance < throwupThreshold)
             {
+                Logger.Information("Overfeed: {overfeed} < {throwup}", overfeedChance, throwupThreshold);
                 var amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount);
                 Amount = amountLost * -1;
 
@@ -84,6 +84,8 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
                 return Task.CompletedTask;
             }
+
+            Logger.Information("No overfeed: {overfeed} >= {throwup}", overfeedChance, throwupThreshold);
         }
 
         swine.Weight = NewWeight;

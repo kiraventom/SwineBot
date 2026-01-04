@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using ScottPlot;
+using ScottPlot.TickGenerators;
 using Serilog;
 using SwineBot.Model;
 
@@ -33,8 +35,19 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         var path = System.IO.Path.GetTempFileName();
 
         ScottPlot.Plot plot = new();
-        plot.Add.Scatter(xValues, yValues);
-        plot.SavePng(path, 400, 400);
+        var sp = plot.Add.Scatter(xValues, yValues);
+        sp.LineWidth = 2;
+        sp.MarkerSize = 7;
+        sp.FillY = true;
+        sp.FillYColor = sp.LineColor.WithAlpha(0.2);
+
+        plot.Axes.Margins(0, 0, 0, 0.07);
+
+        var axis = plot.Axes.DateTimeTicksBottom();
+        var tg = (DateTimeAutomatic)axis.TickGenerator;
+        tg.LabelFormatter = dt => dt.ToString("d MMM", Common.RuCulture);
+
+        plot.SavePng(path, 1000, 1000);
 
         PhotoFilePath = path;
 

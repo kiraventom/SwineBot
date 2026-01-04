@@ -31,7 +31,7 @@ public class Config(string token, string username, string userConnectionString)
         try
         {
             using var configFile = File.OpenRead(filepath);
-            Instance = JsonSerializer.Deserialize<Config>(configFile, CommonOptions.Json);
+            Instance = JsonSerializer.Deserialize<Config>(configFile, Common.JsonOptions);
         }
         catch (Exception)
         {

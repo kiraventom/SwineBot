@@ -10,7 +10,6 @@ namespace SwineBot.BotMessages;
 public class InfoMessage(ILogger logger, AchievementController achievController) : BotMessage(logger)
 {
     private const string DOT = "⋅ ";
-    private readonly CultureInfo _ruCulture = CultureInfo.GetCultureInfo("ru");
 
     protected override Task InitInternal(UserContext userContext, int userId)
     {
@@ -57,7 +56,7 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
 
                         text.Verbatim(DOT).Bold(level.Name)
                             .Verbatim(" (").Verbatim(level.Description).Verbatim(") получено ")
-                            .Verbatim(achiev.DateTime.ToString("d MMMM yyyy", _ruCulture))
+                            .Verbatim(achiev.DateTime.ToString("d MMMM yyyy", Common.RuCulture))
                             .LineBreak();
                     }
                 });
