@@ -1,4 +1,5 @@
 using System.Text;
+using Serilog;
 using SwineBot.Model;
 
 namespace SwineBot.Text;
@@ -51,7 +52,12 @@ public class MessageText
 
         ApplyTabLevel(_tabLevel, _sb);
 
-        _sb.Append('*');
+        // TODO Refactor
+        if (_sb.Length > 0 && _sb[_sb.Length - 1] == '*')
+            _sb.Remove(_sb.Length - 1, 1);
+        else
+            _sb.Append('*');
+
         Verbatim(text);
         _sb.Append('*');
 
@@ -64,7 +70,11 @@ public class MessageText
 
         var text = obj.ToString();
 
-        _sb.Append('_');
+        if (_sb.Length > 0 && _sb[_sb.Length - 1] == '_')
+            _sb.Remove(_sb.Length - 1, 1);
+        else
+            _sb.Append('_');
+
         Verbatim(text);
         _sb.Append('_');
 
@@ -75,7 +85,11 @@ public class MessageText
     {
         ApplyTabLevel(_tabLevel, _sb);
 
-        _sb.Append('*').Append('_');
+        if (_sb.Length > 0 && _sb[_sb.Length - 2] == '_' && _sb[_sb.Length - 1] == '*')
+            _sb.Remove(_sb.Length - 2, 2);
+        else
+            _sb.Append('*').Append('_');
+
         Verbatim(text);
         _sb.Append('_').Append('*');
 
@@ -86,7 +100,11 @@ public class MessageText
     {
         ApplyTabLevel(_tabLevel, _sb);
 
-        _sb.Append('~');
+        if (_sb.Length > 0 && _sb[_sb.Length - 1] == '~')
+            _sb.Remove(_sb.Length - 1, 1);
+        else
+            _sb.Append('~');
+
         Verbatim(text);
         _sb.Append('~');
 
@@ -97,7 +115,11 @@ public class MessageText
     {
         ApplyTabLevel(_tabLevel, _sb);
 
-        _sb.Append("||");
+        if (_sb.Length > 0 && _sb[_sb.Length - 2] == '|' && _sb[_sb.Length - 1] == '|')
+            _sb.Remove(_sb.Length - 2, 2);
+        else
+            _sb.Append("||");
+
         Verbatim(text);
         _sb.Append("||");
 
@@ -165,7 +187,11 @@ public class MessageText
     {
         ApplyTabLevel(_tabLevel, _sb);
 
-        _sb.Append('`');
+        if (_sb.Length > 0 && _sb[_sb.Length - 1] == '`')
+            _sb.Remove(_sb.Length - 1, 1);
+        else
+            _sb.Append('`');
+
         Verbatim(text);
         _sb.Append('`');
 
@@ -212,7 +238,12 @@ public class MessageText
         }
     }
 
-    public override string ToString() => _sb.ToString();
+    public override string ToString()
+    {
+        var str = _sb.ToString();
+        Log.Information(str);
+        return str;
+    }
 
     private static string EscapeLink(string link) => link.Replace("\\", @"\\").Replace(")", "\\)");
 }

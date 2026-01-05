@@ -39,6 +39,8 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         var mealsDecl = MessageTextUtils.GetDeclinatedNoun(recentFeeds.Count, Unit.Meal);
         mealsDecl = char.ToUpper(mealsDecl[0]) + mealsDecl[1..];
 
+        Log.Information(mealsDecl);
+
         Text.Italic(mealsDecl)
            .Italic(" пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
 
