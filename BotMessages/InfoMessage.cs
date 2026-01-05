@@ -34,8 +34,13 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         Text.Bold("Информация о свине ").InlineMention(owner).Bold(":").LineBreak()
             .LineBreak()
             .Italic("Имя: ").Verbatim(swine.Name).LineBreak()
-            .Italic("Вес: ").Verbatim($"{swine.Weight} кг").LineBreak()
-            .Italic("Приёмы пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
+            .Italic("Вес: ").Verbatim($"{swine.Weight} кг").LineBreak();
+
+        var mealsDecl = MessageTextUtils.GetDeclinatedNoun(recentFeeds.Count, Unit.Meal);
+        mealsDecl = char.ToUpper(mealsDecl[0]) + mealsDecl[1..];
+
+        Text.Italic(mealsDecl)
+           .Italic(" пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
 
         if (consecutiveOverfeeds != 0)
         {
