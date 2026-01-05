@@ -53,7 +53,7 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         sp.FillY = true;
         sp.FillYColor = sp.LineColor.WithAlpha(0.2);
 
-        plot.Axes.Margins(0, 0, 0, 0.07);
+        plot.Axes.Margins(0, 0.07, 0, 0.07);
 
         var axis = plot.Axes.DateTimeTicksBottom();
         var tg = (DateTimeAutomatic)axis.TickGenerator;

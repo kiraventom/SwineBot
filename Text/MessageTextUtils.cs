@@ -1,4 +1,5 @@
-using System.Text;
+﻿using System.Text;
+using SwineBot.Achievements;
 
 namespace SwineBot.Text;
 
@@ -19,14 +20,16 @@ public static class MessageTextUtils
         return sb;
     }
 
-    public static string GetDeclinatedNoun(int days, string singular, string accusativeSingular, string accusativePlural)
+    public static string GetDeclinatedNoun(int count, Unit unit) => GetDeclinatedNoun(count, unit.Singular, unit.AccusativeSingular, unit.AccusativePlural);
+
+    private static string GetDeclinatedNoun(int count, string singular, string accusativeSingular, string accusativePlural)
     {
-        var lastTwoDigits = days % 100;
+        var lastTwoDigits = count % 100;
 
         if (lastTwoDigits is >= 10 and <= 20)
             return accusativePlural;
 
-        var lastDigit = days % 10;
+        var lastDigit = count % 10;
         return lastDigit switch
         {
             1 => singular,

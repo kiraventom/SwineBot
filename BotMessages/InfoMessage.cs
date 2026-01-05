@@ -1,7 +1,7 @@
-using System.Globalization;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.Achievements;
+using SwineBot.Achievements.Checkers;
 using SwineBot.Model;
 using SwineBot.Text;
 
@@ -28,15 +28,37 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         var recentFeeds = swine.Feeds.Where(f => (current - f.DateTime).TotalHours < 24).ToList();
         string lastFeedDTStr = GetLastFeedStr(recentFeeds, current);
 
+        int consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swine.SwineId);
+        int consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(userContext, swine.SwineId);
+
         Text.Bold("Информация о свине ").InlineMention(owner).Bold(":").LineBreak()
             .LineBreak()
             .Italic("Имя: ").Verbatim(swine.Name).LineBreak()
             .Italic("Вес: ").Verbatim($"{swine.Weight} кг").LineBreak()
             .Italic("Приёмы пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
 
+        if (consecutiveOverfeeds != 0)
+        {
+            Text.Italic("Перекормов: ").Verbatim(consecutiveOverfeeds).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(consecutiveOverfeeds, Unit.Time))
+                .Verbatim(" подряд").LineBreak();
+        }
+
+        if (consecutiveNoOverfeeds != 0)
+        {
+            Text.Italic("Без перекормов: ").Verbatim(consecutiveNoOverfeeds).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(consecutiveNoOverfeeds, Unit.Time))
+                .Verbatim(" подряд").LineBreak();
+        }
+
         if (wonDuels != 0 || lostDuels != 0)
         {
-            Text.Italic("Статистика дуэлей: ").Verbatim(wonDuels).Verbatim(" побед, ").Verbatim(lostDuels).Verbatim(" поражений").LineBreak();
+            Text.Italic("Статистика дуэлей: ").Verbatim(wonDuels).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(wonDuels, Unit.Win))
+                .Verbatim(", ")
+                .Verbatim(lostDuels).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(lostDuels, Unit.Loss))
+                .LineBreak();
         }
 
         if (swine.Stats.Achievements.Count != 0)
@@ -81,13 +103,13 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         else if (diff.TotalHours < 1)
         {
             var totalMin = (int)diff.TotalMinutes;
-            var minutesDecl = MessageTextUtils.GetDeclinatedNoun(totalMin, "минута", "минуты", "минут");
+            var minutesDecl = MessageTextUtils.GetDeclinatedNoun(totalMin, Unit.Minute);
             return $"{totalMin} {minutesDecl} назад";
         }
         else
         {
             var totalHours = (int)diff.TotalHours;
-            var hoursDecl = MessageTextUtils.GetDeclinatedNoun(totalHours, "час", "часа", "часов");
+            var hoursDecl = MessageTextUtils.GetDeclinatedNoun(totalHours, Unit.Hour);
             return $"{totalHours} {hoursDecl} назад";
         }
     }

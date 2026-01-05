@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using SwineBot.Model;
+using SwineBot.Text;
 
 namespace SwineBot.Achievements.Checkers;
 
@@ -7,6 +8,7 @@ public class AchievementCheckerBuilder
 {
     private AchievementType _type = AchievementType.None;
     private string _descriptionFormat;
+    private Unit _levelUnit;
     private readonly List<AchievementLevel> _levels = [];
 
     public AchievementCheckerBuilder Type(AchievementType type)
@@ -21,7 +23,7 @@ public class AchievementCheckerBuilder
         return this;
     }
 
-    public AchievementCheckerBuilder Description(string descriptionFormat)
+    public AchievementCheckerBuilder Description(string descriptionFormat, Unit unit)
     {
         if (_descriptionFormat != null)
         {
@@ -30,6 +32,7 @@ public class AchievementCheckerBuilder
         }
 
         _descriptionFormat = descriptionFormat;
+        _levelUnit = unit;
         return this;
     }
 
@@ -41,7 +44,9 @@ public class AchievementCheckerBuilder
             return this;
         }
 
-        var description = string.Format(_descriptionFormat, Math.Abs(value));
+        int absValue = Math.Abs(value);
+        var levelUnitDeclination = MessageTextUtils.GetDeclinatedNoun(absValue, _levelUnit);
+        var description = string.Format(_descriptionFormat, absValue, levelUnitDeclination);
         _levels.Add(new AchievementLevel(value, name, description));
         return this;
     }

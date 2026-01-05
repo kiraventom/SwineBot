@@ -40,8 +40,6 @@ internal class Program
 
         var telegramController = new TelegramController(logger, sender, commands.ToList());
         telegramController.StartReceiving(client);
-        
-
 
         while (true)
         {

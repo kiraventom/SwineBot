@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.BotMessages;
 using SwineBot.Model;
@@ -25,7 +25,7 @@ public class AchievementController
         [
             new AchievementCheckerBuilder()
                 .Type(AchievementType.Weight)
-                .Description("Набрать {0} килограмм")
+                .Description("Набрать {0} {1}", Unit.Kg)
                 .AddLevel(100, "Сотка")
                 .AddLevel(228, "Да не торч я")
                 .AddLevel(420, "Ладно я торч")
@@ -47,14 +47,14 @@ public class AchievementController
 
             new AchievementCheckerBuilder()
                 .Type(AchievementType.WeightGain)
-                .Description("Поесть на {0} килограмм")
+                .Description("Поесть на {0} {1}", Unit.Kg)
                 .AddLevel(1, "Заморил червячка")
                 .AddLevel(22, "От пуза")
                 .Build(),
 
             new AchievementCheckerBuilder()
                 .Type(AchievementType.WeightLoss)
-                .Description("Похудеть на {0} килограмм")
+                .Description("Похудеть на {0} {1}", Unit.Kg)
                 .AddLevel(-1, "И не заметил")
                 .AddLevel(-20, "Серьёзный ущерб")
                 .AddLevel(-40, "Жадность фраера сгубила")
@@ -64,7 +64,7 @@ public class AchievementController
 
             new AchievementCheckerBuilder()
                 .Type(AchievementType.Overfeed)
-                .Description("Успешный перекорм {0} раз подряд")
+                .Description("Успешный перекорм {0} {1} подряд", Unit.Time)
                 .AddLevel(3, "Завтрак, обед, ужин")
                 .AddLevel(5, "Плюс полдник и ланч")
                 .AddLevel(7, "Недельный рацион")
@@ -75,7 +75,7 @@ public class AchievementController
 
             new AchievementCheckerBuilder()
                 .Type(AchievementType.NoOverfeed)
-                .Description("Без перекорма {0} раз подряд")
+                .Description("Без перекорма {0} {1} подряд", Unit.Time)
                 .AddLevel(3, "Пивная диета")
                 .AddLevel(5, "Йогуртовая диета")
                 .AddLevel(7, "Яблочная диета")

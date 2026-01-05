@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using SwineBot.Achievements;
 using SwineBot.Model;
 using SwineBot.Text;
 
@@ -7,8 +8,8 @@ namespace SwineBot.BotMessages;
 
 public class FeedMessage(ILogger logger) : BotMessage(logger)
 {
-    private const int THROWUP_COOLDOWN = 24;
-    private const int OVERFEED_COOLDOWN = 24;
+    public const int THROWUP_COOLDOWN = 24;
+    public const int OVERFEED_COOLDOWN = 24;
 
     private const int MIN_LUCK = 1;
     private const int MAX_LUCK = 21;
@@ -144,7 +145,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
         if (!isFirstFeed)
         {
             var recentFeedsCount = recentFeeds.Count + 1;
-            var feedDecl = MessageTextUtils.GetDeclinatedNoun(recentFeedsCount, "приём", "приёма", "приёмов");
+            var feedDecl = MessageTextUtils.GetDeclinatedNoun(recentFeedsCount, Unit.Meal);
             Text.LineBreak()
                 .Italic($"⚠ Перекорм! {recentFeedsCount} {feedDecl} пищи за последние {OVERFEED_COOLDOWN} часа!");
         }

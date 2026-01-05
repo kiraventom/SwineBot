@@ -45,8 +45,10 @@ public class MessageText
         return this;
     }
 
-    public MessageText Bold(string text)
+    public MessageText Bold(object o)
     {
+        var text = o?.ToString();
+
         ApplyTabLevel(_tabLevel, _sb);
 
         _sb.Append('*');

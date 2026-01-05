@@ -9,7 +9,8 @@ public class TopMessage(ILogger logger) : BotMessage(logger)
     {
         var topSwines = userContext.Swines
             .OrderByDescending(s => s.Weight)
-            .Take(10);
+            .Take(10)
+            .Where(s => s.Weight > 1);
 
         Text.Bold("Топ 10 свинов")
             .LineBreak().LineBreak();
@@ -17,37 +18,49 @@ public class TopMessage(ILogger logger) : BotMessage(logger)
         int counter = 1;
         bool isSenderSwineInTop = false;
 
-        var senderSwine = userContext.Swines.First(s => s.OwnerId == userId);
         foreach (var swine in topSwines)
         {
-            if (swine == senderSwine)
+            if (swine.OwnerId == userId)
                 isSenderSwineInTop = true;
 
-            OutputSwine(counter++, swine);
+            OutputSwine(counter++, swine, swine.OwnerId == userId);
         }
 
         if (isSenderSwineInTop == false)
         {
+            var senderSwine = userContext.Swines.First(s => s.OwnerId == userId);
             var senderIndex = userContext.Swines
                 .OrderByDescending(s => s.Weight)
                 .ToList()
                 .IndexOf(senderSwine);
 
             Text.Verbatim("...").LineBreak();
-            OutputSwine(senderIndex + 1, senderSwine);
+            OutputSwine(senderIndex + 1, senderSwine, true);
         }
 
         return Task.CompletedTask;
     }
 
-    private void OutputSwine(int rank, Swine swine)
+    private void OutputSwine(int rank, Swine swine, bool isSender)
     {
-        Text.Verbatim(rank)
-            .Verbatim(". ")
-            .Bold(swine.Name)
-            .Verbatim(": ")
-            .Verbatim($"{swine.Weight} кг")
-            .LineBreak();
+        if (isSender)
+        {
+            Text.Bold(rank)
+                .Bold(". ")
+                .Bold(swine.Name)
+                .Bold(": ")
+                .Bold($"{swine.Weight} кг")
+                .LineBreak();
+        }
+        else
+        {
+            Text.Verbatim(rank)
+                .Verbatim(". ")
+                .Bold(swine.Name)
+                .Verbatim(": ")
+                .Verbatim($"{swine.Weight} кг")
+                .LineBreak();
+        }
     }
 }
 

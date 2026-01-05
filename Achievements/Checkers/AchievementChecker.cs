@@ -1,5 +1,4 @@
-﻿using Serilog;
-using SwineBot.BotMessages;
+﻿using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
