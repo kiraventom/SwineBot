@@ -12,5 +12,3 @@ public class HistoryCommand(ILogger logger) : Command(logger)
         return new HistoryMessage(Logger);
     }
 }
-
-

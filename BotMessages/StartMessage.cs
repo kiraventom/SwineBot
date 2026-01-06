@@ -14,7 +14,8 @@ public class StartMessage(ILogger logger) : BotMessage(logger)
             .Verbatim("/feed — покормить своего свина \U0001F416").LineBreak()
             .Verbatim("/info — получить инфу о своём свине \u2139\ufe0f").LineBreak()
             .Verbatim("/top — топ свинов \U0001f4cb").LineBreak()
-            .Verbatim("/history — история веса свина \U0001f4c8").LineBreak();
+            .Verbatim("/history — история веса свина \U0001f4c8").LineBreak()
+            .Verbatim("/historyall — история веса всех свинок \U0001f4ca").LineBreak();
 
         return Task.CompletedTask;
     }
