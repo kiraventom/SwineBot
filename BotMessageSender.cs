@@ -48,7 +48,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
             return null;
         }
 
-        BeforeMessageSend?.Invoke(userContext, chatId, userId, botMessage);
+        await BeforeMessageSend?.Invoke(userContext, chatId, userId, botMessage);
 
         try
         {
@@ -84,5 +84,5 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
     }
 }
 
-public delegate void BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
+public delegate Task BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
 

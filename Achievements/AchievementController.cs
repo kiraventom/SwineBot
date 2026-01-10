@@ -98,7 +98,7 @@ public class AchievementController
         return level;
     }
 
-    private async void OnBeforeMessageSend(UserContext userContext, ChatId chatId, int userId, BotMessage message)
+    private async Task OnBeforeMessageSend(UserContext userContext, ChatId chatId, int userId, BotMessage message)
     {
         if (message is AchievementMessage)
             return;
