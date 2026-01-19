@@ -95,7 +95,7 @@ public class User
     [InverseProperty(nameof(Slaughter.User))]
     public List<Slaughter> Slaughters { get; } = new();
 
-    public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 1);
+    public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 2);
 }
 
 public class Swine
