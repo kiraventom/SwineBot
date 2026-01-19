@@ -70,7 +70,9 @@ public class MessageText
 
         var text = obj.ToString();
 
-        if (_sb.Length > 0 && _sb[_sb.Length - 1] == '_')
+        // check for underline
+        // TODO mess
+        if ((_sb.Length == 1 && _sb[_sb.Length - 1] == '_') || (_sb.Length > 1 && _sb[_sb.Length - 1] == '_' && _sb[_sb.Length - 2] != '_'))
             _sb.Remove(_sb.Length - 1, 1);
         else
             _sb.Append('_');
@@ -85,13 +87,28 @@ public class MessageText
     {
         ApplyTabLevel(_tabLevel, _sb);
 
-        if (_sb.Length > 0 && _sb[_sb.Length - 2] == '_' && _sb[_sb.Length - 1] == '*')
+        if (_sb.Length > 1 && _sb[_sb.Length - 2] == '_' && _sb[_sb.Length - 1] == '*')
             _sb.Remove(_sb.Length - 2, 2);
         else
             _sb.Append('*').Append('_');
 
         Verbatim(text);
         _sb.Append('_').Append('*');
+
+        return this;
+    }
+
+    public MessageText Underline(string text)
+    {
+        ApplyTabLevel(_tabLevel, _sb);
+
+        if (_sb.Length > 1 && _sb[_sb.Length - 2] == '_' && _sb[_sb.Length - 1] == '_')
+            _sb.Remove(_sb.Length - 2, 2);
+        else
+            _sb.Append('_').Append('_');
+
+        Verbatim(text);
+        _sb.Append('_').Append('_');
 
         return this;
     }

@@ -91,6 +91,23 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
                 });
         }
 
+        var totalSlaughteredWeight = userContext.Slaughters
+            .Where(s => s.UserId == owner.UserId)
+            .Sum(s => s.SwineWeight);
+
+        var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
+        if (growthMod > 1)
+        {
+            Text
+                .Italic("Эффекты: ").LineBreak()
+                .Tab(text =>
+                {
+                    text.Verbatim(DOT).Verbatim("Рост ускорен на ")
+                    .Verbatim(((growthMod - 1) * 100).ToString("##"))
+                    .Verbatim("%").LineBreak();
+                });
+        }
+
         // TODO active duel requests (incoming and outcoming)
 
         return Task.CompletedTask;

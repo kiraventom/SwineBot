@@ -110,5 +110,6 @@ internal class Program
       yield return new HistoryCommand(logger);
       yield return new HistoryAllCommand(logger);
       yield return new SetNameCommand(logger);
+      yield return new SlaughterCommand(logger);
    }
 }

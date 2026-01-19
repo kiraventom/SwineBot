@@ -14,6 +14,7 @@ public class UserContext : DbContext
     public DbSet<DuelRequest> DuelRequests { get; set; }
     public DbSet<DuelResult> DuelResults { get; set; }
     public DbSet<Achievement> Achievements { get; set; }
+    public DbSet<Slaughter> Slaughters { get; set; }
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
@@ -80,6 +81,8 @@ public class UserContext : DbContext
 [Index(nameof(TelegramId), IsUnique=true)]
 public class User
 {
+    private const double GROWTH_MOD_MULT = 0.0002;
+
     [Key] public int UserId { get; set; }
 
     public long TelegramId { get; set; }
@@ -88,6 +91,11 @@ public class User
 
     [InverseProperty(nameof(Swine.Owner))]
     public Swine Swine { get; set; }
+
+    [InverseProperty(nameof(Slaughter.User))]
+    public List<Slaughter> Slaughters { get; } = new();
+
+    public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 1);
 }
 
 public class Swine
@@ -230,4 +238,19 @@ public class Achievement
 
     public AchievementType Type { get; set; }
     public int Value { get; set; }
+}
+
+public class Slaughter
+{
+    [Key]
+    public int SlaughterId { get; set; }
+
+    public int UserId { get; set; }
+
+    [ForeignKey(nameof(UserId))]
+    public User User { get; set; }
+
+    public string SwineName { get; set; }
+    public int SwineWeight { get; set; }
+    public DateTime DateTime { get; set; }
 }

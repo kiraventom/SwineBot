@@ -28,6 +28,8 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
     protected override Task InitInternal(UserContext userContext, int userId)
     {
+        var owner = userContext.Users.First(u => u.UserId == userId);
+
         var swine = userContext.Swines
             .Include(s => s.Feeds)
             .Include(s => s.WeightLosses)
@@ -53,7 +55,15 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
         var luck = Random.Shared.Next(MIN_LUCK, MAX_LUCK);
         var amountMod = Random.Shared.Next(MIN_AMOUNT_MOD, MAX_AMOUNT_MOD);
-        Amount = Math.Max(1, luck + amountMod);
+
+        var totalSlaughteredWeight = userContext.Slaughters
+            .Where(s => s.UserId == owner.UserId)
+            .Sum(s => s.SwineWeight);
+
+        var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
+
+        var baseAmount = Math.Max(1, luck + amountMod);
+        Amount = (int)(Math.Ceiling(baseAmount * growthMod));
 
         if (!isFirstFeed)
         {
@@ -96,7 +106,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
             Amount = Amount,
         });
 
-        if (Amount < LOW_AMOUNT)
+        if (baseAmount < LOW_AMOUNT)
         {
             if (isFirstFeed)
             {
@@ -109,7 +119,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
                 Text.Bold(swine.Name).Verbatim(", явно сытый, неохотно жуёт очередную порцию...").LineBreak();
             }
         }
-        else if (Amount > HIGH_AMOUNT)
+        else if (baseAmount > HIGH_AMOUNT)
         {
             if (isFirstFeed)
             {

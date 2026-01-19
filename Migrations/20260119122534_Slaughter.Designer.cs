@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SwineBot.Model;
 
@@ -10,9 +11,11 @@ using SwineBot.Model;
 namespace SwineBot.Migrations
 {
     [DbContext(typeof(UserContext))]
-    partial class UserContextModelSnapshot : ModelSnapshot
+    [Migration("20260119122534_Slaughter")]
+    partial class Slaughter
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -132,31 +135,6 @@ namespace SwineBot.Migrations
                     b.ToTable("Feeds");
                 });
 
-            modelBuilder.Entity("SwineBot.Model.Slaughter", b =>
-                {
-                    b.Property<int>("SlaughterId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("DateTime")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("SwineName")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("SwineWeight")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("SlaughterId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Slaughters");
-                });
-
             modelBuilder.Entity("SwineBot.Model.Swine", b =>
                 {
                     b.Property<int>("SwineId")
@@ -215,6 +193,9 @@ namespace SwineBot.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<long>("TelegramId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalWeightSlaughtered")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("UserId");
@@ -317,17 +298,6 @@ namespace SwineBot.Migrations
                     b.Navigation("Swine");
                 });
 
-            modelBuilder.Entity("SwineBot.Model.Slaughter", b =>
-                {
-                    b.HasOne("SwineBot.Model.User", "User")
-                        .WithMany("Slaughters")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("SwineBot.Model.Swine", b =>
                 {
                     b.HasOne("SwineBot.Model.User", "Owner")
@@ -377,8 +347,6 @@ namespace SwineBot.Migrations
 
             modelBuilder.Entity("SwineBot.Model.User", b =>
                 {
-                    b.Navigation("Slaughters");
-
                     b.Navigation("Swine");
                 });
 #pragma warning restore 612, 618
