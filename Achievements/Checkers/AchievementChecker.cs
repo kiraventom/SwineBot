@@ -1,4 +1,5 @@
-﻿using SwineBot.BotMessages;
+﻿using Serilog;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
@@ -17,15 +18,18 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
     private CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
     {
         var value = GetValue(botMessage, swine);
+        Log.Logger.Debug("CheckLevel(): value={value}, level={level}", value, levelValue);
 
         if (value is null)
             return CheckerResult.Break;
 
         if (DoesLevelApply(value.Value, levelValue))
         {
+            Log.Logger.Debug("level applies");
             return IsSilentApply(botMessage, swine) ? CheckerResult.ApplySilent : CheckerResult.Apply;
         }
 
+        Log.Logger.Debug("level does not apply");
         return CheckerResult.Continue;
     }
 
