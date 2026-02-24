@@ -2,6 +2,7 @@
 using Serilog;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
+using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 using SwineBot.Text;
 
@@ -68,6 +69,8 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
                 .LineBreak();
         }
 
+        List<IAchievementEffect> effects = [];
+
         if (swine.Stats.Achievements.Count != 0)
         {
             Text
@@ -83,6 +86,9 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
                             continue;
                         }
 
+                        if (level.Effect != null)
+                            effects.Add(level.Effect);
+
                         text.Verbatim(DOT).Bold(level.Name)
                             .Verbatim(" (").Verbatim(level.Description).Verbatim(") получено ")
                             .Verbatim(achiev.DateTime.ToString("d MMMM yyyy", Common.RuCulture))
@@ -96,15 +102,26 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
             .Sum(s => s.SwineWeight);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
-        if (growthMod > 1)
+
+        if (growthMod > 1 || effects.Count > 0)
         {
             Text
                 .Italic("Эффекты: ").LineBreak()
                 .Tab(text =>
                 {
-                    text.Verbatim(DOT).Verbatim("Рост ускорен на ")
-                    .Verbatim(((growthMod - 1) * 100).ToString("##"))
-                    .Verbatim("%").LineBreak();
+                    if (growthMod > 1)
+                    {
+                        text.Verbatim(DOT).Verbatim("Рост ускорен на ")
+                        .Verbatim(((growthMod - 1) * 100).ToString("##"))
+                        .Verbatim("%")
+                        .LineBreak();
+                    }
+
+                    foreach (var effect in effects)
+                    {
+                        text.Verbatim(DOT).Verbatim(effect.Description)
+                            .LineBreak();
+                    }
                 });
         }
 

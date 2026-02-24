@@ -16,7 +16,10 @@ public class WeightLossAchievementChecker(IReadOnlyCollection<AchievementLevel> 
         return feedMessage.Amount;
     }
 
-    protected override bool DoesLevelApply(int value, int level) => value <= level;
+    protected override bool DoesLevelApply(int value, int level)
+    {
+        return value <= level;
+    }
 
     protected override bool IsSilentApply(BotMessage botMessage, Swine swine)
     {

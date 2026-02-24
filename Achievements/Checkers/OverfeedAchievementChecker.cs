@@ -27,15 +27,18 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
         int overfeedCount = 0;
         for (int i = 0; i < recentFeeds.Count - 1; i++)
         {
-            overfeedCount = i;
-
             var feed0 = recentFeeds[i];
+            Log.Warning("Overfeed: feed0[{index}] date {date} amount {amount}", i, feed0.DateTime.ToLongDateString(), feed0.Amount);
             var feed1 = recentFeeds[i + 1];
+            Log.Warning("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, feed1.DateTime.ToLongDateString(), feed1.Amount);
             var offset = feed0.DateTime - feed1.DateTime;
             if (offset.TotalHours >= FeedMessage.OVERFEED_COOLDOWN)
                 break;
+
+            overfeedCount = i + 1;
         }
         
+        Log.Warning("Overfeed: count {count}", overfeedCount);
         return overfeedCount;
     }
 
@@ -48,7 +51,12 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
         return overfeedCount;
     }
 
-    protected override bool DoesLevelApply(int value, int level) => value >= level;
+    protected override bool DoesLevelApply(int value, int level)
+    { 
+        Log.Warning("Overfeed: value {value}, level {level}", value, level);
+
+        return value >= level;
+    }
 
     protected override bool IsSilentApply(BotMessage botMessage, Swine swine)
     {

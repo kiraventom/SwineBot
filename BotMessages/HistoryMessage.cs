@@ -74,7 +74,7 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         if (caption is null)
         {
             sp.FillY = true;
-            sp.FillYColor = sp.LineColor;
+            sp.FillYColor = sp.LineColor.WithAlpha(0.5);
         }
         else
         {

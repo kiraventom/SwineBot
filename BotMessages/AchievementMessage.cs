@@ -18,6 +18,15 @@ public class AchievementMessage(ILogger logger, AchievementLevel achievementLeve
             .LineBreak().LineBreak()
             .Italic(achievementLevel.Description);
 
+        if (achievementLevel.Effect != null)
+        {
+            Text
+                .LineBreak().LineBreak()
+                .Verbatim("✨ Новый эффект: ")
+                .Italic(achievementLevel.Effect.Description)
+                .Verbatim(" ✨");
+        }
+
         return Task.CompletedTask;
     }
 }

@@ -17,19 +17,30 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
 
     private CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
     {
+        // Swine already has the achievement of that of bigger level
+        if (swine.Stats.Achievements
+            .Where(a => a.Type == this.Type)
+            .Any(a => DoesLevelApply(a.Value, levelValue)))
+        {
+            if (this is OverfeedAchievementChecker)
+                Log.Warning("Overfeed: already has {val}, level {lv}", swine.Stats.Achievements.Where(a => a.Type == this.Type).First().Value, levelValue);
+
+            return CheckerResult.Break;
+        }
+
         var value = GetValue(botMessage, swine);
-        Log.Logger.Debug("CheckLevel(): value={value}, level={level}", value, levelValue);
 
         if (value is null)
             return CheckerResult.Break;
 
+        if (this is OverfeedAchievementChecker)
+            Log.Warning("Overfeed: value {value}", value.Value);
+        
         if (DoesLevelApply(value.Value, levelValue))
         {
-            Log.Logger.Debug("level applies");
             return IsSilentApply(botMessage, swine) ? CheckerResult.ApplySilent : CheckerResult.Apply;
         }
 
-        Log.Logger.Debug("level does not apply");
         return CheckerResult.Continue;
     }
 
@@ -50,9 +61,6 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
 
         foreach (var level in Levels)
         {
-            if (swine.Stats.Achievements.Where(a => a.Type == Type).Any(a => a.Value >= level.Value)) // Swine already has the current level achievement
-                return false;
-
             var checkerResult = CheckLevel(botMessage, swine, level.Value);
 
             switch (checkerResult)

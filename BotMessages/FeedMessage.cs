@@ -1,12 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.Achievements;
+using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
-public class FeedMessage(ILogger logger) : BotMessage(logger)
+public class FeedMessage(ILogger logger, AchievementController achievController) : BotMessage(logger)
 {
     public const int THROWUP_COOLDOWN = 24;
     public const int OVERFEED_COOLDOWN = 24;
@@ -18,7 +19,7 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
     private const int MAX_AMOUNT_MOD = 3;
 
     private const double OVERFEED_THROWUP_BASE_CHANCE = 0.01;
-    private const double OVERFEED_SCALE = 2.5;
+    private const double BASE_OVERFEED_SCALE = 2.5;
     private const int LOW_AMOUNT = 5;
     private const int HIGH_AMOUNT = 15;
 
@@ -33,7 +34,14 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
         var swine = userContext.Swines
             .Include(s => s.Feeds)
             .Include(s => s.WeightLosses)
+            .Include(s => s.Stats).ThenInclude(s => s.Achievements)
             .First(s => s.OwnerId == userId);
+
+        var effects = swine.Stats.Achievements
+            .Select(a => achievController.GetLevel(a))
+            .Where(a => a.Effect != null)
+            .Select(a => a.Effect)
+            .ToList();
 
         var now = DateTime.Now.ToUniversalTime();
         var recentThrowups = swine.WeightLosses
@@ -67,7 +75,8 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
 
         if (!isFirstFeed)
         {
-            var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(OVERFEED_SCALE, recentFeeds.Count);
+            var overfeedScale = GetOverfeedScale(effects.OfType<OverfeedScaleModifierEffect>());
+            var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(overfeedScale, recentFeeds.Count);
             throwupThreshold = Math.Min(0.99, throwupThreshold);
 
             var overfeedChance = Random.Shared.NextDouble();
@@ -161,5 +170,17 @@ public class FeedMessage(ILogger logger) : BotMessage(logger)
         }
 
         return Task.CompletedTask;
+    }
+
+    private static double GetOverfeedScale(IEnumerable<OverfeedScaleModifierEffect> effects)
+    {
+        double overfeedScale = BASE_OVERFEED_SCALE;
+        foreach (var effect in effects)
+            overfeedScale = effect.Apply(overfeedScale);
+
+        if (overfeedScale != BASE_OVERFEED_SCALE)
+            Log.Logger.Information("Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
+
+        return overfeedScale;
     }
 }

@@ -104,7 +104,7 @@ internal class Program
    private static IEnumerable<UserAction> BuildCommands(ILogger logger, AchievementController achievementController)
    {
       yield return new StartCommand(logger);
-      yield return new FeedCommand(logger);
+      yield return new FeedCommand(logger, achievementController);
       yield return new InfoCommand(logger, achievementController);
       yield return new TopCommand(logger);
       yield return new HistoryCommand(logger);
