@@ -1,5 +1,4 @@
 ﻿using SwineBot.Achievements.Effects;
-using SwineBot.Model;
 
 namespace SwineBot.Achievements;
 

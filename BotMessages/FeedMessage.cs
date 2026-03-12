@@ -83,7 +83,7 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
             if (overfeedChance < throwupThreshold)
             {
                 Logger.Information("Overfeed: {overfeed} < {throwup}", overfeedChance, throwupThreshold);
-                var amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount);
+                var amountLost = GetThrowup(recentFeeds, effects);
                 Amount = amountLost * -1;
 
                 swine.Weight = NewWeight;
@@ -94,13 +94,25 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
                     Amount = Amount
                 });
 
-                Text
-                    .Verbatim("Едва глаза ")
-                    .Bold(swine.Name)
-                    .Verbatim(" увидели еду, всё его тело содрогнулось в рвотном позыве... Заблевав всю кормушку, изрядно исхудавший хряк грустно вернулся в глубину хлева.")
-                    .LineBreak()
-                    .LineBreak()
-                    .Bold($"{OldWeight} кг - {amountLost} кг → {NewWeight} кг");
+                if (Amount == 0)
+                {
+                    Text
+                        .Bold(swine.Name)
+                        .Verbatim(" уже почти стошнило, но в последний момент свин сдержал позыв и, нахмурившись, утопал обратно на своё место.")
+                        .LineBreak()
+                        .LineBreak()
+                        .Bold($"Вес не изменился: {NewWeight} кг");
+                }
+                else
+                {
+                    Text
+                        .Verbatim("Едва глаза ")
+                        .Bold(swine.Name)
+                        .Verbatim(" увидели еду, всё его тело содрогнулось в рвотном позыве... Заблевав всю кормушку, изрядно исхудавший хряк грустно вернулся в глубину хлева.")
+                        .LineBreak()
+                        .LineBreak()
+                        .Bold($"{OldWeight} кг - {amountLost} кг → {NewWeight} кг");
+                }
 
                 return Task.CompletedTask;
             }
@@ -170,6 +182,23 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
         }
 
         return Task.CompletedTask;
+    }
+
+    private int GetThrowup(IEnumerable<Feed> recentFeeds, IReadOnlyCollection<IAchievementEffect> effects)
+    {
+        int amountLost = Math.Min(OldWeight - 1, recentFeeds.Sum(f => f.Amount) + Amount);
+        int initialAmountLost = amountLost;
+
+        foreach (var effect in effects.OfType<ThrowupScaleEffect>())
+            amountLost = effect.Apply(amountLost);
+
+        foreach (var effect in effects.OfType<ThrowupIgnoreChanceEffect>())
+            amountLost = effect.Apply(amountLost);
+
+        if (amountLost != initialAmountLost)
+            Log.Logger.Information("Throwup changed from {base} to {new}", initialAmountLost, amountLost);
+
+        return amountLost;
     }
 
     private static double GetOverfeedScale(IEnumerable<OverfeedScaleModifierEffect> effects)

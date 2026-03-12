@@ -59,8 +59,9 @@ public class AchievementController
                 .AddLevel(-1, "И не заметил")
                 .AddLevel(-20, "Серьёзный ущерб")
                 .AddLevel(-40, "Жадность фраера сгубила")
-                .AddLevel(-60, "he bought")
-                .AddLevel(-80, "После такого не встают")
+                .AddLevel(-60, "he bought", new ThrowupScaleEffect(0.95))
+                .AddLevel(-80, "После такого не встают", new ThrowupScaleEffect(0.85))
+                .AddLevel(-100, "Булимия", new ThrowupScaleEffect(0.70))
                 .Build(),
 
             new AchievementCheckerBuilder()
@@ -69,9 +70,9 @@ public class AchievementController
                 .AddLevel(3, "Завтрак, обед, ужин")
                 .AddLevel(5, "Плюс полдник и ланч")
                 .AddLevel(7, "Недельный рацион")
-                .AddLevel(14, "Двухнедельный рацион")
-                .AddLevel(21, "Трёхнедельный рацион")
-                .AddLevel(31, "Месячная порция")
+                .AddLevel(14, "Двухнедельный рацион", new ThrowupIgnoreChanceEffect(0.25))
+                .AddLevel(21, "Трёхнедельный рацион", new ThrowupIgnoreChanceEffect(0.50))
+                .AddLevel(31, "Месячная порция", new ThrowupIgnoreChanceEffect(0.75))
                 .Build(),
 
             new AchievementCheckerBuilder()

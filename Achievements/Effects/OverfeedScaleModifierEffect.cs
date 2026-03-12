@@ -24,4 +24,3 @@ public class OverfeedScaleModifierEffect : AchievementEffect<double>
         return value * Modifier;
     }
 }
-

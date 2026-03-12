@@ -1,11 +1,11 @@
-﻿using SwineBot.Model;
-
-namespace SwineBot.Achievements.Effects;
+﻿namespace SwineBot.Achievements.Effects;
 
 public enum AchievementEffectType
 {
     None = 0,
-    OverfeedScale = 1
+    OverfeedScale = 1,
+    ThrowupScale = 2,
+    ThrowupChance = 3
 }
 
 public interface IAchievementEffect
