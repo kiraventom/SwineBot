@@ -227,6 +227,9 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
             var clampedHours = Math.Clamp(hoursSinceLastFeed, 0, OVERFEED_FADEOUT_HOURS);
             var hoursScale = clampedHours / OVERFEED_FADEOUT_HOURS;
             overfeedScale = BASE_OVERFEED_SCALE - (BASE_OVERFEED_SCALE - FADED_OUT_OVERFEED_SCALE) * hoursScale;
+
+            if (overfeedScale != BASE_OVERFEED_SCALE)
+                Log.Logger.Information("Fadeout: Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
         }
 
         double initialOverfeedScale = overfeedScale;
@@ -235,7 +238,7 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
             overfeedScale = effect.Apply(overfeedScale);
 
         if (overfeedScale != initialOverfeedScale)
-            Log.Logger.Information("Overfeed scale changed from {base} to {new}", initialOverfeedScale, overfeedScale);
+            Log.Logger.Information("Effects: Overfeed scale changed from {base} to {new}", initialOverfeedScale, overfeedScale);
 
         return overfeedScale;
     }
