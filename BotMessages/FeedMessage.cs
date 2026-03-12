@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.Achievements;
+using SwineBot.Achievements.Checkers;
 using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 using SwineBot.Text;
@@ -22,6 +23,10 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
     private const double BASE_OVERFEED_SCALE = 2.5;
     private const int LOW_AMOUNT = 5;
     private const int HIGH_AMOUNT = 15;
+
+    private const int OVERFEED_FADEOUT_HOURS = 12;
+    private const double OVERFEED_FADEOUT_SCALE = 0.75;
+    private const double FADED_OUT_OVERFEED_SCALE = BASE_OVERFEED_SCALE * OVERFEED_FADEOUT_SCALE;
 
     public int OldWeight { get; private set; }
     public int Amount { get; private set; }
@@ -75,7 +80,7 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
 
         if (!isFirstFeed)
         {
-            var overfeedScale = GetOverfeedScale(effects.OfType<OverfeedScaleModifierEffect>());
+            var overfeedScale = GetOverfeedScale(recentFeeds, now, effects.OfType<OverfeedScaleModifierEffect>());
             var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(overfeedScale, recentFeeds.Count);
             throwupThreshold = Math.Min(0.99, throwupThreshold);
 
@@ -102,6 +107,14 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
                         .LineBreak()
                         .LineBreak()
                         .Bold($"Вес не изменился: {NewWeight} кг");
+
+                    var consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swine.SwineId);
+                    if (consecutiveOverfeeds != 0)
+                    {
+                        Text
+                            .LineBreak()
+                            .Italic($"Это происшествие не нарушит ваш стрик в {consecutiveOverfeeds} {MessageTextUtils.GetDeclinatedNoun(consecutiveOverfeeds, Unit.Overfeed)}");
+                    }
                 }
                 else
                 {
@@ -201,14 +214,28 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
         return amountLost;
     }
 
-    private static double GetOverfeedScale(IEnumerable<OverfeedScaleModifierEffect> effects)
+    private static double GetOverfeedScale(IEnumerable<Feed> recentFeeds, DateTime utcNow, IEnumerable<OverfeedScaleModifierEffect> effects)
     {
         double overfeedScale = BASE_OVERFEED_SCALE;
+
+        // Шанс на блёв максимальный (BASE_OVERFEED_SCALE) сразу после кормления, 
+        // но постепенно уменьшается до BASE_OVERFEED_SCALE * OVERFEED_FADEOUT_SCALE следующие OVERFEED_FADEOUT_HOURS часов
+        var lastFeed = recentFeeds.OrderBy(f => f.DateTime).LastOrDefault();
+        if (lastFeed is not null)
+        {
+            double hoursSinceLastFeed = (utcNow - lastFeed.DateTime).TotalHours;
+            var clampedHours = Math.Clamp(hoursSinceLastFeed, 0, OVERFEED_FADEOUT_HOURS);
+            var hoursScale = clampedHours / OVERFEED_FADEOUT_HOURS;
+            overfeedScale = BASE_OVERFEED_SCALE - (BASE_OVERFEED_SCALE - FADED_OUT_OVERFEED_SCALE) * hoursScale;
+        }
+
+        double initialOverfeedScale = overfeedScale;
+
         foreach (var effect in effects)
             overfeedScale = effect.Apply(overfeedScale);
 
-        if (overfeedScale != BASE_OVERFEED_SCALE)
-            Log.Logger.Information("Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
+        if (overfeedScale != initialOverfeedScale)
+            Log.Logger.Information("Overfeed scale changed from {base} to {new}", initialOverfeedScale, overfeedScale);
 
         return overfeedScale;
     }

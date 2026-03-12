@@ -161,6 +161,9 @@ public class WeightLoss
     public int Amount { get; set; } // kg
 
     public bool IsThrowUp { get; set; }
+
+    [NotMapped]
+    public bool Ignored => Amount == 0;
 }
 
 public class DuelRequest

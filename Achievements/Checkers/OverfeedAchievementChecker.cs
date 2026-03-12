@@ -21,19 +21,30 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
 
     private static int CountConsecutiveOverfeeds(Swine swine)
     {
-        var lastThrowUp = swine.WeightLosses.Where(wl => wl.IsThrowUp).MaxBy(wl => wl.DateTime);
+        var throwUps = swine.WeightLosses.Where(wl => wl.IsThrowUp);
+        var lastThrowUp = throwUps.Where(wl => !wl.Ignored).MaxBy(wl => wl.DateTime);
         var dateToCountFrom = lastThrowUp?.DateTime ?? DateTime.MinValue;
         var recentFeeds = swine.Feeds.Where(f => f.DateTime > dateToCountFrom).OrderByDescending(f => f.DateTime).ToList();
         int overfeedCount = 0;
         for (int i = 0; i < recentFeeds.Count - 1; i++)
         {
-            var feed0 = recentFeeds[i];
-            Log.Warning("Overfeed: feed0[{index}] date {date} amount {amount}", i, feed0.DateTime.ToLongDateString(), feed0.Amount);
-            var feed1 = recentFeeds[i + 1];
-            Log.Warning("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, feed1.DateTime.ToLongDateString(), feed1.Amount);
-            var offset = feed0.DateTime - feed1.DateTime;
+            var newerFeed = recentFeeds[i];
+            Log.Warning("Overfeed: feed0[{index}] date {date} amount {amount}", i, newerFeed.DateTime.ToLongDateString(), newerFeed.Amount);
+            var olderFeed = recentFeeds[i + 1];
+            Log.Warning("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, olderFeed.DateTime.ToLongDateString(), olderFeed.Amount);
+            var offset = newerFeed.DateTime - olderFeed.DateTime;
             if (offset.TotalHours >= FeedMessage.OVERFEED_COOLDOWN)
-                break;
+            {
+                // Check for ignored throwup
+                var ignoredThrowUp = throwUps
+                    .Where(tu => tu.DateTime < newerFeed.DateTime)
+                    .Where(tu => tu.DateTime > olderFeed.DateTime)
+                    .Where(tu => tu.Ignored)
+                    .FirstOrDefault();
+
+                if (ignoredThrowUp is null)
+                    break;
+            }
 
             overfeedCount = i + 1;
         }
