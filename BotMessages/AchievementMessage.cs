@@ -6,9 +6,9 @@ namespace SwineBot.BotMessages;
 
 public class AchievementMessage(ILogger logger, AchievementLevel achievementLevel) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines.First(s => s.OwnerId == userId);
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
         
         Text.Verbatim("🏆")
             .Bold(swine.Name)

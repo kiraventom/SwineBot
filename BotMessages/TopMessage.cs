@@ -5,9 +5,12 @@ namespace SwineBot.BotMessages;
 
 public class TopMessage(ILogger logger) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
+        var groupId = userContext.Swines.First(s => s.SwineId == swineId).GroupId;
+
         var topSwines = userContext.Swines
+            .Where(s => s.GroupId == groupId)
             .OrderByDescending(s => s.Weight)
             .Take(10)
             .Where(s => s.Weight > 1);
@@ -20,15 +23,15 @@ public class TopMessage(ILogger logger) : BotMessage(logger)
 
         foreach (var swine in topSwines)
         {
-            if (swine.OwnerId == userId)
+            if (swine.SwineId == swineId)
                 isSenderSwineInTop = true;
 
-            OutputSwine(counter++, swine, swine.OwnerId == userId);
+            OutputSwine(counter++, swine, swine.SwineId == swineId);
         }
 
         if (isSenderSwineInTop == false)
         {
-            var senderSwine = userContext.Swines.First(s => s.OwnerId == userId);
+            var senderSwine = userContext.Swines.First(s => s.SwineId == swineId);
             var senderIndex = userContext.Swines
                 .OrderByDescending(s => s.Weight)
                 .ToList()

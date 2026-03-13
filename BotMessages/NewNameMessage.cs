@@ -6,7 +6,7 @@ namespace SwineBot.BotMessages;
 
 public class NewNameMessage(ILogger logger, string name) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -19,7 +19,7 @@ public class NewNameMessage(ILogger logger, string name) : BotMessage(logger)
 
         name = name.Trim();
 
-        var swine = userContext.Swines.First(s => s.OwnerId == userId);
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
         if (swine.Name == name)
         {
             Text.Italic("Свина и так зовут \"").Bold(name).Italic("\" \U0001F914");

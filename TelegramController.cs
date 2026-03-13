@@ -1,5 +1,6 @@
 using Serilog;
 using SwineBot.Actions;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -8,7 +9,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace SwineBot;
 
-public class TelegramController(ILogger logger, BotMessageSender sender, IReadOnlyCollection<UserAction> actions)
+public class TelegramController(ILogger logger, BotMessageSender messageSender, IReadOnlyCollection<UserAction> actions)
 {
     private bool _started;
 
@@ -60,9 +61,23 @@ public class TelegramController(ILogger logger, BotMessageSender sender, IReadOn
 
     private async Task<bool> HandleMessageAsync(Message message, UserContext userContext)
     {
-        var sender = message.From!;
+        var sender = message.From;
+        var chat = message.Chat;
 
-        var user = userContext.GetOrAddUser(sender.Id, sender.FirstName, sender.Username);
+        if (sender is null)
+        {
+            logger.Warning("Sender is null");
+            return false;
+        }
+
+        if (chat.Id == sender.Id)
+        {
+            logger.Warning("Sender.Id == Chat.Id ({id})", chat.Id);
+            /* await messageSender.Send(userContext, chat.Id, (int)sender.Id, new PrivateMessage(logger)); */
+            return false;
+        }
+
+        var user = userContext.GetOrAddUser(chat.Id, chat.Title, sender.Id, sender.FirstName, sender.Username);
 
         logger.Information("Received message [{messageId}] with text '{text}' in chat [{chatId}] from user [{userId}] '{firstname}'", message.MessageId, message.Text, message.Chat.Id, user.UserId, user.FirstName);
 
@@ -89,7 +104,7 @@ public class TelegramController(ILogger logger, BotMessageSender sender, IReadOn
         }
 
         var botMessage = action.Execute(fullText);
-        await sender.Send(userContext, chatId, user.UserId, botMessage);
+        await messageSender.Send(userContext, chatId, user.UserId, botMessage);
         return true;
     }
 

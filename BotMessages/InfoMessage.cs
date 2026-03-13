@@ -12,14 +12,13 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
 {
     private const string DOT = "⋅ ";
 
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
         var swine = userContext.Swines
+            .Include(s => s.Owner)
             .Include(s => s.Stats).ThenInclude(s => s.Achievements)
             .Include(s => s.Feeds)
-            .FirstOrDefault(s => s.OwnerId == userId);
-
-        var owner = userContext.Users.First(u => u.UserId == userId);
+            .FirstOrDefault(s => s.SwineId == swineId);
 
         var duels = userContext.DuelResults.ToList();
         var wonDuels = duels.Count(d => d.WinnerId == swine.SwineId);
@@ -32,7 +31,7 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         int consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swine.SwineId);
         int consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(userContext, swine.SwineId);
 
-        Text.Bold("Информация о свине ").InlineMention(owner).Bold(":").LineBreak()
+        Text.Bold("Информация о свине ").InlineMention(swine.Owner).Bold(":").LineBreak()
             .LineBreak()
             .Italic("Имя: ").Verbatim(swine.Name).LineBreak()
             .Italic("Вес: ").Verbatim($"{swine.Weight} кг").LineBreak();
@@ -98,7 +97,8 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         }
 
         var totalSlaughteredWeight = userContext.Slaughters
-            .Where(s => s.UserId == owner.UserId)
+            .Where(s => s.UserId == swine.OwnerId)
+            .Where(s => s.GroupId == swine.GroupId)
             .Sum(s => s.SwineWeight);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);

@@ -8,33 +8,42 @@ namespace SwineBot.BotMessages;
 
 public class HistoryMessage(ILogger logger) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines
+        var groupId = userContext.Swines.First(s => s.SwineId == swineId).GroupId;
+
+        var swines = userContext.Swines
             .Include(s => s.Feeds)
             .Include(s => s.WeightLosses)
-            .First(s => s.OwnerId == userId);
+            .Where(s => s.GroupId == groupId)
+            .Where(s => s.Feeds.Any())
+            .OrderByDescending(s => s.Weight)
+            .Take(10);
 
-        var feeds = swine.Feeds
-            .Select(f => new WeightChange(f.DateTime, f.Amount));
+        var plot = CreatePlot(showLegend: true);
 
-        var losses = swine.WeightLosses
-            .Select(f => new WeightChange(f.DateTime, f.Amount));
+        foreach (var swine in swines)
+        {
+            var feeds = swine.Feeds
+                .Select(f => new WeightChange(f.DateTime, f.Amount));
 
-        var changes = feeds.Concat(losses).OrderBy(wc => wc.DateTime).ToList();
+            var losses = swine.WeightLosses
+                .Select(f => new WeightChange(f.DateTime, f.Amount));
 
-        var plot = CreatePlot();
-        AddChanges(plot, changes);
+            var changes = feeds.Concat(losses).OrderBy(wc => wc.DateTime).ToList();
+            AddChanges(plot, changes, swine.Name);
+        }
+
         string path = SavePlot(plot);
 
         PhotoFilePath = path;
 
-        Text.Italic("История веса ").Bold(swine.Name);
+        Text.Italic("История веса свинок");
 
         return Task.CompletedTask;
     }
 
-    protected static Plot CreatePlot(bool showLegend = false)
+    private static Plot CreatePlot(bool showLegend = false)
     {
         Plot plot = new();
 
@@ -56,7 +65,7 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         return plot;
     }
 
-    protected static void AddChanges(Plot plot, IReadOnlyCollection<WeightChange> changes, string caption = null)
+    private static void AddChanges(Plot plot, IReadOnlyCollection<WeightChange> changes, string caption = null)
     {
         var xValues = changes.Select(c => c.DateTime).ToList();
 
@@ -82,7 +91,7 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         }
     }
 
-    protected static string SavePlot(Plot plot)
+    private static string SavePlot(Plot plot)
     {
         var path = System.IO.Path.GetTempFileName();
         plot.SavePng(path, 1000, 1000);
@@ -107,5 +116,5 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         plot.Legend.FontName = "Roboto";
     }
 
-    protected record WeightChange(DateTime DateTime, int Amount);
+    private record WeightChange(DateTime DateTime, int Amount);
 }

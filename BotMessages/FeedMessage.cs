@@ -32,15 +32,13 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
     public int Amount { get; private set; }
     public int NewWeight => OldWeight + Amount;
 
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var owner = userContext.Users.First(u => u.UserId == userId);
-
         var swine = userContext.Swines
             .Include(s => s.Feeds)
             .Include(s => s.WeightLosses)
             .Include(s => s.Stats).ThenInclude(s => s.Achievements)
-            .First(s => s.OwnerId == userId);
+            .First(s => s.SwineId == swineId);
 
         var effects = swine.Stats.Achievements
             .Select(a => achievController.GetLevel(a))
@@ -70,7 +68,8 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
         var amountMod = Random.Shared.Next(MIN_AMOUNT_MOD, MAX_AMOUNT_MOD);
 
         var totalSlaughteredWeight = userContext.Slaughters
-            .Where(s => s.UserId == owner.UserId)
+            .Where(s => s.UserId == swine.OwnerId)
+            .Where(s => s.GroupId == swine.GroupId)
             .Sum(s => s.SwineWeight);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);

@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace SwineBot.Model;
 
 public class UserContext : DbContext
 {
+    public DbSet<Group> Groups { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Swine> Swines { get; set; }
     public DbSet<SwineInfo> Infos { get; set; }
@@ -28,43 +30,72 @@ public class UserContext : DbContext
         return new UserContext(builder.Options);
     }
 
-    public User GetOrAddUser(long telegramId, string firstName, string username)
+    public User GetOrAddUser(long chatId, string title, long senderId, string firstName, string username)
     {
-        var isNew = false;
+        var isNewUser = false;
 
-        var userModel = this.Users
-            .FirstOrDefault(u => u.TelegramId == telegramId);
+        var user = this.Users.Include(u => u.Swines).FirstOrDefault(u => u.TelegramId == senderId);
 
-        if (userModel is null)
+        if (user is null)
         {
-            isNew = true;
-            userModel = new User()
+            isNewUser = true;
+            user = new User()
             {
                 FirstName = firstName,
                 Tag = username,
-                TelegramId = telegramId,
-                Swine = new Swine()
-                {
-                    Name = firstName,
-                    Stats = new(),
-                    Weight = 1,
-                }
+                TelegramId = senderId,
+                Swines = []
             };
         }
 
-        if (userModel.FirstName != firstName)
-            userModel.FirstName = firstName;
+        var isNewGroup = false;
+        var group = this.Groups.FirstOrDefault(g => g.TelegramId == chatId);
 
-        if (userModel.Tag != username)
-            userModel.Tag = username;
-
-        if (isNew)
+        if (group is null)
         {
-            Users.Add(userModel);
-            this.SaveChanges();
+            isNewGroup = true;
+            group = new Group()
+            {
+                Title = title,
+                TelegramId = chatId,
+                Swines = []
+            };
+
+            Log.Logger.Information("User [{userId}] chat [{chatId}]: New group, creating new swine", senderId, chatId);
+
+            var swine = new Swine()
+            {
+                Name = firstName,
+                Stats = new(),
+                Weight = 1,
+                Owner = user,
+            };
+
+            group.Swines.Add(swine);
         }
 
-        return userModel;
+        if (user.FirstName != firstName)
+            user.FirstName = firstName;
+
+        if (user.Tag != username)
+            user.Tag = username;
+
+        if (group.Title != title)
+            group.Title = title;
+
+        if (isNewGroup)
+        {
+            Groups.Add(group);
+        }
+
+        if (isNewUser)
+        {
+            Users.Add(user);
+        }
+
+        this.SaveChanges();
+
+        return user;
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -79,6 +110,19 @@ public class UserContext : DbContext
 }
 
 [Index(nameof(TelegramId), IsUnique=true)]
+public class Group
+{
+    [Key] public int GroupId { get; set; }
+    
+    public long TelegramId { get; set; }
+
+    public string Title { get; set; }
+
+    [InverseProperty(nameof(Swine.Group))]
+    public List<Swine> Swines { get; set; }
+}
+
+[Index(nameof(TelegramId), IsUnique=true)]
 public class User
 {
     private const double GROWTH_MOD_MULT = 0.0002;
@@ -90,7 +134,7 @@ public class User
     public string Tag { get; set; }
 
     [InverseProperty(nameof(Swine.Owner))]
-    public Swine Swine { get; set; }
+    public List<Swine> Swines { get; set; }
 
     [InverseProperty(nameof(Slaughter.User))]
     public List<Slaughter> Slaughters { get; } = new();
@@ -102,11 +146,16 @@ public class Swine
 {
     [Key] public int SwineId { get; set; }
     public int OwnerId { get; set; }
+    public int? GroupId { get; set; }
     public int StatsId { get; set; }
 
     [ForeignKey(nameof(OwnerId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
     public User Owner { get; set; }
+
+    [ForeignKey(nameof(GroupId))]
+    [DeleteBehavior(DeleteBehavior.Cascade)]
+    public Group Group { get; set; }
 
     [InverseProperty(nameof(SwineInfo.Swine))]
     public SwineInfo Stats { get; set; }
@@ -249,9 +298,13 @@ public class Slaughter
     public int SlaughterId { get; set; }
 
     public int UserId { get; set; }
+    public int? GroupId { get; set; }
 
     [ForeignKey(nameof(UserId))]
     public User User { get; set; }
+
+    [ForeignKey(nameof(GroupId))]
+    public Group Group { get; set; }
 
     public string SwineName { get; set; }
     public int SwineWeight { get; set; }

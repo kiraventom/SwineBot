@@ -9,10 +9,10 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
     private const string CONFIRMATION = "yes";
     private const int SLAUGHTER_COOLDOWN = 24;
 
-    protected override Task InitInternal(UserContext userContext, int userId)
+    protected override Task InitInternal(UserContext userContext, int swineId)
     {
         var lastSlaughter = userContext.Slaughters
-            .Where(s => s.UserId == userId)
+            .Where(s => s.UserId == swineId)
             .OrderByDescending(s => s.DateTime)
             .FirstOrDefault();
 
@@ -22,7 +22,7 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
             return Task.CompletedTask;
         }
 
-        var swine = userContext.Swines.First(s => s.OwnerId == userId);
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
         var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == swine.StatsId).Count();
 
         if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
@@ -42,17 +42,17 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
         }
 
         var slaughteredWeight = swine.Weight - 1;
-        userContext.Slaughters.Add(new Slaughter() { UserId = userId, DateTime = DateTime.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
+        userContext.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = DateTime.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
 
         Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
         userContext.Swines.Remove(swine);
 
         var newSwine = new Swine()
         {
-            Name = userContext.Users.First(u => u.UserId == userId).FirstName,
+            Name = userContext.Users.First(u => u.UserId == swineId).FirstName,
             Stats = new(),
             Weight = 1,
-            OwnerId = userId
+            SwineId = swineId
         };
 
         userContext.Swines.Add(newSwine);

@@ -11,11 +11,11 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
 {
     public event BeforeMessageSendDelegate BeforeMessageSend;
 
-    private async Task<bool> InitMessage(UserContext userContext, int userId, BotMessage botMessage)
+    private async Task<bool> InitMessage(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
     {
         try
         {
-            await botMessage.Init(userContext, userId);
+            await botMessage.Init(userContext, chatId, userId);
             return true;
         }
         catch (Exception e)
@@ -37,7 +37,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
     {
         try
         {
-            var didInit = await InitMessage(userContext, userId, botMessage);
+            var didInit = await InitMessage(userContext, chatId, userId, botMessage);
             if (didInit == false)
             {
                 return await Send(userContext, chatId, userId, new InvalidMessage(logger));
