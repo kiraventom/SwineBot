@@ -23,7 +23,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
             .Any(a => DoesLevelApply(a.Value, levelValue)))
         {
             if (this is OverfeedAchievementChecker)
-                Log.Warning("Overfeed: already has {val}, level {lv}", swine.Stats.Achievements.Where(a => a.Type == this.Type).First().Value, levelValue);
+                Log.Debug("Overfeed: already has {val}, level {lv}", swine.Stats.Achievements.Where(a => a.Type == this.Type).First().Value, levelValue);
 
             return CheckerResult.Break;
         }
@@ -34,7 +34,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
             return CheckerResult.Break;
 
         if (this is OverfeedAchievementChecker)
-            Log.Warning("Overfeed: value {value}", value.Value);
+            Log.Debug("Overfeed: value {value}", value.Value);
         
         if (DoesLevelApply(value.Value, levelValue))
         {

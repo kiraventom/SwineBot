@@ -29,9 +29,9 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
         for (int i = 0; i < recentFeeds.Count - 1; i++)
         {
             var newerFeed = recentFeeds[i];
-            Log.Warning("Overfeed: feed0[{index}] date {date} amount {amount}", i, newerFeed.DateTime.ToLongDateString(), newerFeed.Amount);
+            Log.Debug("Overfeed: feed0[{index}] date {date} amount {amount}", i, newerFeed.DateTime.ToLongDateString(), newerFeed.Amount);
             var olderFeed = recentFeeds[i + 1];
-            Log.Warning("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, olderFeed.DateTime.ToLongDateString(), olderFeed.Amount);
+            Log.Debug("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, olderFeed.DateTime.ToLongDateString(), olderFeed.Amount);
             var offset = newerFeed.DateTime - olderFeed.DateTime;
             if (offset.TotalHours >= FeedMessage.OVERFEED_COOLDOWN)
             {
@@ -49,7 +49,7 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
             overfeedCount = i + 1;
         }
         
-        Log.Warning("Overfeed: count {count}", overfeedCount);
+        Log.Debug("Overfeed: count {count}", overfeedCount);
         return overfeedCount;
     }
 
@@ -64,7 +64,7 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
 
     protected override bool DoesLevelApply(int value, int level)
     { 
-        Log.Warning("Overfeed: value {value}, level {level}", value, level);
+        Log.Debug("Overfeed: value {value}, level {level}", value, level);
 
         return value >= level;
     }
