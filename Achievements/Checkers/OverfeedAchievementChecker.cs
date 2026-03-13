@@ -33,7 +33,7 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
             var olderFeed = recentFeeds[i + 1];
             Log.Debug("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, olderFeed.DateTime.ToLongDateString(), olderFeed.Amount);
             var offset = newerFeed.DateTime - olderFeed.DateTime;
-            if (offset.TotalHours >= FeedMessage.OVERFEED_COOLDOWN)
+            if (offset.TotalHours >= FeedManager.OVERFEED_COOLDOWN)
             {
                 // Check for ignored throwup
                 var ignoredThrowUp = throwUps
@@ -77,7 +77,7 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
             return true;
         }
 
-        Log.Information("OVERFEED: {swineWeight} {newWeight}", swine.Weight, feedMessage.NewWeight);
-        return swine.Weight != feedMessage.NewWeight;
+        Log.Information("OVERFEED: {swineWeight} {newWeight}", swine.Weight, feedMessage.FeedResult.NewWeight);
+        return swine.Weight != feedMessage.FeedResult.NewWeight;
     }
 }

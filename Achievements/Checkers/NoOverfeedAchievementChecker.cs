@@ -32,7 +32,7 @@ public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> 
             var feed0 = recentFeeds[i];
             var feed1 = recentFeeds[i + 1];
             var offset = feed0.DateTime - feed1.DateTime;
-            if (offset.TotalHours < FeedMessage.OVERFEED_COOLDOWN)
+            if (offset.TotalHours < FeedManager.OVERFEED_COOLDOWN)
                 break;
         }
         
@@ -59,7 +59,7 @@ public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> 
             return true;
         }
 
-        return swine.Weight != feedMessage.NewWeight;
+        return swine.Weight != feedMessage.FeedResult.NewWeight;
     }
 }
 

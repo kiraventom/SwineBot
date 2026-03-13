@@ -26,6 +26,6 @@ public class WeightAchievementChecker(IReadOnlyCollection<AchievementLevel> leve
             return true;
         }
 
-        return swine.Weight != feedMessage.NewWeight;
+        return swine.Weight != feedMessage.FeedResult.NewWeight;
     }
 }

@@ -13,7 +13,7 @@ public class WeightGainAchievementChecker(IReadOnlyCollection<AchievementLevel> 
         if (botMessage is not FeedMessage feedMessage)
             return null;
 
-        return feedMessage.Amount;
+        return feedMessage.FeedResult.Amount;
     }
 
     protected override bool DoesLevelApply(int value, int level) => value == level;
@@ -26,6 +26,6 @@ public class WeightGainAchievementChecker(IReadOnlyCollection<AchievementLevel> 
             return true;
         }
 
-        return swine.Weight != feedMessage.NewWeight;
+        return swine.Weight != feedMessage.FeedResult.NewWeight;
     }
 }
