@@ -76,6 +76,7 @@ public class FeedManager
     {
         var totalSlaughteredWeight = Swine.Owner.Slaughters
             .Where(s => s.GroupId == Swine.GroupId)
+            .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
             .Sum(s => s.SwineWeight);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);

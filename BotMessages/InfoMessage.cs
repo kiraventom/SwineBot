@@ -99,6 +99,7 @@ public class InfoMessage(ILogger logger, AchievementController achievController)
         var totalSlaughteredWeight = userContext.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
             .Where(s => s.GroupId == swine.GroupId)
+            .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
             .Sum(s => s.SwineWeight);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);

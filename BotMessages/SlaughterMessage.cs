@@ -9,6 +9,8 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
     private const string CONFIRMATION = "yes";
     private const int SLAUGHTER_COOLDOWN = 24;
 
+    public const int MIN_SWINE_WEIGHT = 75;
+
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
         var lastSlaughter = userContext.Slaughters
@@ -47,17 +49,20 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
         Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
         userContext.Swines.Remove(swine);
 
+        userContext.SaveChanges();
+
         var newSwine = new Swine()
         {
-            Name = userContext.Users.First(u => u.UserId == swineId).FirstName,
+            Name = userContext.Users.First(u => u.UserId == swine.OwnerId).FirstName,
             Stats = new(),
             Weight = 1,
-            SwineId = swineId
+            GroupId = swine.GroupId,
+            OwnerId = swine.OwnerId
         };
 
         userContext.Swines.Add(newSwine);
 
-        if (slaughteredWeight > 0)
+        if (slaughteredWeight >= MIN_SWINE_WEIGHT)
             Text.Italic("Теперь ваши будущие свинки будут расти быстрее...");
         else
             Text.Italic("Это жестокое убийство не принесло никакого эффекта.");
