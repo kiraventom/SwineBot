@@ -55,10 +55,10 @@ public class FeedManager
     private int RollAmount(double luck)
     {
         const int MAX_AMOUNT = 20;
-        var baseAmount = (int)(MAX_AMOUNT * luck);
+        var baseAmount = (int)Math.Round(MAX_AMOUNT * luck);
+        baseAmount = Math.Max(1, baseAmount);
         Log.Logger.Information("Base amount rolled: {baseAmount}", baseAmount);
         var amount = ApplyEffects(baseAmount);
-        Log.Logger.Information("Amount with effects: {amount}", amount);
         return amount;
     }
 
@@ -87,7 +87,10 @@ public class FeedManager
             .Sum(s => s.SwineWeight);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
-        return (int)(amount * growthMod);
+
+        var amountEff = Math.Round(amount * growthMod);
+        Log.Logger.Information("Amount with effects: {amountEff}", amountEff);
+        return (int)amountEff;
     }
 
     private int ApplyResult(IReadOnlyCollection<Feed> recentFeeds, int amount, Result result)
