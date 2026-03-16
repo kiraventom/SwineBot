@@ -1,3 +1,4 @@
+using Serilog;
 using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 
@@ -31,6 +32,7 @@ public class FeedManager
         double luck = RollLuck();
         int absAmount = RollAmount(luck);
         int amount = ApplyResult(recentFeeds, absAmount, result);
+        Log.Logger.Information("Final amount: {amount}", amount);
 
         return new FeedResult()
         {
@@ -46,13 +48,18 @@ public class FeedManager
     private double RollLuck()
     {
         var luck = Random.Shared.NextDouble();
+        Log.Logger.Information("Luck rolled: {luck}", luck);
         return luck;
     }
 
     private int RollAmount(double luck)
     {
         const int MAX_AMOUNT = 20;
-        return (int)(MAX_AMOUNT * luck);
+        var baseAmount = (int)(MAX_AMOUNT * luck);
+        Log.Logger.Information("Base amount rolled: {baseAmount}", baseAmount);
+        var amount = ApplyEffects(baseAmount);
+        Log.Logger.Information("Amount with effects: {amount}", amount);
+        return amount;
     }
 
     private Result RollResult(IReadOnlyCollection<Feed> recentFeeds)
