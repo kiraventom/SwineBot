@@ -1,6 +1,8 @@
-﻿namespace SwineBot.Achievements.Effects;
+﻿using SwineBot.Model;
 
-public class ThrowupIgnoreChanceEffect : AchievementEffect<int>
+namespace SwineBot.Achievements.Effects;
+
+public class ThrowupIgnoreChanceEffect : StaticAchievementEffect<int>
 {
     public override string Description { get; }
     public override AchievementEffectType Type => AchievementEffectType.ThrowupChance;

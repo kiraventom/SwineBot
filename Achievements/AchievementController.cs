@@ -83,7 +83,7 @@ public class AchievementController
                 .AddLevel(7, "Яблочная диета")
                 .AddLevel(14, "Водная диета")
                 .AddLevel(21, "Диета Типичной Анорексички")
-                .AddLevel(31, "Диета Ларисы Долиной", new OverfeedScaleModifierEffect(0.75))
+                .AddLevel(31, "Диета Ларисы Долиной", new NoOverfeedsLuckAmplifierEffect())
                 .Build(),
         ];
 

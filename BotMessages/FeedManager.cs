@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using Serilog;
+using SwineBot.Achievements;
 using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 
@@ -7,16 +9,29 @@ namespace SwineBot.BotMessages;
 public class FeedManager
 {
     public const int OVERFEED_COOLDOWN = 24;
+    private readonly UserContext _userContext;
 
     public Swine Swine { get; }
     public IReadOnlyCollection<IAchievementEffect> Effects { get; }
     public DateTime UtcNow { get; }
     public ThrowupCalculator ThrowupCalculator { get; }
 
-    public FeedManager(Swine swine, IReadOnlyCollection<IAchievementEffect> effects)
+    public FeedManager(UserContext userContext, int swineId, AchievementController achievController)
     {
-        Swine = swine;
-        Effects = effects;
+        _userContext = userContext;
+        Swine = userContext.Swines
+            .Include(s => s.Owner).ThenInclude(u => u.Slaughters)
+            .Include(s => s.Feeds)
+            .Include(s => s.WeightLosses)
+            .Include(s => s.Stats).ThenInclude(s => s.Achievements)
+            .First(s => s.SwineId == swineId);
+;
+        Effects = Swine.Stats.Achievements
+            .Select(a => achievController.GetLevel(a))
+            .Where(a => a.Effect != null)
+            .Select(a => a.Effect)
+            .ToList();
+
         UtcNow = DateTime.Now.ToUniversalTime();
         ThrowupCalculator = new ThrowupCalculator(UtcNow, Effects);
     }
@@ -47,8 +62,21 @@ public class FeedManager
 
     private double RollLuck()
     {
-        var luck = Random.Shared.NextDouble();
-        Log.Logger.Information("Luck rolled: {luck}", luck);
+        var baseLuck = Random.Shared.NextDouble();
+        Log.Logger.Information("Luck rolled: {luck}", baseLuck);
+
+        var luck = ApplyLuckEffects(baseLuck);
+        if (luck != baseLuck)
+            Log.Logger.Information("Luck changed from {base} to {new}", baseLuck, luck);
+
+        return luck;
+    }
+
+    private double ApplyLuckEffects(double luck)
+    {
+        foreach (var effect in Effects.OfType<NoOverfeedsLuckAmplifierEffect>())
+            luck = effect.Apply(_userContext, Swine.SwineId, luck);
+
         return luck;
     }
 
@@ -58,7 +86,7 @@ public class FeedManager
         var baseAmount = (int)Math.Round(MAX_AMOUNT * luck);
         baseAmount = Math.Max(1, baseAmount);
         Log.Logger.Information("Base amount rolled: {baseAmount}", baseAmount);
-        var amount = ApplyEffects(baseAmount);
+        var amount = ApplyAmountEffects(baseAmount);
         return amount;
     }
 
@@ -79,7 +107,7 @@ public class FeedManager
         return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
     }
 
-    private int ApplyEffects(int amount)
+    private int ApplyAmountEffects(int amount)
     {
         var totalSlaughteredWeight = Swine.Owner.Slaughters
             .Where(s => s.GroupId == Swine.GroupId)

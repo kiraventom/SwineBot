@@ -16,35 +16,22 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
 
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines
-            .Include(s => s.Owner).ThenInclude(u => u.Slaughters)
-            .Include(s => s.Feeds)
-            .Include(s => s.WeightLosses)
-            .Include(s => s.Stats).ThenInclude(s => s.Achievements)
-            .First(s => s.SwineId == swineId);
-
-        var effects = swine.Stats.Achievements
-            .Select(a => achievController.GetLevel(a))
-            .Where(a => a.Effect != null)
-            .Select(a => a.Effect)
-            .ToList();
-
-        var feedManager = new FeedManager(swine, effects);
+        var feedManager = new FeedManager(userContext, swineId, achievController);
         var result = feedManager.Generate();
 
         switch (result.Result)
         {
             case Result.FirstFeed:
             case Result.Overfeed:
-                HandleFeed(swine, result);
+                HandleFeed(feedManager.Swine, result);
                 break;
 
             case Result.Throwup:
-                HandleThrowup(userContext, swine, result);
+                HandleThrowup(userContext, feedManager.Swine, result);
                 break;
 
             case Result.Full:
-                HandleFull(swine);
+                HandleFull(feedManager.Swine);
                 break;
 
         }

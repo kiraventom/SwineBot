@@ -1,6 +1,6 @@
 ﻿namespace SwineBot.Achievements.Effects;
 
-public class OverfeedScaleModifierEffect : AchievementEffect<double>
+public class OverfeedScaleModifierEffect : StaticAchievementEffect<double>
 {
     public override string Description { get; } 
     public override AchievementEffectType Type => AchievementEffectType.OverfeedScale;
@@ -14,9 +14,9 @@ public class OverfeedScaleModifierEffect : AchievementEffect<double>
         var mod = Modifier - 1.0;
 
         Description =
-            "Шанс блёва при перекорме "
-            + (mod < 0 ? "снижен" : "увеличен")
-            + $" на {(int)Math.Round(Math.Abs(mod) * 100)}%";
+            "Шанс блёва при перекорме растёт"
+            + $" на {(int)Math.Round(Math.Abs(mod) * 100)}% "
+            + (mod < 0 ? "медленнее" : "быстрее");
     }
 
     public override double Apply(double value)
