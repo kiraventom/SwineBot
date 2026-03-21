@@ -13,8 +13,9 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
 
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
         var lastSlaughter = userContext.Slaughters
-            .Where(s => s.UserId == swineId)
+            .Where(s => s.UserId == swine.OwnerId)
             .OrderByDescending(s => s.DateTime)
             .FirstOrDefault();
 
@@ -24,7 +25,6 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
             return Task.CompletedTask;
         }
 
-        var swine = userContext.Swines.First(s => s.SwineId == swineId);
         var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == swine.StatsId).Count();
 
         if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
@@ -47,9 +47,6 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
         userContext.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = DateTime.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
 
         Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
-        userContext.Swines.Remove(swine);
-
-        userContext.SaveChanges();
 
         var newSwine = new Swine()
         {
@@ -60,7 +57,11 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
             OwnerId = swine.OwnerId
         };
 
+        userContext.Swines.Remove(swine);
+        userContext.SaveChanges();
+
         userContext.Swines.Add(newSwine);
+        userContext.SaveChanges();
 
         if (slaughteredWeight >= MIN_SWINE_WEIGHT)
             Text.Italic("Теперь ваши будущие свинки будут расти быстрее...");
