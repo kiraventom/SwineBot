@@ -23,10 +23,10 @@ public class FeedManager
             .Include(s => s.Owner).ThenInclude(u => u.Slaughters)
             .Include(s => s.Feeds)
             .Include(s => s.WeightLosses)
-            .Include(s => s.Stats).ThenInclude(s => s.Achievements)
+            .Include(s => s.Info).ThenInclude(s => s.Achievements)
             .First(s => s.SwineId == swineId);
 ;
-        Effects = Swine.Stats.Achievements
+        Effects = Swine.Info.Achievements
             .Select(a => achievController.GetLevel(a))
             .Where(a => a.Effect != null)
             .Select(a => a.Effect)

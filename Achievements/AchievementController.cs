@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.BotMessages;
 using SwineBot.Model;
@@ -40,9 +40,10 @@ public class AchievementController
                 .AddLevel(1488, "Егор Просвинин")
                 .AddLevel(1580, "Вертикаль")
                 .AddLevel(1703, "Круче Петра")
+                .AddLevel(1917, "Октябрёнок")
                 .AddLevel(2000, "2K")
                 .AddLevel(2007, "Вернулся")
-                .AddLevel(2026, "It's me!")
+                .AddLevel(2022, "Свой парень")
                 .AddLevel(5000, "А хули вы хотели?")
                 .Build(),
 
@@ -105,10 +106,15 @@ public class AchievementController
         if (message is AchievementMessage)
             return;
 
+        Log.Logger.Warning("{method} {chatid} {userid}", nameof(OnBeforeMessageSend), chatId.Identifier, userId);
+
+        var group = userContext.Groups.First(g => g.TelegramId == chatId.Identifier);
+
         var swine = userContext.Swines
-            .Include(s => s.Stats).ThenInclude(s => s.Achievements)
+            .Include(s => s.Info).ThenInclude(s => s.Achievements)
             .Include(s => s.Feeds)
             .Include(s => s.WeightLosses)
+            .Where(s => s.GroupId == group.GroupId)
             .First(s => s.OwnerId == userId);
 
         foreach (var checker in _checkers)

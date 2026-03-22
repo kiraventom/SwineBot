@@ -1,4 +1,4 @@
-﻿using Serilog;
+using Serilog;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 
@@ -18,24 +18,24 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
     private CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
     {
         // Swine already has the achievement of that of bigger level
-        if (swine.Stats.Achievements
+        var higherLevelAchievement = swine.Info.Achievements
             .Where(a => a.Type == this.Type)
-            .Any(a => DoesLevelApply(a.Value, levelValue)))
-        {
-            if (this is OverfeedAchievementChecker)
-                Log.Debug("Overfeed: already has {val}, level {lv}", swine.Stats.Achievements.Where(a => a.Type == this.Type).First().Value, levelValue);
+            .FirstOrDefault(a => DoesLevelApply(a.Value, levelValue));
 
+        if (higherLevelAchievement != null)
+        {
+            Log.Logger.Debug("Already has achievement of higher level: id={id}", higherLevelAchievement.AchievementId);
             return CheckerResult.Break;
         }
 
         var value = GetValue(botMessage, swine);
 
         if (value is null)
+        {
+            Log.Logger.Warning("GetValue returned null");
             return CheckerResult.Break;
+        }
 
-        if (this is OverfeedAchievementChecker)
-            Log.Debug("Overfeed: value {value}", value.Value);
-        
         if (DoesLevelApply(value.Value, levelValue))
         {
             return IsSilentApply(botMessage, swine) ? CheckerResult.ApplySilent : CheckerResult.Apply;
@@ -62,6 +62,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
         foreach (var level in Levels)
         {
             var checkerResult = CheckLevel(botMessage, swine, level.Value);
+            Log.Logger.Debug("Checking {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
 
             switch (checkerResult)
             {
@@ -92,16 +93,16 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
             Type = Type,
             DateTime = DateTime.Now.ToUniversalTime(),
             Value = levelValue,
-            SwineInfoId = swine.Stats.InfoId
+            SwineInfoId = swine.Info.InfoId
         };
 
-        var lowerLevelAchievs = swine.Stats.Achievements.Where(a => a.Type == Type).ToList();
+        var lowerLevelAchievs = swine.Info.Achievements.Where(a => a.Type == Type).ToList();
         foreach (var lowerLevelAchiev in lowerLevelAchievs)
         {
-            swine.Stats.Achievements.Remove(lowerLevelAchiev);
+            swine.Info.Achievements.Remove(lowerLevelAchiev);
         }
 
-        swine.Stats.Achievements.Add(newLevelAchiev);
+        swine.Info.Achievements.Add(newLevelAchiev);
     }
 }
 

@@ -1,4 +1,5 @@
-﻿using Serilog;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
 
@@ -13,7 +14,10 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
 
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines.First(s => s.SwineId == swineId);
+        var swine = userContext.Swines
+            .Include(s => s.Info)
+            .First(s => s.SwineId == swineId);
+
         var lastSlaughter = userContext.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
             .OrderByDescending(s => s.DateTime)
@@ -25,7 +29,7 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
             return Task.CompletedTask;
         }
 
-        var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == swine.StatsId).Count();
+        var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == swine.Info.InfoId).Count();
 
         if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
         {
@@ -51,7 +55,7 @@ public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(
         var newSwine = new Swine()
         {
             Name = userContext.Users.First(u => u.UserId == swine.OwnerId).FirstName,
-            Stats = new(),
+            Info = new(),
             Weight = 1,
             GroupId = swine.GroupId,
             OwnerId = swine.OwnerId

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.Achievements;
 using SwineBot.Model;
@@ -10,10 +10,10 @@ public class AchievementsMessage(ILogger logger, AchievementController achievCon
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
         var swine = userContext.Swines
-            .Include(s => s.Stats).ThenInclude(s => s.Achievements)
+            .Include(s => s.Info).ThenInclude(s => s.Achievements)
             .FirstOrDefault(s => s.SwineId == swineId);
 
-        if (swine.Stats.Achievements.Count == 0)
+        if (swine.Info.Achievements.Count == 0)
         {
             Text.Italic("У ").Bold(swine.Name).Italic(" пока нет достижений :(").LineBreak();
             return Task.CompletedTask;
@@ -22,7 +22,7 @@ public class AchievementsMessage(ILogger logger, AchievementController achievCon
         Text.Bold("Достижения ").Bold(swine.Name).Bold(":").LineBreak().LineBreak();
 
         int index = 0;
-        foreach (var achiev in swine.Stats.Achievements.OrderByDescending(a => a.DateTime))
+        foreach (var achiev in swine.Info.Achievements.OrderByDescending(a => a.DateTime))
         {
             WriteAchievement(achiev, index);
             ++index;

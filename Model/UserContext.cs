@@ -66,7 +66,7 @@ public class UserContext : DbContext
             var swine = new Swine()
             {
                 Name = firstName,
-                Stats = new(),
+                Info = new(),
                 Weight = 1,
                 Owner = user,
             };
@@ -147,7 +147,6 @@ public class Swine
     [Key] public int SwineId { get; set; }
     public int OwnerId { get; set; }
     public int? GroupId { get; set; }
-    public int StatsId { get; set; }
 
     [ForeignKey(nameof(OwnerId))]
     [DeleteBehavior(DeleteBehavior.Cascade)]
@@ -158,7 +157,7 @@ public class Swine
     public Group Group { get; set; }
 
     [InverseProperty(nameof(SwineInfo.Swine))]
-    public SwineInfo Stats { get; set; }
+    public SwineInfo Info { get; set; }
 
     [Required] public string Name { get; set; }
 
