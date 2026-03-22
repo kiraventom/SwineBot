@@ -77,10 +77,10 @@ public class InfoMessage(ILogger logger) : BotMessage(logger)
 
         if (slaughters.Count > 0)
         {
-            Text.Italic("Свинов убито: ").Verbatim(slaughters.Count);
+            Text.Italic("Предшественников погибло: ").Verbatim(slaughters.Count);
             if (growthMod > 1)
             {
-                Text.Verbatim("; рост ускорен на  ")
+                Text.Verbatim("; рост ускорен на ")
                     .Verbatim(((growthMod - 1) * 100).ToString("##"))
                     .Verbatim("%");
             }

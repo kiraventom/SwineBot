@@ -19,14 +19,7 @@ public class AchievementsMessage(ILogger logger, AchievementController achievCon
             return Task.CompletedTask;
         }
 
-        if (swine.Stats.Achievements.Count == 1)
-        {
-            Text.Bold("Достижение ").Bold(swine.Name).Bold(":").LineBreak();
-            WriteAchievement(swine.Stats.Achievements.First());
-            return Task.CompletedTask;
-        }
-
-        Text.Bold("Достижения ").Bold(swine.Name).Bold(":").LineBreak();
+        Text.Bold("Достижения ").Bold(swine.Name).Bold(":").LineBreak().LineBreak();
 
         int index = 0;
         foreach (var achiev in swine.Stats.Achievements.OrderByDescending(a => a.DateTime))
@@ -38,7 +31,7 @@ public class AchievementsMessage(ILogger logger, AchievementController achievCon
         return Task.CompletedTask;
     }
 
-    private void WriteAchievement(Achievement achiev, int index = -1)
+    private void WriteAchievement(Achievement achiev, int index)
     {
         var level = achievController.GetLevel(achiev);
         if (level is null)
@@ -47,17 +40,17 @@ public class AchievementsMessage(ILogger logger, AchievementController achievCon
             return;
         }
 
-        if (index > -1)
-            Text.Bold(index + 1).Bold(". ");
+        Text.Verbatim(index + 1).Verbatim(". ").Bold(level.Name).LineBreak();
+        Text.Tab(text =>
+        {
+            Text.Italic(level.Description).LineBreak();
+            Text.Verbatim("Получено ").Monospace(achiev.DateTime.ToString("d MMMM yyyy", Common.RuCulture)).LineBreak();
 
-        Text.Bold(level.Name).LineBreak();
-        Text.Verbatim(level.Description).LineBreak();
-        Text.Verbatim("Получено ").Verbatim(achiev.DateTime.ToString("d MMMM yyyy", Common.RuCulture)).LineBreak();
+            if (level.Effect != null)
+                Text.Verbatim("Эффект: ").Italic(level.Effect.Description).LineBreak();
 
-        if (level.Effect != null)
-            Text.Italic(level.Effect.Description).LineBreak();
-
-        Text.LineBreak();
+            Text.LineBreak();
+        });
     }
 }
 
