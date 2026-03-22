@@ -1,6 +1,4 @@
-﻿using SwineBot.Model;
-
-namespace SwineBot.Achievements.Effects;
+﻿namespace SwineBot.Achievements.Effects;
 
 public class ThrowupIgnoreChanceEffect : StaticAchievementEffect<int>
 {

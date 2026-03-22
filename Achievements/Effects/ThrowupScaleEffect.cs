@@ -1,6 +1,4 @@
-﻿using SwineBot.Model;
-
-namespace SwineBot.Achievements.Effects;
+﻿namespace SwineBot.Achievements.Effects;
 
 public class ThrowupScaleEffect : StaticAchievementEffect<int>
 {

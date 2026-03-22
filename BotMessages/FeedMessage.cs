@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;

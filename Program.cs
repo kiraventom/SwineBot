@@ -105,7 +105,8 @@ internal class Program
    {
       yield return new StartCommand(logger);
       yield return new FeedCommand(logger, achievementController);
-      yield return new InfoCommand(logger, achievementController);
+      yield return new InfoCommand(logger);
+      yield return new AchievCommand(logger, achievementController);
       yield return new TopCommand(logger);
       yield return new HistoryCommand(logger);
       yield return new SetNameCommand(logger);

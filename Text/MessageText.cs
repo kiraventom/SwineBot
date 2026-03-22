@@ -10,6 +10,8 @@ public class MessageText
     private const string TAB = "   ";
     private int _tabLevel = 0;
 
+    public const string DOT_SPACE = "⋅ ";
+
     public MessageText(string text = null)
     {
         if (text is not null)
