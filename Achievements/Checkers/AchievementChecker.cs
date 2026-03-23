@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
@@ -19,7 +20,7 @@ public interface IAchievementChecker
 {
     AchievementType Type { get; }
     AchievementLevel GetLevel(Achievement achievement);
-    bool TryApply(BotMessage botMessage, Swine swine, out AchievementLevel achievementLevel);
+    bool TryApply(BotMessage botMessage, UserContext context, int swineId, out AchievementLevel achievementLevel);
 }
  
 public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> values) : IAchievementChecker
@@ -33,10 +34,11 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
 
     protected abstract bool IsSilentApply(BotMessage botMessage, Swine swine);
 
-    private CheckerResult CheckLevel(BotMessage botMessage, Swine swine, int levelValue)
+    private CheckerResult CheckLevel(BotMessage botMessage, UserContext userContext, Swine swine, int levelValue)
     {
         // Swine already has the achievement of that of bigger level
-        var higherLevelAchievement = swine.Info.Achievements
+        var higherLevelAchievement = userContext.Achievements
+            .Where(a => a.SwineInfoId == swine.Info.InfoId)
             .Where(a => a.Type == this.Type)
             .FirstOrDefault(a => DoesLevelApply(a.Value, levelValue));
 
@@ -73,13 +75,17 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
         return null;
     }
 
-    public bool TryApply(BotMessage botMessage, Swine swine, out AchievementLevel achievementLevel)
+    public bool TryApply(BotMessage botMessage, UserContext context, int swineId, out AchievementLevel achievementLevel)
     {
         achievementLevel = null;
 
+        var swine = context.Swines
+            .Include(s => s.Info)
+            .First(s => s.SwineId == swineId);
+
         foreach (var level in Levels)
         {
-            var checkerResult = CheckLevel(botMessage, swine, level.Value);
+            var checkerResult = CheckLevel(botMessage, context, swine, level.Value);
             Logger.LogDebug("Checking {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
 
             switch (checkerResult)

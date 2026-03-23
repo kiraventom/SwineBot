@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 using Telegram.Bot.Types;
@@ -113,17 +112,11 @@ public class AchievementController : IAchievementController
             return;
 
         var group = userContext.Groups.First(g => g.TelegramId == chatId.Identifier);
-
-        var swine = userContext.Swines
-            .Include(s => s.Info).ThenInclude(s => s.Achievements)
-            .Include(s => s.Feeds)
-            .Include(s => s.WeightLosses)
-            .Where(s => s.GroupId == group.GroupId)
-            .First(s => s.OwnerId == userId);
+        var swine = userContext.Swines.First(s => s.OwnerId == userId && s.GroupId == group.GroupId);
 
         foreach (var checker in Checkers)
         {
-            if (checker.TryApply(message, swine, out var achievementLevel))
+            if (checker.TryApply(message, userContext, swine.SwineId, out var achievementLevel))
             {
                 await Sender.Send(userContext, chatId, userId, MessageFactory.Create<AchievementMessage>());
             }

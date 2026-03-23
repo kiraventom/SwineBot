@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Effects;
@@ -32,24 +31,23 @@ public class FeedGenerator : IFeedGenerator
     private IAchievementController AchievController { get; }
     private IThrowupCalculator ThrowupCalculator { get; }
 
-    public Swine Swine { get; }
     public IReadOnlyCollection<IAchievementEffect> Effects { get; }
     public DateTime UtcNow { get; }
 
-    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, IAchievementController achievController, IThrowupCalculatorFactory throwupCalcFactory, int SwineId)
+    public Swine Swine { get; }
+
+    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, IAchievementController achievController, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
     {
         Logger = logger;
         Context = context;
         AchievController = achievController;
 
-        Swine = context.Swines
-            .Include(s => s.Owner).ThenInclude(u => u.Slaughters)
-            .Include(s => s.Feeds)
-            .Include(s => s.WeightLosses)
-            .Include(s => s.Info).ThenInclude(s => s.Achievements)
-            .First(s => s.SwineId == SwineId);
+        Swine = Context.Swines.First(s => s.SwineId == swineId);
 
-        Effects = Swine.Info.Achievements
+        var swineInfoId = Context.Infos.First(i => i.SwineId == Swine.SwineId).InfoId;
+
+        Effects = Context.Achievements
+            .Where(a => a.SwineInfoId == swineInfoId)
             .Select(a => AchievController.GetLevel(a))
             .Where(a => a.Effect != null)
             .Select(a => a.Effect)
@@ -61,7 +59,9 @@ public class FeedGenerator : IFeedGenerator
 
     public FeedResult Generate()
     {
-        var recentFeeds = Swine.Feeds.Where(f => (UtcNow - f.DateTime).TotalHours < OVERFEED_COOLDOWN).ToList();
+        var recentFeeds = Context.Feeds
+            .Where(f => f.SwineId == Swine.SwineId)
+            .Where(f => (UtcNow - f.DateTime).TotalHours < OVERFEED_COOLDOWN).ToList();
 
         Result result = RollResult(recentFeeds);
         if (result == Result.Full)
@@ -72,12 +72,13 @@ public class FeedGenerator : IFeedGenerator
         int amount = ApplyResult(recentFeeds, absAmount, result);
         Logger.LogInformation("Final amount: {amount}", amount);
 
+        var oldWeight = Swine.Weight;
         return new FeedResult()
         {
             Luck = luck,
             Amount = amount,
             Result = result,
-            OldWeight = Swine.Weight,
+            OldWeight = oldWeight,
             RecentFeedsCount = recentFeeds.Count + 1,
             UtcDT = UtcNow
         };
@@ -117,7 +118,8 @@ public class FeedGenerator : IFeedGenerator
     {
         const int THROWUP_COOLDOWN = 24;
 
-        var recentThrowups = Swine.WeightLosses
+        var recentThrowups = Context.WeightLosses
+            .Where(wl => wl.SwineId == Swine.SwineId)
             .Where(wl => (UtcNow - wl.DateTime).TotalHours < THROWUP_COOLDOWN)
             .Where(wl => wl.IsThrowUp);
 
@@ -132,7 +134,8 @@ public class FeedGenerator : IFeedGenerator
 
     private int ApplyAmountEffects(int amount)
     {
-        var totalSlaughteredWeight = Swine.Owner.Slaughters
+        var totalSlaughteredWeight = Context.Slaughters
+            .Where(s => s.UserId == Swine.OwnerId)
             .Where(s => s.GroupId == Swine.GroupId)
             .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
             .Sum(s => s.SwineWeight);
