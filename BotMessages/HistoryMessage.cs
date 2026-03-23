@@ -23,13 +23,19 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
         {
             var feeds = userContext.Feeds
                 .Where(f => f.SwineId == swine.SwineId)
-                .Select(f => new WeightChange(f.DateTime, f.Amount));
+                .Select(f => new { f.DateTime, f.Amount });
 
             var losses = userContext.WeightLosses
                 .Where(f => f.SwineId == swine.SwineId)
-                .Select(f => new WeightChange(f.DateTime, f.Amount));
+                .Select(f => new { f.DateTime, f.Amount });
 
-            var changes = feeds.Concat(losses).OrderBy(wc => wc.DateTime).ToList();
+            var changes = feeds
+                .Concat(losses)
+                .OrderBy(wc => wc.DateTime)
+                .AsEnumerable()
+                .Select(x => new WeightChange(x.DateTime, x.Amount))
+                .ToList();
+
             AddChanges(plot, changes, swine.Name);
         }
 
