@@ -1,4 +1,4 @@
-using Serilog;
+using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.Model;
@@ -6,7 +6,7 @@ using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
-public class FeedMessage(ILogger logger, AchievementController achievController) : BotMessage(logger)
+public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory FeedGeneratorFactory) : BotMessage(Logger)
 {
     private const double LOW_LUCK_THRESHOLD = 0.15;
     private const double HIGH_LUCK_THRESHOLD = 0.85;
@@ -15,7 +15,7 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
 
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var feedManager = new FeedManager(userContext, swineId, achievController);
+        var feedManager = FeedGeneratorFactory.Create(swineId);
         var result = feedManager.Generate();
 
         switch (result.Result)
@@ -32,7 +32,6 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
             case Result.Full:
                 HandleFull(feedManager.Swine);
                 break;
-
         }
 
         FeedResult = result;
@@ -139,7 +138,7 @@ public class FeedMessage(ILogger logger, AchievementController achievController)
         {
             var feedDecl = MessageTextUtils.GetDeclinatedNoun(result.RecentFeedsCount, Unit.Meal);
             Text.LineBreak()
-                .Italic($"⚠ Перекорм! {result.RecentFeedsCount} {feedDecl} пищи за последние {FeedManager.OVERFEED_COOLDOWN} часа!");
+                .Italic($"⚠ Перекорм! {result.RecentFeedsCount} {feedDecl} пищи за последние {FeedGenerator.OVERFEED_COOLDOWN} часа!");
         }
     }
 }

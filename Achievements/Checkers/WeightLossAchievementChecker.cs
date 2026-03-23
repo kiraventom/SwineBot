@@ -1,10 +1,10 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class WeightLossAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
+public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(Logger, levels)
 {
     public override AchievementType Type => AchievementType.WeightLoss;
 
@@ -25,7 +25,7 @@ public class WeightLossAchievementChecker(IReadOnlyCollection<AchievementLevel> 
     {
         if (botMessage is not FeedMessage feedMessage)
         {
-            Log.Error("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
+            Logger.LogError("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
             return true;
         }
 

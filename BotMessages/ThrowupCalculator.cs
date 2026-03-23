@@ -1,10 +1,27 @@
-using Serilog;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class ThrowupCalculator(DateTime utcNow, IReadOnlyCollection<IAchievementEffect> effects)
+public interface IThrowupCalculatorFactory
+{
+    IThrowupCalculator Create(DateTime utcNow, IReadOnlyCollection<IAchievementEffect> effects);
+}
+
+public class ThrowupCalculatorFactory(IServiceProvider sp) : IThrowupCalculatorFactory
+{
+    public IThrowupCalculator Create(DateTime utcNow, IReadOnlyCollection<IAchievementEffect> effects) => ActivatorUtilities.CreateInstance<ThrowupCalculator>(sp, utcNow, effects);
+}
+
+public interface IThrowupCalculator
+{
+    bool IsThrowup(IReadOnlyCollection<Feed> recentFeeds);
+    int Calculate(IReadOnlyCollection<Feed> recentFeeds, int oldWeight, int amount);
+}
+
+public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNow, IReadOnlyCollection<IAchievementEffect> Effects) : IThrowupCalculator
 {
     public bool IsThrowup(IReadOnlyCollection<Feed> recentFeeds)
     {
@@ -17,9 +34,9 @@ public class ThrowupCalculator(DateTime utcNow, IReadOnlyCollection<IAchievement
         var overfeedChance = Random.Shared.NextDouble();
         var isThrowup = overfeedChance < throwupThreshold;
         if (isThrowup)
-            Log.Logger.Information("Throwup: {overfeed} < {throwup}", overfeedChance, throwupThreshold);
+            Logger.LogInformation("Throwup: {overfeed} < {throwup}", overfeedChance, throwupThreshold);
         else
-            Log.Logger.Information("No overfeed: {overfeed} >= {throwup}", overfeedChance, throwupThreshold);
+            Logger.LogInformation("No overfeed: {overfeed} >= {throwup}", overfeedChance, throwupThreshold);
 
         return isThrowup;
     }
@@ -29,14 +46,14 @@ public class ThrowupCalculator(DateTime utcNow, IReadOnlyCollection<IAchievement
         int amountLost = Math.Min(oldWeight - 1, recentFeeds.Sum(f => f.Amount) + amount);
         int initialAmountLost = amountLost;
 
-        foreach (var effect in effects.OfType<ThrowupScaleEffect>())
+        foreach (var effect in Effects.OfType<ThrowupScaleEffect>())
             amountLost = effect.Apply(amountLost);
 
-        foreach (var effect in effects.OfType<ThrowupIgnoreChanceEffect>())
+        foreach (var effect in Effects.OfType<ThrowupIgnoreChanceEffect>())
             amountLost = effect.Apply(amountLost);
 
         if (amountLost != initialAmountLost)
-            Log.Logger.Information("Throwup changed from {base} to {new}", initialAmountLost, amountLost);
+            Logger.LogInformation("Throwup changed from {base} to {new}", initialAmountLost, amountLost);
 
         return amountLost;
     }
@@ -56,22 +73,22 @@ public class ThrowupCalculator(DateTime utcNow, IReadOnlyCollection<IAchievement
         var lastFeed = recentFeeds.OrderBy(f => f.DateTime).LastOrDefault();
         if (lastFeed is not null)
         {
-            double hoursSinceLastFeed = (utcNow - lastFeed.DateTime).TotalHours;
+            double hoursSinceLastFeed = (UtcNow - lastFeed.DateTime).TotalHours;
             var clampedHours = Math.Clamp(hoursSinceLastFeed, 0, OVERFEED_FADEOUT_HOURS);
             var hoursScale = clampedHours / OVERFEED_FADEOUT_HOURS;
             overfeedScale = BASE_OVERFEED_SCALE - (BASE_OVERFEED_SCALE - FADED_OUT_OVERFEED_SCALE) * hoursScale;
 
             if (overfeedScale != BASE_OVERFEED_SCALE)
-                Log.Logger.Information("Fadeout: Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
+                Logger.LogInformation("Fadeout: Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
         }
 
         double initialOverfeedScale = overfeedScale;
 
-        foreach (var effect in effects.OfType<OverfeedScaleModifierEffect>())
+        foreach (var effect in Effects.OfType<OverfeedScaleModifierEffect>())
             overfeedScale = effect.Apply(overfeedScale);
 
         if (overfeedScale != initialOverfeedScale)
-            Log.Logger.Information("Effects: Overfeed scale changed from {base} to {new}", initialOverfeedScale, overfeedScale);
+            Logger.LogInformation("Effects: Overfeed scale changed from {base} to {new}", initialOverfeedScale, overfeedScale);
 
         return overfeedScale;
     }

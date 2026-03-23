@@ -1,11 +1,11 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
 using SwineBot.Achievements;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class AchievementsMessage(ILogger logger, AchievementController achievController) : BotMessage(logger)
+public class AchievementsMessage(ILogger<AchievementsMessage> Logger, IAchievementController achievController) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
@@ -36,7 +36,7 @@ public class AchievementsMessage(ILogger logger, AchievementController achievCon
         var level = achievController.GetLevel(achiev);
         if (level is null)
         {
-            Logger.Error("Level for achievement {type} with value {value} was not found", achiev.Type.ToString(), achiev.Value);
+            Logger.LogError("Level for achievement {type} with value {value} was not found", achiev.Type.ToString(), achiev.Value);
             return;
         }
 

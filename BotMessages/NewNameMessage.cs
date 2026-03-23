@@ -1,10 +1,10 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Logging;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class NewNameMessage(ILogger logger, string name) : BotMessage(logger)
+public class NewNameMessage(ILogger<NewNameMessage> Logger, string name) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {

@@ -1,11 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Serilog;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
+public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(Logger, levels)
 {
     public override AchievementType Type => AchievementType.Overfeed;
 
@@ -29,11 +29,9 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
         for (int i = 0; i < recentFeeds.Count - 1; i++)
         {
             var newerFeed = recentFeeds[i];
-            Log.Debug("Overfeed: feed0[{index}] date {date} amount {amount}", i, newerFeed.DateTime.ToLongDateString(), newerFeed.Amount);
             var olderFeed = recentFeeds[i + 1];
-            Log.Debug("Overfeed: feed1[{index}] date {date} amount {amount}", i+1, olderFeed.DateTime.ToLongDateString(), olderFeed.Amount);
             var offset = newerFeed.DateTime - olderFeed.DateTime;
-            if (offset.TotalHours >= FeedManager.OVERFEED_COOLDOWN)
+            if (offset.TotalHours >= FeedGenerator.OVERFEED_COOLDOWN)
             {
                 // Check for ignored throwup
                 var ignoredThrowUp = throwUps
@@ -49,7 +47,6 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
             overfeedCount = i + 1;
         }
         
-        Log.Debug("Overfeed: count {count}", overfeedCount);
         return overfeedCount;
     }
 
@@ -64,7 +61,7 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
 
     protected override bool DoesLevelApply(int value, int level)
     { 
-        Log.Debug("Overfeed: value {value}, level {level}", value, level);
+        Logger.LogDebug("Overfeed: value {value}, level {level}", value, level);
 
         return value >= level;
     }
@@ -73,11 +70,11 @@ public class OverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> le
     {
         if (botMessage is not FeedMessage feedMessage)
         {
-            Log.Error("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
+            Logger.LogError("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
             return true;
         }
 
-        Log.Information("OVERFEED: {swineWeight} {newWeight}", swine.Weight, feedMessage.FeedResult.NewWeight);
+        Logger.LogInformation("OVERFEED: {swineWeight} {newWeight}", swine.Weight, feedMessage.FeedResult.NewWeight);
         return swine.Weight != feedMessage.FeedResult.NewWeight;
     }
 }

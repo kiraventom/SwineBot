@@ -1,9 +1,9 @@
-using Serilog;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 
 namespace SwineBot.Actions;
 
-public abstract class UserAction(ILogger logger)
+public abstract class UserAction(ILogger<UserAction> logger)
 {
     protected ILogger Logger { get; } = logger;
 
@@ -13,4 +13,5 @@ public abstract class UserAction(ILogger logger)
 
     public virtual bool IsMatch(string name) => name == Name;
 }
+
 

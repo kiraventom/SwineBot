@@ -1,11 +1,11 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class SlaughterMessage(ILogger logger, string confirmation) : BotMessage(logger)
+public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmation) : BotMessage(Logger)
 {
     private const string CONFIRMATION = "yes";
     private const int SLAUGHTER_COOLDOWN = 24;

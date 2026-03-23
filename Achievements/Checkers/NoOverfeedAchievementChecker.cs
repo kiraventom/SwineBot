@@ -1,11 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Serilog;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(levels)
+public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(Logger, levels)
 {
     public override AchievementType Type => AchievementType.NoOverfeed;
 
@@ -32,7 +32,7 @@ public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> 
             var feed0 = recentFeeds[i];
             var feed1 = recentFeeds[i + 1];
             var offset = feed0.DateTime - feed1.DateTime;
-            if (offset.TotalHours < FeedManager.OVERFEED_COOLDOWN)
+            if (offset.TotalHours < FeedGenerator.OVERFEED_COOLDOWN)
                 break;
         }
         
@@ -55,7 +55,7 @@ public class NoOverfeedAchievementChecker(IReadOnlyCollection<AchievementLevel> 
     {
         if (botMessage is not FeedMessage feedMessage)
         {
-            Log.Error("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
+            Logger.LogError("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
             return true;
         }
 

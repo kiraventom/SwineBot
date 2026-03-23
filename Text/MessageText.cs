@@ -1,5 +1,4 @@
 using System.Text;
-using Serilog;
 using SwineBot.Model;
 
 namespace SwineBot.Text;
@@ -259,9 +258,7 @@ public class MessageText
 
     public override string ToString()
     {
-        var str = _sb.ToString();
-        Log.Information(str);
-        return str;
+        return _sb.ToString();
     }
 
     private static string EscapeLink(string link) => link.Replace("\\", @"\\").Replace(")", "\\)");

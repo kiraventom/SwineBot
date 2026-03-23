@@ -1,15 +1,24 @@
-using Serilog;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SwineBot.Model;
 using SwineBot.Text;
 using Telegram.Bot.Types;
 
 namespace SwineBot.BotMessages;
 
-public abstract class BotMessage(ILogger logger)
+public interface IMessageFactory
+{
+    T Create<T>(object[] args = null) where T : BotMessage;
+}
+
+public class MessageFactory(IServiceProvider sp) : IMessageFactory
+{
+    public T Create<T>(object[] args = null) where T : BotMessage => ActivatorUtilities.CreateInstance<T>(sp, args);
+}
+
+public abstract class BotMessage(ILogger<BotMessage> Logger)
 {
     private bool _isInited;
-
-    protected ILogger Logger { get; } = logger;
 
     public MessageText Text { get; } = new();
 

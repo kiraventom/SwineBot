@@ -1,16 +1,11 @@
-using Serilog;
-using SwineBot.Achievements;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 
 namespace SwineBot.Actions.Commands;
 
-public class AchievCommand(ILogger logger, AchievementController achievController) : Command(logger)
+public class AchievCommand(ILogger<AchievCommand> logger, IMessageFactory messageFactory) : Command<AchievementsMessage>(logger, messageFactory)
 {
     public override string Name => "/achiev";
-
-    public override BotMessage Execute(string actionText)
-    {
-        return new AchievementsMessage(Logger, achievController);
-    }
+    public override string Description => "Посмотреть достижения своего свина \U0001F3C6";
 }
 

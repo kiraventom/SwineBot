@@ -6,8 +6,6 @@ namespace SwineBot;
 [method: JsonConstructor]
 public class Config(string token, string username, string userConnectionString)
 {
-    public static Config Instance { get; private set; }
-
     /// <summary>
     /// Telegram bot token. Received from <a href="https://t.me/BotFather">BotFather</a>
     /// </summary>
@@ -25,18 +23,13 @@ public class Config(string token, string username, string userConnectionString)
 
     public static Config Load(string filepath)
     {
-        if (Instance is not null)
-            return Instance;
+        using var configFile = File.OpenRead(filepath);
+        return JsonSerializer.Deserialize<Config>(configFile, Common.JsonOptions);
+    }
 
-        try
-        {
-            using var configFile = File.OpenRead(filepath);
-            Instance = JsonSerializer.Deserialize<Config>(configFile, Common.JsonOptions);
-        }
-        catch (Exception)
-        {
-        }
-
-        return Instance;
+    public void Save(string filepath)
+    {
+        using var configFile = File.OpenWrite(filepath);
+        JsonSerializer.Serialize<Config>(configFile, this, Common.JsonOptions);
     }
 }

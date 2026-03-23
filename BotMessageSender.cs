@@ -1,4 +1,4 @@
-using Serilog;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 using Telegram.Bot;
@@ -7,7 +7,13 @@ using Telegram.Bot.Types.Enums;
 
 namespace SwineBot;
 
-public class BotMessageSender(ILogger logger, ITelegramBotClient client)
+public interface IBotMessageSender
+{
+    event BeforeMessageSendDelegate BeforeMessageSend;
+    Task<Message> Send(UserContext context, ChatId chatId, int userId, BotMessage botMessage);
+}
+
+public class BotMessageSender(ILogger<BotMessageSender> Logger, ITelegramBotClient Client, IMessageFactory MessageFactory) : IBotMessageSender
 {
     public event BeforeMessageSendDelegate BeforeMessageSend;
 
@@ -22,12 +28,12 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
         {
             if (botMessage is InvalidMessage)
             {
-                logger.Fatal("Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
+                Logger.LogCritical("Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
                 throw;
             }
             else
             {
-                logger.Fatal(e.ToString());
+                Logger.LogCritical(e.ToString());
                 return false;
             }
         }
@@ -40,7 +46,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
             var didInit = await InitMessage(userContext, chatId, userId, botMessage);
             if (didInit == false)
             {
-                return await Send(userContext, chatId, userId, new InvalidMessage(logger));
+                return await Send(userContext, chatId, userId, MessageFactory.Create<InvalidMessage>());
             }
         }
         catch
@@ -48,7 +54,8 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
             return null;
         }
 
-        await BeforeMessageSend?.Invoke(userContext, chatId, userId, botMessage);
+        if (BeforeMessageSend != null)
+            await BeforeMessageSend.Invoke(userContext, chatId, userId, botMessage);
 
         try
         {
@@ -58,7 +65,7 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
 
             if (botMessage.PhotoFilePath is null)
             {
-                message = await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
+                message = await Client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
 
             }
             else
@@ -66,23 +73,22 @@ public class BotMessageSender(ILogger logger, ITelegramBotClient client)
                 using (var stream = File.OpenRead(botMessage.PhotoFilePath))
                 {
                     var photo = InputFile.FromStream(stream);
-                    message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
+                    message = await Client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
                 }
 
                 File.Delete(botMessage.PhotoFilePath);
             }
 
-            logger.Information("Sent '{text}' to [{id}], messageId [{messageId}]", text, chatId, message.MessageId);
+            Logger.LogInformation("Sent '{text}' to [{id}], messageId [{messageId}]", text, chatId, message.MessageId);
 
             return message;
         }
         catch (Exception e)
         {
-            logger.Fatal(e.ToString());
+            Logger.LogCritical(e.ToString());
             return null;
         }
     }
 }
 
 public delegate Task BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
-

@@ -1,9 +1,9 @@
-using Serilog;
+using Microsoft.Extensions.Logging;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class PrivateMessage(ILogger logger) : BotMessage(logger)
+public class PrivateMessage(ILogger<PrivateMessage> Logger) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {

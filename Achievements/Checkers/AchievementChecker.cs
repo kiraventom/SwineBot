@@ -1,10 +1,28 @@
-using Serilog;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> values)
+public interface IAchievementCheckerFactory
+{
+    T Create<T>(IReadOnlyCollection<AchievementLevel> levels) where T : IAchievementChecker;
+}
+
+public class AchievementCheckerFactory(IServiceProvider sp) : IAchievementCheckerFactory
+{
+    public T Create<T>(IReadOnlyCollection<AchievementLevel> levels) where T : IAchievementChecker => ActivatorUtilities.CreateInstance<T>(sp, levels);
+}
+
+public interface IAchievementChecker
+{
+    AchievementType Type { get; }
+    AchievementLevel GetLevel(Achievement achievement);
+    bool TryApply(BotMessage botMessage, Swine swine, out AchievementLevel achievementLevel);
+}
+ 
+public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> values) : IAchievementChecker
 {
     public abstract AchievementType Type { get; }
     protected IReadOnlyCollection<AchievementLevel> Levels { get; } = values;
@@ -24,7 +42,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
 
         if (higherLevelAchievement != null)
         {
-            Log.Logger.Debug("Already has achievement of higher level: id={id}", higherLevelAchievement.AchievementId);
+            Logger.LogDebug("Already has achievement of higher level: id={id}", higherLevelAchievement.AchievementId);
             return CheckerResult.Break;
         }
 
@@ -32,7 +50,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
 
         if (value is null)
         {
-            Log.Logger.Warning("GetValue returned null");
+            Logger.LogWarning("Checker {checker}. GetValue returned null", Type.ToString());
             return CheckerResult.Break;
         }
 
@@ -62,7 +80,7 @@ public abstract class AchievementChecker(IReadOnlyCollection<AchievementLevel> v
         foreach (var level in Levels)
         {
             var checkerResult = CheckLevel(botMessage, swine, level.Value);
-            Log.Logger.Debug("Checking {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
+            Logger.LogDebug("Checking {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
 
             switch (checkerResult)
             {

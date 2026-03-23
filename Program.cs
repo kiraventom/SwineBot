@@ -1,12 +1,19 @@
-﻿using Serilog;
-using Serilog.Core;
 using Serilog.Events;
 using SwineBot.Achievements;
 using SwineBot.Actions;
-using SwineBot.Actions.Commands;
 using Telegram.Bot;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using SwineBot.Model;
+using Microsoft.EntityFrameworkCore;
+using static System.Environment;
+using Serilog;
+using SwineBot.BotMessages;
+using SwineBot.Achievements.Checkers;
 
 namespace SwineBot;
+
+public record Paths(string ConfigDir, string DataDir);
 
 internal class Program
 {
@@ -14,102 +21,98 @@ internal class Program
 
     private static async Task Main(string[] args)
     {
-        var projectDirPath = GetConfigDirPath();
-        Directory.CreateDirectory(projectDirPath);
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
 
-        if (!TryLoadConfig(projectDirPath, out var config))
+        Log.Information("Building host...");
+
+        try
         {
-            Console.WriteLine("Couldn't parse config, exiting");
-            return;
+            var builder = Host.CreateApplicationBuilder();
+
+            builder.Services
+                .AddSingleton<Paths>(BuildPaths)
+                .AddSingleton<Config>(BuildConfig)
+                .AddSerilog(ConfigureLogger)
+                .AddSingleton<TelegramBotClientOptions>(BuildTelegramBotClientOptions)
+                .AddSingleton<IFeedGeneratorFactory, FeedGeneratorFactory>()
+                .AddSingleton<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
+                .AddSingleton<IMessageFactory, MessageFactory>()
+                .AddSingleton<ITelegramBotClient, TelegramBotClient>()
+                .AddSingleton<IBotMessageSender, BotMessageSender>()
+                .AddSingleton<IAchievementController, AchievementController>()
+                .AddDbContext<UserContext>(ConfigureContext)
+                .AddUserActions()
+                .AddScoped<IUpdateHandler, UpdateHandler>()
+                .AddSingleton<IAchievementCheckerFactory, AchievementCheckerFactory>()
+                .AddTransient<AchievementCheckerBuilder>()
+                .AddHostedService<AppService>();
+
+            var host = builder.Build();
+
+            Log.Information("Starting host...");
+
+            await host.RunAsync();
         }
-
-        var logger = InitLogger(projectDirPath);
-
-        logger.Information("===== ENTRY POINT =====");
-
-        if (!TryInitTelegramClient(logger, config.Token, out var client))
+        catch (Exception ex)
         {
-            logger.Fatal("Couldn't init {TelegramBotClient}, exiting", nameof(TelegramBotClient));
-            return;
+            Log.Fatal(ex, "Failed to run host, terminating");
         }
-
-        var sender = new BotMessageSender(logger, client);
-        var achievementController = new AchievementController(logger, sender);
-
-        var commands = BuildCommands(logger, achievementController);
-
-        var telegramController = new TelegramController(logger, sender, commands.ToList());
-        telegramController.StartReceiving(client);
-
-        while (true)
+        finally
         {
-            if (Console.In.Peek() is (int)'q' or (int)'Q')
-                return;
-
-            await Task.Delay(10);
+            await Log.CloseAndFlushAsync();
         }
     }
 
-    private static string GetConfigDirPath()
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            var appDataDirPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(appDataDirPath, PROJECT_NAME);
-        }
+    private static TelegramBotClientOptions BuildTelegramBotClientOptions(IServiceProvider provider) => new TelegramBotClientOptions(provider.GetRequiredService<Config>().Token);
 
-        var homeDirPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        return Path.Combine(homeDirPath, ".config", PROJECT_NAME);
+    private static void ConfigureContext(IServiceProvider provider, DbContextOptionsBuilder builder)
+    {
+        var config = provider.GetRequiredService<Config>();
+        builder.UseSqlite(config.UserConnectionString);
     }
 
-    private static Logger InitLogger(string projectDirPath)
+    private static Config BuildConfig(IServiceProvider provider)
     {
-        var logsDirPath = Path.Combine(projectDirPath, "logs");
+        var paths = provider.GetRequiredService<Paths>();
+        var configFilePath = Path.Combine(paths.ConfigDir, "config.json");
+
+        if (!File.Exists(configFilePath))
+        {
+            var defaultConfig = new Config("TOKEN", "@USERNAME_BOT", "Data Source=PATH_TO.db");
+            defaultConfig.Save(configFilePath); 
+            throw new InvalidOperationException($"Default config created at {configFilePath}. Fill it out and restart.");
+        }
+
+        return Config.Load(configFilePath);
+    }
+
+    private static Paths BuildPaths(IServiceProvider provider)
+    {
+        var appData = Environment.GetFolderPath(SpecialFolder.ApplicationData);
+        var localAppData = Environment.GetFolderPath(SpecialFolder.LocalApplicationData);
+
+        var configDirPath = Path.Combine(appData, PROJECT_NAME);
+        var dataDirPath = Path.Combine(localAppData, PROJECT_NAME);
+
+        Directory.CreateDirectory(configDirPath);
+        Directory.CreateDirectory(dataDirPath);
+
+        return new Paths(configDirPath, dataDirPath);
+    }
+
+    private static void ConfigureLogger(IServiceProvider provider, LoggerConfiguration logger)
+    {
+        var paths = provider.GetRequiredService<Paths>();
+        var logsDirPath = Path.Combine(paths.DataDir, "logs");
         Directory.CreateDirectory(logsDirPath);
         var logFilePath = Path.Combine(logsDirPath, $"{PROJECT_NAME}.log");
 
-        var logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
+        logger.MinimumLevel.Debug()
             .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day)
-            .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
-            .CreateLogger();
-
-        Log.Logger = logger;
-
-        return logger;
+            .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information);
     }
-
-    private static bool TryLoadConfig(string projectDirPath, out Config config)
-    {
-        var configFilePath = Path.Combine(projectDirPath, "config.json");
-        config = Config.Load(configFilePath);
-        return config is not null;
-    }
-
-    private static bool TryInitTelegramClient(ILogger logger, string token, out TelegramBotClient client)
-    {
-        try
-        {
-            client = new TelegramBotClient(token);
-            return true;
-        }
-        catch (Exception e)
-        {
-            client = null;
-            logger.Error(e.ToString());
-            return false;
-        }
-    }
-
-   private static IEnumerable<UserAction> BuildCommands(ILogger logger, AchievementController achievementController)
-   {
-      yield return new StartCommand(logger);
-      yield return new FeedCommand(logger, achievementController);
-      yield return new InfoCommand(logger);
-      yield return new AchievCommand(logger, achievementController);
-      yield return new TopCommand(logger);
-      yield return new HistoryCommand(logger);
-      yield return new SetNameCommand(logger);
-      yield return new SlaughterCommand(logger);
-   }
 }
+

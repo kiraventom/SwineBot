@@ -1,9 +1,10 @@
-﻿using SwineBot.BotMessages;
+﻿using Microsoft.Extensions.Logging;
+using SwineBot.BotMessages;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class InvalidAchievementChecker() : AchievementChecker(Array.Empty<AchievementLevel>())
+public class InvalidAchievementChecker(ILogger<InvalidAchievementChecker> Logger) : AchievementChecker(Logger, Array.Empty<AchievementLevel>())
 {
     public override AchievementType Type => AchievementType.None;
 

@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
 
 namespace SwineBot.Model;
 
@@ -20,14 +19,6 @@ public class UserContext : DbContext
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
-    }
-
-    public static UserContext Create()
-    {
-        var builder = new DbContextOptionsBuilder<UserContext>();
-        builder.UseSqlite(Config.Instance.UserConnectionString);
-
-        return new UserContext(builder.Options);
     }
 
     public User GetOrAddUser(long chatId, string title, long senderId, string firstName, string username)
@@ -60,8 +51,6 @@ public class UserContext : DbContext
                 TelegramId = chatId,
                 Swines = []
             };
-
-            Log.Logger.Information("User [{userId}] chat [{chatId}]: New group, creating new swine", senderId, chatId);
 
             var swine = new Swine()
             {

@@ -1,12 +1,12 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using ScottPlot;
 using ScottPlot.TickGenerators;
-using Serilog;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class HistoryMessage(ILogger logger) : BotMessage(logger)
+public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
@@ -43,7 +43,7 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         return Task.CompletedTask;
     }
 
-    private static Plot CreatePlot(bool showLegend = false)
+    private Plot CreatePlot(bool showLegend = false)
     {
         Plot plot = new();
 
@@ -98,12 +98,12 @@ public class HistoryMessage(ILogger logger) : BotMessage(logger)
         return path;
     }
 
-    private static void SetDefaultFont(Plot plot)
+    private void SetDefaultFont(Plot plot)
     {
         var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Roboto-Regular.ttf");
         if (File.Exists(fontPath) == false)
         {
-            Log.Error("Default font {path} was not found", fontPath);
+            Logger.LogError("Default font {path} was not found", fontPath);
             return;
         }
 

@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Serilog;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.Model;
@@ -7,7 +7,7 @@ using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
-public class InfoMessage(ILogger logger) : BotMessage(logger)
+public class InfoMessage(ILogger<InfoMessage> Logger) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
@@ -35,7 +35,7 @@ public class InfoMessage(ILogger logger) : BotMessage(logger)
         var mealsDecl = MessageTextUtils.GetDeclinatedNoun(recentFeeds.Count, Unit.Meal);
         mealsDecl = char.ToUpper(mealsDecl[0]) + mealsDecl[1..];
 
-        Log.Information(mealsDecl);
+        Logger.LogInformation(mealsDecl);
 
         Text.Italic(mealsDecl)
            .Italic(" пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();

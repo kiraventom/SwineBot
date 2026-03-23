@@ -1,14 +1,10 @@
-using Serilog;
+using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 
 namespace SwineBot.Actions.Commands;
 
-public class HistoryCommand(ILogger logger) : Command(logger)
+public class HistoryCommand(ILogger<HistoryCommand> logger, IMessageFactory messageFactory) : Command<HistoryMessage>(logger, messageFactory)
 {
     public override string Name => "/history";
-
-    public override BotMessage Execute(string actionText)
-    {
-        return new HistoryMessage(Logger);
-    }
+    public override string Description => "История веса свинок \U0001f4c8";
 }

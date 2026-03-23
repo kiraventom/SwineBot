@@ -1,10 +1,10 @@
-﻿using Serilog;
+﻿using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class AchievementMessage(ILogger logger, AchievementLevel achievementLevel) : BotMessage(logger)
+public class AchievementMessage(ILogger<AchievementMessage> Logger, AchievementLevel achievementLevel) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
