@@ -8,24 +8,14 @@ public class WeightAchievementChecker(ILogger<WeightAchievementChecker> Logger, 
 {
     public override AchievementType Type => AchievementType.Weight;
 
-    protected override int? GetValue(BotMessage botMessage, Swine swine)
+    protected override int? GetValue(BotMessage botMessage, UserContext context, int swineId)
     {
         if (botMessage is not FeedMessage feedMessage)
             return null;
 
-        return swine.Weight;
+        var weight = context.Swines.First(s => s.SwineId == swineId).Weight;
+        return weight;
     }
 
     protected override bool DoesLevelApply(int value, int level) => value >= level;
-
-    protected override bool IsSilentApply(BotMessage botMessage, Swine swine)
-    {
-        if (botMessage is not FeedMessage feedMessage)
-        {
-            Logger.LogError("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
-            return true;
-        }
-
-        return swine.Weight != feedMessage.FeedResult.NewWeight;
-    }
 }

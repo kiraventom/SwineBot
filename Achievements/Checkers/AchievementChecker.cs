@@ -28,18 +28,18 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
     public abstract AchievementType Type { get; }
     protected IReadOnlyCollection<AchievementLevel> Levels { get; } = values;
 
-    protected abstract int? GetValue(BotMessage botMessage, Swine swine);
+    protected abstract int? GetValue(BotMessage botMessage, UserContext context, int swineId);
 
     protected abstract bool DoesLevelApply(int value, int level);
 
-    protected abstract bool IsSilentApply(BotMessage botMessage, Swine swine);
-
-    private CheckerResult CheckLevel(BotMessage botMessage, UserContext userContext, Swine swine, int levelValue)
+    private CheckerResult CheckLevel(BotMessage botMessage, UserContext userContext, int swineId, int levelValue)
     {
+        var infoId = userContext.Infos.First(i => i.SwineId == swineId).InfoId;
         // Swine already has the achievement of that of bigger level
         var higherLevelAchievement = userContext.Achievements
-            .Where(a => a.SwineInfoId == swine.Info.InfoId)
+            .Where(a => a.SwineInfoId == infoId)
             .Where(a => a.Type == this.Type)
+            .AsEnumerable()
             .FirstOrDefault(a => DoesLevelApply(a.Value, levelValue));
 
         if (higherLevelAchievement != null)
@@ -48,7 +48,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
             return CheckerResult.Break;
         }
 
-        var value = GetValue(botMessage, swine);
+        var value = GetValue(botMessage, userContext, swineId);
 
         if (value is null)
         {
@@ -58,7 +58,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
 
         if (DoesLevelApply(value.Value, levelValue))
         {
-            return IsSilentApply(botMessage, swine) ? CheckerResult.ApplySilent : CheckerResult.Apply;
+            return CheckerResult.Apply;
         }
 
         return CheckerResult.Continue;
@@ -85,19 +85,15 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
 
         foreach (var level in Levels)
         {
-            var checkerResult = CheckLevel(botMessage, context, swine, level.Value);
+            var checkerResult = CheckLevel(botMessage, context, swineId, level.Value);
             Logger.LogDebug("Checking {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
 
             switch (checkerResult)
             {
                 case CheckerResult.Apply:
-                    Apply(swine, level.Value);
+                    Apply(context, swineId, level.Value);
                     achievementLevel = level;
                     return true;
-
-                case CheckerResult.ApplySilent:
-                    Apply(swine, level.Value);
-                    return false;
 
                 case CheckerResult.Break:
                     return false;
@@ -110,23 +106,26 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
         return false;
     }
 
-    private void Apply(Swine swine, int levelValue)
+    private void Apply(UserContext context, int swineId, int levelValue)
     {
+        var infoId = context.Infos.First(i => i.SwineId == swineId).InfoId;
         var newLevelAchiev = new Achievement()
         {
             Type = Type,
             DateTime = DateTime.Now.ToUniversalTime(),
             Value = levelValue,
-            SwineInfoId = swine.Info.InfoId
+            SwineInfoId = infoId
         };
 
-        var lowerLevelAchievs = swine.Info.Achievements.Where(a => a.Type == Type).ToList();
-        foreach (var lowerLevelAchiev in lowerLevelAchievs)
-        {
-            swine.Info.Achievements.Remove(lowerLevelAchiev);
-        }
+        var lowerLevelAchievs = context.Achievements
+            .Where(a => a.SwineInfoId == infoId)
+            .Where(a => a.Type == Type)
+            .ToList();
 
-        swine.Info.Achievements.Add(newLevelAchiev);
+        foreach (var lowerLevelAchiev in lowerLevelAchievs)
+            context.Achievements.Remove(lowerLevelAchiev);
+
+        context.Achievements.Add(newLevelAchiev);
     }
 }
 

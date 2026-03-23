@@ -118,7 +118,7 @@ public class AchievementController : IAchievementController
         {
             if (checker.TryApply(message, userContext, swine.SwineId, out var achievementLevel))
             {
-                await Sender.Send(userContext, chatId, userId, MessageFactory.Create<AchievementMessage>());
+                await Sender.Send(userContext, chatId, userId, MessageFactory.Create<AchievementMessage>(achievementLevel));
             }
         }
     }

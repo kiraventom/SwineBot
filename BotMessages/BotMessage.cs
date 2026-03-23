@@ -8,12 +8,12 @@ namespace SwineBot.BotMessages;
 
 public interface IMessageFactory
 {
-    T Create<T>(object[] args = null) where T : BotMessage;
+    T Create<T>(params object[] args) where T : BotMessage;
 }
 
 public class MessageFactory(IServiceProvider sp) : IMessageFactory
 {
-    public T Create<T>(object[] args = null) where T : BotMessage => ActivatorUtilities.CreateInstance<T>(sp, args);
+    public T Create<T>(params object[] args) where T : BotMessage => ActivatorUtilities.CreateInstance<T>(sp, args);
 }
 
 public abstract class BotMessage(ILogger<BotMessage> Logger)

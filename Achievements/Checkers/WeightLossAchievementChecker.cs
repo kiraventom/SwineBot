@@ -8,7 +8,7 @@ public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> 
 {
     public override AchievementType Type => AchievementType.WeightLoss;
 
-    protected override int? GetValue(BotMessage botMessage, Swine swine)
+    protected override int? GetValue(BotMessage botMessage, UserContext context, int swineId)
     {
         if (botMessage is not FeedMessage feedMessage)
             return null;
@@ -19,16 +19,5 @@ public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> 
     protected override bool DoesLevelApply(int value, int level)
     {
         return value <= level;
-    }
-
-    protected override bool IsSilentApply(BotMessage botMessage, Swine swine)
-    {
-        if (botMessage is not FeedMessage feedMessage)
-        {
-            Logger.LogError("{botMessage} is not {FeedMessage}", nameof(botMessage), nameof(FeedMessage));
-            return true;
-        }
-
-        return swine.Weight != feedMessage.FeedResult.NewWeight;
     }
 }

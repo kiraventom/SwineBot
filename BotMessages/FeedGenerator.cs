@@ -48,6 +48,7 @@ public class FeedGenerator : IFeedGenerator
 
         Effects = Context.Achievements
             .Where(a => a.SwineInfoId == swineInfoId)
+            .AsEnumerable()
             .Select(a => AchievController.GetLevel(a))
             .Where(a => a.Effect != null)
             .Select(a => a.Effect)
@@ -61,7 +62,9 @@ public class FeedGenerator : IFeedGenerator
     {
         var recentFeeds = Context.Feeds
             .Where(f => f.SwineId == Swine.SwineId)
-            .Where(f => (UtcNow - f.DateTime).TotalHours < OVERFEED_COOLDOWN).ToList();
+            .AsEnumerable()
+            .Where(f => (UtcNow - f.DateTime).TotalHours < OVERFEED_COOLDOWN)
+            .ToList();
 
         Result result = RollResult(recentFeeds);
         if (result == Result.Full)
@@ -120,8 +123,9 @@ public class FeedGenerator : IFeedGenerator
 
         var recentThrowups = Context.WeightLosses
             .Where(wl => wl.SwineId == Swine.SwineId)
-            .Where(wl => (UtcNow - wl.DateTime).TotalHours < THROWUP_COOLDOWN)
-            .Where(wl => wl.IsThrowUp);
+            .Where(wl => wl.IsThrowUp)
+            .AsEnumerable()
+            .Where(wl => (UtcNow - wl.DateTime).TotalHours < THROWUP_COOLDOWN);
 
         if (recentThrowups.Any())
             return Result.Full;
