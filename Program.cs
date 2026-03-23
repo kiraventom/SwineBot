@@ -111,6 +111,7 @@ internal class Program
         var logFilePath = Path.Combine(logsDirPath, $"{PROJECT_NAME}.log");
 
         logger.MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Serilog.Events.LogEventLevel.Warning)
             .WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day)
             .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information);
     }

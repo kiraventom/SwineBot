@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
 
@@ -14,9 +13,7 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmat
 
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines
-            .Include(s => s.Info)
-            .First(s => s.SwineId == swineId);
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
 
         var lastSlaughter = userContext.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
@@ -29,7 +26,8 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmat
             return Task.CompletedTask;
         }
 
-        var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == swine.Info.InfoId).Count();
+        var infoId = userContext.Infos.First(i => i.SwineId == swineId).InfoId;
+        var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == infoId).Count();
 
         if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
         {
@@ -52,19 +50,26 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmat
 
         Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
 
+        userContext.Swines.Remove(swine);
+        userContext.SaveChanges();
+
         var newSwine = new Swine()
         {
             Name = userContext.Users.First(u => u.UserId == swine.OwnerId).FirstName,
-            Info = new(),
             Weight = 1,
             GroupId = swine.GroupId,
             OwnerId = swine.OwnerId
         };
 
-        userContext.Swines.Remove(swine);
+        userContext.Swines.Add(newSwine);
         userContext.SaveChanges();
 
-        userContext.Swines.Add(newSwine);
+        var info = new SwineInfo()
+        {
+            SwineId = newSwine.SwineId
+        };
+
+        userContext.Infos.Add(info);
         userContext.SaveChanges();
 
         if (slaughteredWeight >= MIN_SWINE_WEIGHT)

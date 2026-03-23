@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
@@ -51,10 +50,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
         var value = GetValue(botMessage, userContext, swineId);
 
         if (value is null)
-        {
-            Logger.LogWarning("Checker {checker}. GetValue returned null", Type.ToString());
             return CheckerResult.Break;
-        }
 
         if (DoesLevelApply(value.Value, levelValue))
         {
@@ -79,9 +75,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
     {
         achievementLevel = null;
 
-        var swine = context.Swines
-            .Include(s => s.Info)
-            .First(s => s.SwineId == swineId);
+        var swine = context.Swines.First(s => s.SwineId == swineId);
 
         foreach (var level in Levels)
         {

@@ -30,7 +30,11 @@ public abstract class BotMessage(ILogger<BotMessage> Logger)
             return;
 
         var group = userContext.Groups.First(g => g.TelegramId == chatId.Identifier);
-        var swine = group.Swines.First(s => s.OwnerId == userId);
+
+        var swine = userContext.Swines
+            .Where(s => s.GroupId == group.GroupId)
+            .First(s => s.OwnerId == userId);
+
         await InitInternal(userContext, swine.SwineId);
 
         _isInited = true;

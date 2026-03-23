@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 using ScottPlot;
 using ScottPlot.TickGenerators;
 using SwineBot.Model;
@@ -13,10 +12,8 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
         var groupId = userContext.Swines.First(s => s.SwineId == swineId).GroupId;
 
         var swines = userContext.Swines
-            .Include(s => s.Feeds)
-            .Include(s => s.WeightLosses)
             .Where(s => s.GroupId == groupId)
-            .Where(s => s.Feeds.Any())
+            .Where(s => userContext.Feeds.Where(f => f.SwineId == s.SwineId).Any())
             .OrderByDescending(s => s.Weight)
             .Take(10);
 
@@ -24,10 +21,12 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
 
         foreach (var swine in swines)
         {
-            var feeds = swine.Feeds
+            var feeds = userContext.Feeds
+                .Where(f => f.SwineId == swine.SwineId)
                 .Select(f => new WeightChange(f.DateTime, f.Amount));
 
-            var losses = swine.WeightLosses
+            var losses = userContext.WeightLosses
+                .Where(f => f.SwineId == swine.SwineId)
                 .Select(f => new WeightChange(f.DateTime, f.Amount));
 
             var changes = feeds.Concat(losses).OrderBy(wc => wc.DateTime).ToList();

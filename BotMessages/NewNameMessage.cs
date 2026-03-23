@@ -27,6 +27,7 @@ public class NewNameMessage(ILogger<NewNameMessage> Logger, string name) : BotMe
         }
 
         swine.Name = name;
+        userContext.SaveChanges();
 
         Text.Bold(swine.Name).Verbatim(" радостно хрюкает, будто подпевая своему новому имени!");
 

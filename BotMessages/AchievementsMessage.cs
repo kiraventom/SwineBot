@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 using SwineBot.Achievements;
 using SwineBot.Model;
 
@@ -9,11 +8,10 @@ public class AchievementsMessage(ILogger<AchievementsMessage> Logger, IAchieveme
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines
-            .Include(s => s.Info).ThenInclude(s => s.Achievements)
-            .FirstOrDefault(s => s.SwineId == swineId);
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
+        var infoId = userContext.Infos.First(i => i.SwineId == swineId).InfoId;
 
-        if (swine.Info.Achievements.Count == 0)
+        if (userContext.Achievements.Where(a => a.SwineInfoId == infoId).Count() == 0)
         {
             Text.Italic("У ").Bold(swine.Name).Italic(" пока нет достижений :(").LineBreak();
             return Task.CompletedTask;
@@ -22,7 +20,7 @@ public class AchievementsMessage(ILogger<AchievementsMessage> Logger, IAchieveme
         Text.Bold("Достижения ").Bold(swine.Name).Bold(":").LineBreak().LineBreak();
 
         int index = 0;
-        foreach (var achiev in swine.Info.Achievements.OrderByDescending(a => a.DateTime))
+        foreach (var achiev in userContext.Achievements.Where(a => a.SwineInfoId == infoId).OrderByDescending(a => a.DateTime))
         {
             WriteAchievement(achiev, index);
             ++index;

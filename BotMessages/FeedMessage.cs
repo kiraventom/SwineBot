@@ -15,42 +15,48 @@ public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory Feed
 
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var feedManager = FeedGeneratorFactory.Create(swineId);
+        var feedManager = FeedGeneratorFactory.Create(userContext, swineId);
         var result = feedManager.Generate();
 
         switch (result.Result)
         {
             case Result.FirstFeed:
             case Result.Overfeed:
-                HandleFeed(feedManager.Swine, result);
+                HandleFeed(userContext, swineId, result);
                 break;
 
             case Result.Throwup:
-                HandleThrowup(userContext, feedManager.Swine, result);
+                HandleThrowup(userContext, swineId, result);
                 break;
 
             case Result.Full:
-                HandleFull(feedManager.Swine);
+                HandleFull(userContext, swineId);
                 break;
         }
 
         FeedResult = result;
 
+        userContext.SaveChanges();
+
         return Task.CompletedTask;
     }
 
-    private void HandleFull(Swine swine)
+    private void HandleFull(UserContext context, int swineId)
     {
+        var name = context.Swines.First(s => s.SwineId == swineId).Name;
         Text.Verbatim("После недавнего инцидента с перееданием ")
-            .Bold(swine.Name)
+            .Bold(name)
             .Verbatim(" совсем не до еды...");
     }
 
-    private void HandleThrowup(UserContext userContext, Swine swine, FeedResult result)
+    private void HandleThrowup(UserContext context, int swineId, FeedResult result)
     {
+        var swine = context.Swines.First(s => s.SwineId == swineId);
         swine.Weight = result.NewWeight;
-        swine.WeightLosses.Add(new WeightLoss()
+
+        context.WeightLosses.Add(new WeightLoss()
         {
+            SwineId = swineId,
             DateTime = result.UtcDT,
             IsThrowUp = true,
             Amount = result.Amount
@@ -65,7 +71,7 @@ public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory Feed
                     .LineBreak()
                     .Bold($"Вес не изменился: {result.NewWeight} кг");
 
-                var consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swine.SwineId);
+                var consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
                 if (consecutiveOverfeeds != 0)
                     Text.LineBreak()
                         .Italic($"Это происшествие не нарушит ваш стрик в {consecutiveOverfeeds} {MessageTextUtils.GetDeclinatedNoun(consecutiveOverfeeds, Unit.Overfeed)}");
@@ -84,11 +90,14 @@ public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory Feed
         }
     }
 
-    private void HandleFeed(Swine swine, FeedResult result)
+    private void HandleFeed(UserContext context, int swineId, FeedResult result)
     {
+        var swine = context.Swines.First(s => s.SwineId == swineId);
         swine.Weight = result.NewWeight;
-        swine.Feeds.Add(new Feed()
+
+        context.Feeds.Add(new Feed()
         {
+            SwineId = swineId,
             DateTime = result.UtcDT,
             Amount = result.Amount,
         });

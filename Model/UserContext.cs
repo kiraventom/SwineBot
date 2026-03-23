@@ -24,44 +24,51 @@ public class UserContext : DbContext
 
     public User GetOrAddUser(long chatId, string title, long senderId, string firstName, string username)
     {
-        var isNewUser = false;
-
-        var user = this.Users.Include(u => u.Swines).FirstOrDefault(u => u.TelegramId == senderId);
+        var user = this.Users.FirstOrDefault(u => u.TelegramId == senderId);
 
         if (user is null)
         {
-            isNewUser = true;
             user = new User()
             {
                 FirstName = firstName,
                 Tag = username,
                 TelegramId = senderId,
-                Swines = []
             };
+
+            Users.Add(user);
+            SaveChanges();
         }
 
-        var isNewGroup = false;
         var group = this.Groups.FirstOrDefault(g => g.TelegramId == chatId);
 
         if (group is null)
         {
-            isNewGroup = true;
             group = new Group()
             {
                 Title = title,
                 TelegramId = chatId,
-                Swines = []
             };
+
+            Groups.Add(group);
+            SaveChanges();
 
             var swine = new Swine()
             {
                 Name = firstName,
-                Info = new(),
                 Weight = 1,
-                Owner = user,
+                OwnerId = user.UserId,
+                GroupId = group.GroupId
             };
 
-            group.Swines.Add(swine);
+            Swines.Add(swine);
+            SaveChanges();
+
+            var info = new SwineInfo()
+            {
+                SwineId = swine.SwineId
+            };
+
+            Infos.Add(info);
         }
 
         if (user.FirstName != firstName)
@@ -73,17 +80,7 @@ public class UserContext : DbContext
         if (group.Title != title)
             group.Title = title;
 
-        if (isNewGroup)
-        {
-            Groups.Add(group);
-        }
-
-        if (isNewUser)
-        {
-            Users.Add(user);
-        }
-
-        this.SaveChanges();
+        SaveChanges();
 
         return user;
     }
@@ -108,9 +105,6 @@ public class Group
     public long TelegramId { get; set; }
 
     public string Title { get; set; }
-
-    [InverseProperty(nameof(Swine.Group))]
-    public List<Swine> Swines { get; set; }
 }
 
 [Index(nameof(TelegramId), IsUnique=true)]
@@ -124,12 +118,6 @@ public class User
     [Required] public string FirstName { get; set; }
     public string Tag { get; set; }
 
-    [InverseProperty(nameof(Swine.Owner))]
-    public List<Swine> Swines { get; set; }
-
-    [InverseProperty(nameof(Slaughter.User))]
-    public List<Slaughter> Slaughters { get; } = new();
-
     public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 2);
 }
 
@@ -139,49 +127,20 @@ public class Swine
     public int OwnerId { get; set; }
     public int? GroupId { get; set; }
 
-    [ForeignKey(nameof(OwnerId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public User Owner { get; set; }
-
-    [ForeignKey(nameof(GroupId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Group Group { get; set; }
-
-    [InverseProperty(nameof(SwineInfo.Swine))]
-    public SwineInfo Info { get; set; }
-
     [Required] public string Name { get; set; }
-
     public int Weight { get; set; } // kg
-
-    [InverseProperty(nameof(Feed.Swine))]
-    public List<Feed> Feeds { get; } = new();
-
-    [InverseProperty(nameof(WeightLoss.Swine))]
-    public List<WeightLoss> WeightLosses { get; } = new();
 }
 
 public class SwineInfo
 {
     [Key] public int InfoId { get; set; }
     public int SwineId { get; set; }
-
-    [ForeignKey(nameof(SwineId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Swine { get; set; }
-
-    [InverseProperty(nameof(Achievement.SwineInfo))]
-    public List<Achievement> Achievements { get; } = new();
 }
 
 public class Feed
 {
     [Key] public int FeedId { get; set; }
     public int SwineId { get; set; }
-
-    [ForeignKey(nameof(SwineId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Swine { get; set; }
 
     public DateTime DateTime { get; set; }
     public int Amount { get; set; } // kg
@@ -191,10 +150,6 @@ public class WeightLoss
 {
     [Key] public int LossId { get; set; }
     public int SwineId { get; set; }
-
-    [ForeignKey(nameof(SwineId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Swine { get; set; }
 
     public DateTime DateTime { get; set; }
     public int Amount { get; set; } // kg
@@ -210,14 +165,6 @@ public class DuelRequest
     [Key] public int RequestId { get; set; }
     public int AttackerId { get; set; }
     public int DefenderId { get; set; }
-
-    [ForeignKey(nameof(AttackerId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Attacker { get; set; }
-
-    [ForeignKey(nameof(DefenderId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Defender { get; set; }
 
     public DateTime DateTime { get; set; }
 }
@@ -235,18 +182,6 @@ public class DuelResult
 
     [NotMapped]
     public int LoserId => AttackerWon ? DefenderId : AttackerId;
-
-    [ForeignKey(nameof(AttackerId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Attacker { get; set; }
-
-    [ForeignKey(nameof(DefenderId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Defender { get; set; }
-
-    [ForeignKey(nameof(WinnerId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public Swine Winner { get; set; }
 
     public DateTime DateTime { get; set; }
 
@@ -274,10 +209,6 @@ public class Achievement
     
     public DateTime DateTime { get; set; }
 
-    [ForeignKey(nameof(SwineInfoId))]
-    [DeleteBehavior(DeleteBehavior.Cascade)]
-    public SwineInfo SwineInfo { get; set; }
-
     public AchievementType Type { get; set; }
     public int Value { get; set; }
 }
@@ -289,12 +220,6 @@ public class Slaughter
 
     public int UserId { get; set; }
     public int? GroupId { get; set; }
-
-    [ForeignKey(nameof(UserId))]
-    public User User { get; set; }
-
-    [ForeignKey(nameof(GroupId))]
-    public Group Group { get; set; }
 
     public string SwineName { get; set; }
     public int SwineWeight { get; set; }

@@ -8,17 +8,16 @@ namespace SwineBot.BotMessages;
 
 public interface IFeedGeneratorFactory
 {
-    IFeedGenerator Create(int swineId);
+    IFeedGenerator Create(UserContext context, int swineId);
 }
 
 public class FeedGeneratorFactory(IServiceProvider sp) : IFeedGeneratorFactory
 {
-    public IFeedGenerator Create(int swineId) => ActivatorUtilities.CreateInstance<FeedGenerator>(sp, swineId);
+    public IFeedGenerator Create(UserContext context, int swineId) => ActivatorUtilities.CreateInstance<FeedGenerator>(sp, context, swineId);
 }
 
 public interface IFeedGenerator
 {
-    Swine Swine { get; }
     FeedResult Generate();
 }
 
@@ -30,21 +29,20 @@ public class FeedGenerator : IFeedGenerator
     private UserContext Context { get; }
     private IAchievementController AchievController { get; }
     private IThrowupCalculator ThrowupCalculator { get; }
+    private int SwineId { get; }
 
     public IReadOnlyCollection<IAchievementEffect> Effects { get; }
     public DateTime UtcNow { get; }
-
-    public Swine Swine { get; }
 
     public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, IAchievementController achievController, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
     {
         Logger = logger;
         Context = context;
         AchievController = achievController;
+        SwineId = swineId;
 
-        Swine = Context.Swines.First(s => s.SwineId == swineId);
-
-        var swineInfoId = Context.Infos.First(i => i.SwineId == Swine.SwineId).InfoId;
+        var swine = Context.Swines.First(s => s.SwineId == swineId);
+        var swineInfoId = Context.Infos.First(i => i.SwineId == swineId).InfoId;
 
         Effects = Context.Achievements
             .Where(a => a.SwineInfoId == swineInfoId)
@@ -60,8 +58,9 @@ public class FeedGenerator : IFeedGenerator
 
     public FeedResult Generate()
     {
+        var swine = Context.Swines.First(s => s.SwineId == SwineId);
         var recentFeeds = Context.Feeds
-            .Where(f => f.SwineId == Swine.SwineId)
+            .Where(f => f.SwineId == SwineId)
             .AsEnumerable()
             .Where(f => (UtcNow - f.DateTime).TotalHours < OVERFEED_COOLDOWN)
             .ToList();
@@ -75,7 +74,8 @@ public class FeedGenerator : IFeedGenerator
         int amount = ApplyResult(recentFeeds, absAmount, result);
         Logger.LogInformation("Final amount: {amount}", amount);
 
-        var oldWeight = Swine.Weight;
+        var oldWeight = swine.Weight;
+
         return new FeedResult()
         {
             Luck = luck,
@@ -102,7 +102,7 @@ public class FeedGenerator : IFeedGenerator
     private double ApplyLuckEffects(double luck)
     {
         foreach (var effect in Effects.OfType<NoOverfeedsLuckAmplifierEffect>())
-            luck = effect.Apply(Context, Swine.SwineId, luck);
+            luck = effect.Apply(Context, SwineId, luck);
 
         return luck;
     }
@@ -122,7 +122,7 @@ public class FeedGenerator : IFeedGenerator
         const int THROWUP_COOLDOWN = 24;
 
         var recentThrowups = Context.WeightLosses
-            .Where(wl => wl.SwineId == Swine.SwineId)
+            .Where(wl => wl.SwineId == SwineId)
             .Where(wl => wl.IsThrowUp)
             .AsEnumerable()
             .Where(wl => (UtcNow - wl.DateTime).TotalHours < THROWUP_COOLDOWN);
@@ -138,9 +138,11 @@ public class FeedGenerator : IFeedGenerator
 
     private int ApplyAmountEffects(int amount)
     {
+        var swine = Context.Swines.First(s => s.SwineId == SwineId);
+
         var totalSlaughteredWeight = Context.Slaughters
-            .Where(s => s.UserId == Swine.OwnerId)
-            .Where(s => s.GroupId == Swine.GroupId)
+            .Where(s => s.UserId == swine.OwnerId)
+            .Where(s => s.GroupId == swine.GroupId)
             .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
             .Sum(s => s.SwineWeight);
 
@@ -153,8 +155,9 @@ public class FeedGenerator : IFeedGenerator
 
     private int ApplyResult(IReadOnlyCollection<Feed> recentFeeds, int amount, Result result)
     {
+        var swine = Context.Swines.First(s => s.SwineId == SwineId);
         if (result == Result.Throwup)
-            return ThrowupCalculator.Calculate(recentFeeds, Swine.Weight, amount) * -1;
+            return ThrowupCalculator.Calculate(recentFeeds, swine.Weight, amount) * -1;
 
         return amount;
     }

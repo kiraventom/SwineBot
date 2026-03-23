@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.Model;
@@ -11,23 +10,26 @@ public class InfoMessage(ILogger<InfoMessage> Logger) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
-        var swine = userContext.Swines
-            .Include(s => s.Owner)
-            .Include(s => s.Feeds)
-            .FirstOrDefault(s => s.SwineId == swineId);
+        var swine = userContext.Swines.First(s => s.SwineId == swineId);
 
         var duels = userContext.DuelResults.ToList();
-        var wonDuels = duels.Count(d => d.WinnerId == swine.SwineId);
-        var lostDuels = duels.Count(d => d.LoserId == swine.SwineId);
+        var wonDuels = duels.Count(d => d.WinnerId == swineId);
+        var lostDuels = duels.Count(d => d.LoserId == swineId);
 
         var current = DateTime.Now.ToUniversalTime();
-        var recentFeeds = swine.Feeds.Where(f => (current - f.DateTime).TotalHours < 24).ToList();
+        var recentFeeds = userContext.Feeds
+            .Where(f => f.SwineId == swineId)
+            .AsEnumerable()
+            .Where(f => (current - f.DateTime).TotalHours < 24)
+            .ToList();
+
         string lastFeedDTStr = GetLastFeedStr(recentFeeds, current);
 
-        int consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swine.SwineId);
-        int consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(userContext, swine.SwineId);
+        int consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swineId);
+        int consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(userContext, swineId);
 
-        Text.Bold("Информация о свине ").InlineMention(swine.Owner).Bold(":").LineBreak()
+        var owner = userContext.Users.First(u => u.UserId == swine.OwnerId);
+        Text.Bold("Информация о свине ").InlineMention(owner).Bold(":").LineBreak()
             .LineBreak()
             .Italic("Имя: ").Verbatim(swine.Name).LineBreak()
             .Italic("Вес: ").Verbatim($"{swine.Weight} кг").LineBreak();
