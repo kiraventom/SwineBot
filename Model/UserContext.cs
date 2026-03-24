@@ -26,7 +26,8 @@ public class UserContext : DbContext
     {
         var user = this.Users.FirstOrDefault(u => u.TelegramId == senderId);
 
-        if (user is null)
+        bool newUser = user is null;
+        if (newUser)
         {
             user = new User()
             {
@@ -40,8 +41,9 @@ public class UserContext : DbContext
         }
 
         var group = this.Groups.FirstOrDefault(g => g.TelegramId == chatId);
+        bool newGroup = group is null;
 
-        if (group is null)
+        if (newGroup)
         {
             group = new Group()
             {
@@ -51,7 +53,10 @@ public class UserContext : DbContext
 
             Groups.Add(group);
             SaveChanges();
+        }
 
+        if (newUser || newGroup)
+        {
             var swine = new Swine()
             {
                 Name = firstName,
@@ -69,6 +74,7 @@ public class UserContext : DbContext
             };
 
             Infos.Add(info);
+            SaveChanges();
         }
 
         if (user.FirstName != firstName)
@@ -97,17 +103,17 @@ public class UserContext : DbContext
     }
 }
 
-[Index(nameof(TelegramId), IsUnique=true)]
+[Index(nameof(TelegramId), IsUnique = true)]
 public class Group
 {
     [Key] public int GroupId { get; set; }
-    
+
     public long TelegramId { get; set; }
 
     public string Title { get; set; }
 }
 
-[Index(nameof(TelegramId), IsUnique=true)]
+[Index(nameof(TelegramId), IsUnique = true)]
 public class User
 {
     private const double GROWTH_MOD_MULT = 0.0002;
@@ -206,7 +212,7 @@ public class Achievement
     [Key] public int AchievementId { get; set; }
 
     public int SwineInfoId { get; set; }
-    
+
     public DateTime DateTime { get; set; }
 
     public AchievementType Type { get; set; }
