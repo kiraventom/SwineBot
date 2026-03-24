@@ -34,7 +34,7 @@ public class FeedGenerator : IFeedGenerator
     public IReadOnlyCollection<IAchievementEffect> Effects { get; }
     public DateTime UtcNow { get; }
 
-    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, IAchievementController achievController, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
+    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, IAchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
     {
         Logger = logger;
         Context = context;
@@ -52,7 +52,7 @@ public class FeedGenerator : IFeedGenerator
             .Select(a => a.Effect)
             .ToList();
 
-        UtcNow = DateTime.Now.ToUniversalTime();
+        UtcNow = dtnProvider.UtcNow;
         ThrowupCalculator = throwupCalcFactory.Create(UtcNow, Effects);
     }
 

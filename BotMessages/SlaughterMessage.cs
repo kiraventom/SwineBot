@@ -4,7 +4,7 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmation) : BotMessage(Logger)
+public class SlaughterMessage(ILogger<SlaughterMessage> Logger, IDateTimeNowProvider dtnProvider, string confirmation) : BotMessage(Logger)
 {
     private const string CONFIRMATION = "yes";
     private const int SLAUGHTER_COOLDOWN = 24;
@@ -20,7 +20,7 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmat
             .OrderByDescending(s => s.DateTime)
             .FirstOrDefault();
 
-        if (lastSlaughter is not null && (DateTime.UtcNow - lastSlaughter.DateTime).TotalHours < SLAUGHTER_COOLDOWN)
+        if (lastSlaughter is not null && (dtnProvider.UtcNow - lastSlaughter.DateTime).TotalHours < SLAUGHTER_COOLDOWN)
         {
             Text.Italic("Нельзя марать руки в крови так часто.");
             return Task.CompletedTask;
@@ -46,7 +46,7 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, string confirmat
         }
 
         var slaughteredWeight = swine.Weight - 1;
-        userContext.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = DateTime.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
+        userContext.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
 
         Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
 

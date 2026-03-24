@@ -4,7 +4,7 @@ using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class WeightGainAchievementChecker(ILogger<WeightGainAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(Logger, levels)
+public class WeightGainAchievementChecker(ILogger<WeightGainAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, levels)
 {
     public override AchievementType Type => AchievementType.WeightGain;
 

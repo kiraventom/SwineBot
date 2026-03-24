@@ -4,7 +4,7 @@ using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels) : AchievementChecker(Logger, levels)
+public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, levels)
 {
     public override AchievementType Type => AchievementType.Overfeed;
 

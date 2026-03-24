@@ -6,7 +6,7 @@ using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
-public class InfoMessage(ILogger<InfoMessage> Logger) : BotMessage(Logger)
+public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnProvider) : BotMessage(Logger)
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {
@@ -16,7 +16,7 @@ public class InfoMessage(ILogger<InfoMessage> Logger) : BotMessage(Logger)
         var wonDuels = duels.Count(d => d.WinnerId == swineId);
         var lostDuels = duels.Count(d => d.LoserId == swineId);
 
-        var current = DateTime.Now.ToUniversalTime();
+        var current = dtnProvider.UtcNow;
         var recentFeeds = userContext.Feeds
             .Where(f => f.SwineId == swineId)
             .AsEnumerable()

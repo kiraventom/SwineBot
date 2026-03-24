@@ -13,6 +13,16 @@ using SwineBot.Achievements.Checkers;
 
 namespace SwineBot;
 
+public interface IDateTimeNowProvider
+{
+    DateTime UtcNow { get; }
+}
+
+public class DateTimeNowProvider : IDateTimeNowProvider
+{
+    public DateTime UtcNow => DateTime.UtcNow;
+}
+
 public record Paths(string ConfigDir, string DataDir);
 
 internal class Program
@@ -37,6 +47,7 @@ internal class Program
                 .AddSingleton<Config>(BuildConfig)
                 .AddSerilog(ConfigureLogger)
                 .AddSingleton<TelegramBotClientOptions>(BuildTelegramBotClientOptions)
+                .AddSingleton<IDateTimeNowProvider, DateTimeNowProvider>()
                 .AddSingleton<IFeedGeneratorFactory, FeedGeneratorFactory>()
                 .AddSingleton<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
                 .AddSingleton<IMessageFactory, MessageFactory>()

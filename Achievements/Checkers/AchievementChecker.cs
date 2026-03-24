@@ -22,7 +22,7 @@ public interface IAchievementChecker
     bool TryApply(BotMessage botMessage, UserContext context, int swineId, out AchievementLevel achievementLevel);
 }
  
-public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> values) : IAchievementChecker
+public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IDateTimeNowProvider dtnProvider, IReadOnlyCollection<AchievementLevel> values) : IAchievementChecker
 {
     public abstract AchievementType Type { get; }
     protected IReadOnlyCollection<AchievementLevel> Levels { get; } = values;
@@ -106,7 +106,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IRe
         var newLevelAchiev = new Achievement()
         {
             Type = Type,
-            DateTime = DateTime.Now.ToUniversalTime(),
+            DateTime = dtnProvider.UtcNow,
             Value = levelValue,
             SwineInfoId = infoId
         };
