@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
+using SwineBot.Achievements;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
+using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
@@ -32,9 +34,9 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, IDateTimeNowProv
         if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
         {
             Text.Italic("Вы собираетесь").Verbatim(" ").Underline("убить").Verbatim(" ").Italic("вашу свинку ").Bold(swine.Name).LineBreak();
-            Text.Italic("Вы потеряете ").Bold(swine.Weight).Italic(" кг сальца");
+            Text.Italic("Вы потеряете ").Bold(swine.Weight).Italic($" {MessageTextUtils.GetDeclinatedNoun(swine.Weight, Unit.Kg)} сальца");
             if (achievsCount != 0)
-                Text.Italic(", ").Bold(achievsCount).Italic(" достижений");
+                Text.Italic(", ").Bold(achievsCount).Italic($" {MessageTextUtils.GetDeclinatedNoun(achievsCount, Unit.Achievement)}");
 
             Text.Italic(" и верного друга.").LineBreak().LineBreak();
 

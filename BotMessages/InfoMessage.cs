@@ -23,7 +23,15 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
             .Where(f => (current - f.DateTime).TotalHours < 24)
             .ToList();
 
-        string lastFeedDTStr = GetLastFeedStr(recentFeeds, current);
+        var recentThrowups = userContext.WeightLosses
+            .Where(wl => wl.SwineId == swineId)
+            .Where(wl => wl.IsThrowUp)
+            .AsEnumerable()
+            .Where(wl => (current - wl.DateTime).TotalHours < 24)
+            .ToList();
+
+        string lastFeedDTStr = GetLastDTStr(recentFeeds.Select(f => f.DateTime).ToList(), current);
+        string lastThrowUpDTStr = GetLastDTStr(recentThrowups.Select(f => f.DateTime).ToList(), current);
 
         int consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swineId);
         int consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(userContext, swineId);
@@ -41,6 +49,11 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
 
         Text.Italic(mealsDecl)
            .Italic(" пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
+
+        if (recentThrowups.Count != 0)
+        {
+            Text.Italic("Неудачный перекорм: ").Verbatim(lastThrowUpDTStr).LineBreak();
+        }
 
         if (consecutiveOverfeeds != 0)
         {
@@ -95,13 +108,13 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
         return Task.CompletedTask;
     }
 
-    private static string GetLastFeedStr(IReadOnlyCollection<Feed> recentFeeds, DateTime current)
+    private static string GetLastDTStr(IReadOnlyCollection<DateTime> recentDTs, DateTime current)
     {
-        if (recentFeeds.Count == 0)
+        if (recentDTs.Count == 0)
             return "так давно, что никогда...";
 
-        var lastFeedDT = recentFeeds.Max(f => f.DateTime);
-        var diff = current - lastFeedDT;
+        var lastDT = recentDTs.Max();
+        var diff = current - lastDT;
         if (diff.TotalMinutes < 1)
         {
             return "Только что";
