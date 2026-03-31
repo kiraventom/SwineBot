@@ -117,7 +117,7 @@ public class FeedGenerator : IFeedGenerator
         Logger.LogInformation("Base amount rolled: {luck} * {maxAmount} = {baseAmount}", luck, MAX_AMOUNT, baseAmount);
 
         if (baseAmount != nonZeroBaseAmount)
-            Logger.LogInformation("Base amount adjusted to not being zero: {baseAmount} -> {nonZero}", baseAmount, nonZeroBaseAmount);
+            Logger.LogInformation("Base amount adjusted to not being zero from {baseAmount} to {nonZero}", baseAmount, nonZeroBaseAmount);
 
         var amount = ApplyGrowthModifier(nonZeroBaseAmount);
         return amount;

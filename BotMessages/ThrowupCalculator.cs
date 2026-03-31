@@ -29,7 +29,13 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
 
         var overfeedScale = GetOverfeedScale(recentFeeds);
         var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(overfeedScale, recentFeeds.Count);
+        Logger.LogInformation("Throwup threshold: {baseChance} * {scale}^{recentFeedsCount}", OVERFEED_THROWUP_BASE_CHANCE, overfeedScale, recentFeeds.Count);
+
+        var throwupThresholdBeforeClamping = throwupThreshold;
         throwupThreshold = Math.Min(0.99, throwupThreshold);
+
+        if (throwupThreshold != throwupThresholdBeforeClamping)
+            Logger.LogInformation("Throwup threshold: adjusted to being not 100% from {old} to {new}", throwupThresholdBeforeClamping, throwupThreshold);
 
         var overfeedChance = Random.Shared.NextDouble();
         var isThrowup = overfeedChance < throwupThreshold;
@@ -46,7 +52,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         int sum = recentFeeds.Sum(f => f.Amount);
         int amountLost = Math.Min(oldWeight - 1, sum + amount);
 
-        Logger.LogInformation("Throwup: recent feeds: {recentFeeds} = {sum}; {sum} + {amount} = {amountLost}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, sum, amount, amountLost);
+        Logger.LogInformation("Recent feeds: {recentFeeds} = {sum}; {sum} + {amount} = {amountLost}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, sum, amount, amountLost);
 
         foreach (var effect in Effects.OfType<ThrowupScaleEffect>())
         {
