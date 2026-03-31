@@ -46,7 +46,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         int sum = recentFeeds.Sum(f => f.Amount);
         int amountLost = Math.Min(oldWeight - 1, sum + amount);
 
-        Logger.LogInformation("Throwup: recent feeds: {recentFeeds} = {sum}; {sum} + {amount} = {amountLost}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, amount, amountLost);
+        Logger.LogInformation("Throwup: recent feeds: {recentFeeds} = {sum}; {sum} + {amount} = {amountLost}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, sum, amount, amountLost);
 
         foreach (var effect in Effects.OfType<ThrowupScaleEffect>())
         {
