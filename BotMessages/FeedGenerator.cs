@@ -92,8 +92,6 @@ public class FeedGenerator : IFeedGenerator
         Logger.LogInformation("Luck rolled: {luck}", baseLuck);
 
         var luck = ApplyLuckEffects(baseLuck);
-        if (luck != baseLuck)
-            Logger.LogInformation("Luck changed from {base} to {new}", baseLuck, luck);
 
         return luck;
     }
@@ -101,7 +99,12 @@ public class FeedGenerator : IFeedGenerator
     private double ApplyLuckEffects(double luck)
     {
         foreach (var effect in Effects.OfType<NoOverfeedsLuckAmplifierEffect>())
+        {
+            var oldLuck = luck;
             luck = effect.Apply(Context, SwineId, luck);
+            if (luck != oldLuck)
+                Logger.LogInformation("Applied effect {effect}, luck changed from {old} to {new}", effect.Type.ToString(), oldLuck, luck);
+        }
 
         return luck;
     }
@@ -112,7 +115,7 @@ public class FeedGenerator : IFeedGenerator
         var baseAmount = (int)Math.Round(MAX_AMOUNT * luck);
         baseAmount = Math.Max(1, baseAmount);
         Logger.LogInformation("Base amount rolled: {baseAmount}", baseAmount);
-        var amount = ApplyAmountEffects(baseAmount);
+        var amount = ApplyGrowthModifier(baseAmount);
         return amount;
     }
 
@@ -135,7 +138,7 @@ public class FeedGenerator : IFeedGenerator
         return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
     }
 
-    private int ApplyAmountEffects(int amount)
+    private int ApplyGrowthModifier(int amount)
     {
         var swine = Context.Swines.First(s => s.SwineId == SwineId);
 
@@ -147,9 +150,9 @@ public class FeedGenerator : IFeedGenerator
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
 
-        var amountEff = Math.Round(amount * growthMod);
-        Logger.LogInformation("Amount with effects: {amountEff}", amountEff);
-        return (int)amountEff;
+        var amountEff = amount * growthMod;
+        Logger.LogInformation("Amount with growth mod: {amount} * {mod} = {amountEff}", amount, growthMod, amountEff);
+        return (int)Math.Round(amountEff);
     }
 
     private int ApplyResult(IReadOnlyCollection<Feed> recentFeeds, int amount, Result result)

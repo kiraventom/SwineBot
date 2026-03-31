@@ -43,17 +43,26 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
 
     public int Calculate(IReadOnlyCollection<Feed> recentFeeds, int oldWeight, int amount)
     {
-        int amountLost = Math.Min(oldWeight - 1, recentFeeds.Sum(f => f.Amount) + amount);
-        int initialAmountLost = amountLost;
+        int sum = recentFeeds.Sum(f => f.Amount);
+        int amountLost = Math.Min(oldWeight - 1, sum + amount);
+
+        Logger.LogInformation("Throwup: recent feeds: {recentFeeds} = {sum}; {sum} + {amount} = {amountLost}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, amount, amountLost);
 
         foreach (var effect in Effects.OfType<ThrowupScaleEffect>())
+        {
+            var oldAmountLost = amountLost;
             amountLost = effect.Apply(amountLost);
+            if (amountLost != oldAmountLost)
+                Logger.LogInformation("Applied effect {effect}, amount lost changed from {old} to {new}", effect.Type.ToString(), oldAmountLost, amountLost);
+        }
 
         foreach (var effect in Effects.OfType<ThrowupIgnoreChanceEffect>())
+        {
+            var oldAmountLost = amountLost;
             amountLost = effect.Apply(amountLost);
-
-        if (amountLost != initialAmountLost)
-            Logger.LogInformation("Throwup changed from {base} to {new}", initialAmountLost, amountLost);
+            if (amountLost != oldAmountLost)
+                Logger.LogInformation("Applied effect {effect}, amount lost changed from {old} to {new}", effect.Type.ToString(), oldAmountLost, amountLost);
+        }
 
         return amountLost;
     }
@@ -82,13 +91,13 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
                 Logger.LogInformation("Fadeout: Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
         }
 
-        double initialOverfeedScale = overfeedScale;
-
         foreach (var effect in Effects.OfType<OverfeedScaleModifierEffect>())
+        {
+            var oldScale = overfeedScale;
             overfeedScale = effect.Apply(overfeedScale);
-
-        if (overfeedScale != initialOverfeedScale)
-            Logger.LogInformation("Effects: Overfeed scale changed from {base} to {new}", initialOverfeedScale, overfeedScale);
+            if (oldScale != overfeedScale)
+                Logger.LogInformation("Applied effect {effect}, overfeed scale changed from {old} to {new}", effect.Type.ToString(), oldScale, overfeedScale);
+        }
 
         return overfeedScale;
     }
