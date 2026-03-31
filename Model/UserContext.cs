@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using SwineBot.BotMessages;
 
 namespace SwineBot.Model;
 
@@ -20,6 +21,29 @@ public class UserContext : DbContext
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
+    }
+
+    public IReadOnlyList<Feed> GetRecentFeeds(int swineId, DateTime utcNow)
+    {
+        var dateToCountFeedsFrom = utcNow.AddHours(FeedGenerator.OVERFEED_COOLDOWN * -1);
+
+        return this.Feeds
+            .AsNoTracking()
+            .Where(f => f.SwineId == swineId)
+            .Where(f => f.DateTime > dateToCountFeedsFrom)
+            .ToList();
+    }
+
+    public IReadOnlyList<WeightLoss> GetRecentThrowups(int swineId, DateTime utcNow)
+    {
+        var dateToCountThrowupsFrom = utcNow.AddHours(FeedGenerator.THROWUP_COOLDOWN * -1);
+
+        return this.WeightLosses
+            .AsNoTracking()
+            .Where(wl => wl.SwineId == swineId)
+            .Where(wl => wl.IsThrowUp)
+            .Where(f => f.DateTime > dateToCountThrowupsFrom)
+            .ToList();
     }
 
     public User GetOrAddUser(long chatId, string title, long senderId, string firstName, string username)
@@ -95,6 +119,7 @@ public class UserContext : DbContext
     {
         optionsBuilder.UseLazyLoadingProxies(false);
         optionsBuilder.ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning));
+        optionsBuilder.EnableSensitiveDataLogging(true);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

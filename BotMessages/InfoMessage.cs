@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.Model;
@@ -17,18 +18,9 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
         var lostDuels = duels.Count(d => d.LoserId == swineId);
 
         var current = dtnProvider.UtcNow;
-        var recentFeeds = userContext.Feeds
-            .Where(f => f.SwineId == swineId)
-            .AsEnumerable()
-            .Where(f => (current - f.DateTime).TotalHours < 24)
-            .ToList();
 
-        var recentThrowups = userContext.WeightLosses
-            .Where(wl => wl.SwineId == swineId)
-            .Where(wl => wl.IsThrowUp)
-            .AsEnumerable()
-            .Where(wl => (current - wl.DateTime).TotalHours < 24)
-            .ToList();
+        var recentFeeds = userContext.GetRecentFeeds(swineId, current);
+        var recentThrowups = userContext.GetRecentThrowups(swineId, current);
 
         string lastFeedDTStr = GetLastDTStr(recentFeeds.Select(f => f.DateTime).ToList(), current);
         string lastThrowUpDTStr = GetLastDTStr(recentThrowups.Select(f => f.DateTime).ToList(), current);
@@ -48,7 +40,7 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
         Logger.LogInformation(mealsDecl);
 
         Text.Italic(mealsDecl)
-           .Italic(" пищи (за 24 ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
+           .Italic($" пищи (за {FeedGenerator.OVERFEED_COOLDOWN} ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
 
         if (recentThrowups.Count != 0)
         {

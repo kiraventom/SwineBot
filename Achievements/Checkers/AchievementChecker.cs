@@ -80,7 +80,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> Logger, IDa
         foreach (var level in Levels)
         {
             var checkerResult = CheckLevel(botMessage, context, swineId, level.Value);
-            Logger.LogDebug("Checking {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
+            Logger.LogDebug("Checked {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
 
             switch (checkerResult)
             {

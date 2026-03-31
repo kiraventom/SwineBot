@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.Model;
@@ -11,28 +12,30 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
     public static int CountConsecutiveOverfeeds(UserContext context, int swineId)
     {
         var throwUps = context.WeightLosses
+            .AsNoTracking()
             .Where(wl => wl.SwineId == swineId)
             .Where(wl => wl.IsThrowUp)
             .ToList();
 
-        var lastThrowUp = throwUps
+        var lastActualThrowUp = throwUps
             .Where(wl => !wl.Ignored)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefault();
 
-        var dateToCountFrom = lastThrowUp?.DateTime ?? DateTime.MinValue;
+        var dateToCountFrom = lastActualThrowUp?.DateTime ?? DateTime.MinValue;
 
-        var recentFeeds = context.Feeds
+        var feedsSinceThrowup = context.Feeds
+            .AsNoTracking()
             .Where(wl => wl.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
             .ToList();
 
         int overfeedCount = 0;
-        for (int i = 0; i < recentFeeds.Count - 1; i++)
+        for (int i = 0; i < feedsSinceThrowup.Count - 1; i++)
         {
-            var newerFeed = recentFeeds[i];
-            var olderFeed = recentFeeds[i + 1];
+            var newerFeed = feedsSinceThrowup[i];
+            var olderFeed = feedsSinceThrowup[i + 1];
             var offset = newerFeed.DateTime - olderFeed.DateTime;
             if (offset.TotalHours >= FeedGenerator.OVERFEED_COOLDOWN)
             {

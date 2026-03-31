@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Effects;
@@ -24,6 +25,7 @@ public interface IFeedGenerator
 public class FeedGenerator : IFeedGenerator
 {
     public const int OVERFEED_COOLDOWN = 24;
+    public const int THROWUP_COOLDOWN = 24;
 
     private ILogger<FeedGenerator> Logger { get; }
     private UserContext Context { get; }
@@ -45,6 +47,7 @@ public class FeedGenerator : IFeedGenerator
         var swineInfoId = Context.Infos.First(i => i.SwineId == swineId).InfoId;
 
         Effects = Context.Achievements
+            .AsNoTracking()
             .Where(a => a.SwineInfoId == swineInfoId)
             .AsEnumerable()
             .Select(a => AchievController.GetLevel(a))
@@ -59,11 +62,7 @@ public class FeedGenerator : IFeedGenerator
     public FeedResult Generate()
     {
         var swine = Context.Swines.First(s => s.SwineId == SwineId);
-        var recentFeeds = Context.Feeds
-            .Where(f => f.SwineId == SwineId)
-            .AsEnumerable()
-            .Where(f => (UtcNow - f.DateTime).TotalHours < OVERFEED_COOLDOWN)
-            .ToList();
+        var recentFeeds = Context.GetRecentFeeds(SwineId, UtcNow);
 
         Result result = RollResult(recentFeeds);
         if (result == Result.Full)
@@ -119,18 +118,18 @@ public class FeedGenerator : IFeedGenerator
 
     private Result RollResult(IReadOnlyCollection<Feed> recentFeeds)
     {
-        const int THROWUP_COOLDOWN = 24;
+        var recentThrowups = Context.GetRecentThrowups(SwineId, UtcNow);
 
-        var recentThrowups = Context.WeightLosses
-            .Where(wl => wl.SwineId == SwineId)
-            .Where(wl => wl.IsThrowUp)
-            .AsEnumerable()
-            .Where(wl => (UtcNow - wl.DateTime).TotalHours < THROWUP_COOLDOWN);
-
-        if (recentThrowups.Any())
+        if (recentThrowups.Count != 0)
             return Result.Full;
 
-        if (recentFeeds.Any() == false)
+        var lastThrowup = Context.WeightLosses
+            .AsNoTracking()
+            .Where(wl => wl.IsThrowUp)
+            .OrderByDescending(wl => wl.DateTime)
+            .FirstOrDefault();
+
+        if (recentFeeds.Count == 0 && lastThrowup is not { Ignored: true })
             return Result.FirstFeed;
 
         return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
