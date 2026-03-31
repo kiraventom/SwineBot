@@ -151,8 +151,9 @@ public class FeedGenerator : IFeedGenerator
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
 
         var amountEff = amount * growthMod;
-        Logger.LogInformation("Amount with growth mod: {amount} * {mod} = {amountEff}", amount, growthMod, amountEff);
-        return (int)Math.Round(amountEff);
+        var rounded = (int)Math.Round(amountEff);
+        Logger.LogInformation("Amount with growth mod: {amount} * {mod} = {amountEff}; rounded to {rounded}", amount, growthMod, amountEff, rounded);
+        return rounded;
     }
 
     private int ApplyResult(IReadOnlyCollection<Feed> recentFeeds, int amount, Result result)
