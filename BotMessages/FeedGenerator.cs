@@ -112,10 +112,14 @@ public class FeedGenerator : IFeedGenerator
     private int RollAmount(double luck)
     {
         const int MAX_AMOUNT = 20;
-        var baseAmount = (int)Math.Round(MAX_AMOUNT * luck);
-        baseAmount = Math.Max(1, baseAmount);
-        Logger.LogInformation("Base amount rolled: {baseAmount}", baseAmount);
-        var amount = ApplyGrowthModifier(baseAmount);
+        var baseAmount = MAX_AMOUNT * luck;
+        var nonZeroBaseAmount = Math.Max(1, baseAmount);
+        Logger.LogInformation("Base amount rolled: {luck} * {maxAmount} = {baseAmount}", luck, MAX_AMOUNT, baseAmount);
+
+        if (baseAmount != nonZeroBaseAmount)
+            Logger.LogInformation("Base amount adjusted to not being zero: {baseAmount} -> {nonZero}", baseAmount, nonZeroBaseAmount);
+
+        var amount = ApplyGrowthModifier(nonZeroBaseAmount);
         return amount;
     }
 
@@ -138,7 +142,7 @@ public class FeedGenerator : IFeedGenerator
         return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
     }
 
-    private int ApplyGrowthModifier(int amount)
+    private int ApplyGrowthModifier(double amount)
     {
         var swine = Context.Swines.First(s => s.SwineId == SwineId);
 
