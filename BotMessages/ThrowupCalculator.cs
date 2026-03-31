@@ -35,7 +35,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         throwupThreshold = Math.Min(0.99, throwupThreshold);
 
         if (throwupThreshold != throwupThresholdBeforeClamping)
-            Logger.LogInformation("Throwup threshold: adjusted to being not 100% from {old} to {new}", throwupThresholdBeforeClamping, throwupThreshold);
+            Logger.LogInformation("Throwup threshold: adjusted to be not 100% from {old} to {new}", throwupThresholdBeforeClamping, throwupThreshold);
 
         var overfeedChance = Random.Shared.NextDouble();
         var isThrowup = overfeedChance < throwupThreshold;
@@ -50,9 +50,9 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
     public int Calculate(IReadOnlyCollection<Feed> recentFeeds, int oldWeight, int amount)
     {
         int sum = recentFeeds.Sum(f => f.Amount);
-        int amountLost = Math.Min(oldWeight - 1, sum + amount);
+        var amountLost = sum + amount;
 
-        Logger.LogInformation("Recent feeds: {recentFeeds} = {sum}; {sum} + {amount} = {amountLost}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, sum, amount, amountLost);
+        Logger.LogInformation("Recent feeds: {recentFeeds} = {sum}; Amount lost: {sum} + {amount} = {totalSum}", string.Join(" + ", recentFeeds.Select(f => f.Amount)), sum, sum, amount, amountLost);
 
         foreach (var effect in Effects.OfType<ThrowupScaleEffect>())
         {
@@ -70,7 +70,12 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
                 Logger.LogInformation("Applied effect {effect}, amount lost changed from {old} to {new}", effect.Type.ToString(), oldAmountLost, amountLost);
         }
 
-        return amountLost;
+        int clampedAmountLost = Math.Min(oldWeight - 1, amountLost);
+
+        if (amountLost != clampedAmountLost)
+            Logger.LogInformation("Amount lost: adjusted to not leave swine with zero or negative weight from {old} to {new}", amountLost, clampedAmountLost);
+
+        return clampedAmountLost;
     }
 
     private double GetOverfeedScale(IReadOnlyCollection<Feed> recentFeeds)
