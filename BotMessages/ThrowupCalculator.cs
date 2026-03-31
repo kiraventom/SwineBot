@@ -29,7 +29,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
 
         var overfeedScale = GetOverfeedScale(recentFeeds);
         var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(overfeedScale, recentFeeds.Count);
-        Logger.LogInformation("Throwup threshold: {baseChance} * {scale}^{recentFeedsCount}", OVERFEED_THROWUP_BASE_CHANCE, overfeedScale, recentFeeds.Count);
+        Logger.LogInformation("Throwup threshold: {baseChance} * {scale} ^ {recentFeedsCount} = {threshold}", OVERFEED_THROWUP_BASE_CHANCE, overfeedScale, recentFeeds.Count, throwupThreshold);
 
         var throwupThresholdBeforeClamping = throwupThreshold;
         throwupThreshold = Math.Min(0.99, throwupThreshold);
