@@ -99,7 +99,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
             overfeedScale = BASE_OVERFEED_SCALE - (BASE_OVERFEED_SCALE - FADED_OUT_OVERFEED_SCALE) * hoursScale;
 
             if (overfeedScale != BASE_OVERFEED_SCALE)
-                Logger.LogInformation("Fadeout: Overfeed scale changed from {base} to {new}", BASE_OVERFEED_SCALE, overfeedScale);
+                Logger.LogInformation("Fadeout: overfeed scaled down from {base} to {base} - {minus} * ({hours} / {fadeoutHours}) = {overfeedScale}", BASE_OVERFEED_SCALE, BASE_OVERFEED_SCALE, (BASE_OVERFEED_SCALE - FADED_OUT_OVERFEED_SCALE), clampedHours, OVERFEED_FADEOUT_HOURS, overfeedScale);
         }
 
         foreach (var effect in Effects.OfType<OverfeedScaleModifierEffect>())
