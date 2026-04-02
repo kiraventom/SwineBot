@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
+using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;

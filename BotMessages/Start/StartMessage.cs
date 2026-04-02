@@ -2,9 +2,9 @@ using Microsoft.Extensions.Logging;
 using SwineBot.Actions.Commands;
 using SwineBot.Model;
 
-namespace SwineBot.BotMessages;
+namespace SwineBot.BotMessages.Start;
 
-public class StartMessage : BotMessage
+public class StartMessage : BotMessage, IStaticMessage
 {
     private static IReadOnlyCollection<ICommand> _commands;
 
@@ -32,7 +32,9 @@ public class StartMessage : BotMessage
             .Italic("Доступные команды:").LineBreak();
 
         foreach (var command in _commands)
+        {
             Text.Verbatim(command.Title).Verbatim(" - ").Verbatim(command.Description).LineBreak();
+        }
 
         return Task.CompletedTask;
     }

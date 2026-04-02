@@ -15,7 +15,7 @@ public class AppService(ILogger<AppService> Logger, IServiceScopeFactory spf, IT
     {
         var receiverOptions = new ReceiverOptions()
         {
-            AllowedUpdates = [UpdateType.Message, UpdateType.CallbackQuery]
+            AllowedUpdates = [UpdateType.Message]
         };
 
         using var scope = spf.CreateScope();

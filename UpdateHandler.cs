@@ -11,7 +11,7 @@ public interface IUpdateHandler
     Task Handle(Update update, CancellationToken token);
 }
 
-public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, IBotMessageSender Sender, IEnumerable<UserAction> actions) : IUpdateHandler
+public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, Config Config, IBotMessageSender Sender, IEnumerable<UserAction> actions) : IUpdateHandler
 {
     private IReadOnlyCollection<UserAction> Actions { get; } = actions.ToList();
 
@@ -25,15 +25,17 @@ public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, I
             if (update.Message is not { } message)
                 return;
 
-            await HandleMessageAsync(message);
+            var didHandle = await HandleMessageAsync(message);
 
-            Context.SaveChanges();
+            if (didHandle)
+                Context.SaveChanges();
+
             transaction.Commit();
         }
         catch (Exception e)
         {
             transaction.Rollback();
-            Logger.LogError(e.ToString());
+            Logger.LogError(e, "Transaction failed, rolling back");
         }
     }
 
@@ -48,17 +50,22 @@ public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, I
             return false;
         }
 
-        if (chat.Id == sender.Id)
-        {
-            Logger.LogWarning("Sender.Id == Chat.Id ({id})", chat.Id);
-            // TODO Private messages
-            /* await messageSender.Send(Context, chat.Id, (int)sender.Id, new PrivateMessage(logger)); */
+        // Bot received its own message (e.g., pinned message notification)
+        if (sender.Username == Config.Username)
             return false;
-        }
+
+        var isPrivate = chat.Id == sender.Id;
 
         var user = Context.GetOrAddUser(chat.Id, chat.Title, sender.Id, sender.FirstName, sender.Username);
 
-        Logger.LogInformation("Received message [{messageId}] with text '{text}' in chat [{chatId}] from user [{userId}] '{firstname}'", message.MessageId, message.Text, message.Chat.Id, user.UserId, user.FirstName);
+        if (isPrivate)
+        {
+            Logger.LogInformation("Received private message [{messageId}] with text '{text}' from user [{userId}] '{firstname}'", message.MessageId, message.Text, user.UserId, user.FirstName);
+        }
+        else
+        {
+            Logger.LogInformation("Received message [{messageId}] with text '{text}' in chat [{chatId}] from user [{userId}] '{firstname}'", message.MessageId, message.Text, message.Chat.Id, user.UserId, user.FirstName);
+        }
 
         var botCommand = message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
         if (botCommand is not null)
@@ -82,7 +89,7 @@ public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, I
             return false;
         }
 
-        var botMessage = action.Execute(fullText);
+        var botMessage = action.Execute(user.UserId, fullText);
         await Sender.Send(Context, chatId, user.UserId, botMessage);
         return true;
     }

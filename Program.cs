@@ -10,6 +10,8 @@ using static System.Environment;
 using Serilog;
 using SwineBot.BotMessages;
 using SwineBot.Achievements.Checkers;
+using SwineBot.BotMessages.Feed;
+using SwineBot.BotMessages.Start;
 
 namespace SwineBot;
 
@@ -51,6 +53,9 @@ internal class Program
                 .AddSingleton<IFeedGeneratorFactory, FeedGeneratorFactory>()
                 .AddSingleton<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
                 .AddSingleton<IMessageFactory, MessageFactory>()
+                .AddSingleton<StartLinkBuilder>()
+                .AddStartLinkActions()
+                .AddTransient<IStartLinkParser, StartLinkParser>()
                 .AddSingleton<ITelegramBotClient, TelegramBotClient>()
                 .AddSingleton<IBotMessageSender, BotMessageSender>()
                 .AddSingleton<IAchievementController, AchievementController>()

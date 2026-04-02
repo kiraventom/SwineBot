@@ -4,7 +4,7 @@ using SwineBot.Achievements.Checkers;
 using SwineBot.Model;
 using SwineBot.Text;
 
-namespace SwineBot.BotMessages;
+namespace SwineBot.BotMessages.Feed;
 
 public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory FeedGeneratorFactory) : BotMessage(Logger)
 {
@@ -95,7 +95,7 @@ public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory Feed
         var swine = context.Swines.First(s => s.SwineId == swineId);
         swine.Weight = result.NewWeight;
 
-        context.Feeds.Add(new Feed()
+        context.Feeds.Add(new Model.Feed()
         {
             SwineId = swineId,
             DateTime = result.UtcDT,

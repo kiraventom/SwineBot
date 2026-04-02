@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
+using SwineBot.BotMessages.Feed;
 
 namespace SwineBot.Actions.Commands;
 

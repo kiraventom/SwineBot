@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
+using SwineBot.BotMessages.Start;
 using SwineBot.Model;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -17,25 +18,35 @@ public class BotMessageSender(ILogger<BotMessageSender> Logger, ITelegramBotClie
 {
     public event BeforeMessageSendDelegate BeforeMessageSend;
 
-    private async Task<bool> InitMessage(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
+    private async Task<BotMessage> InitMessage(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
     {
         try
         {
-            await botMessage.Init(userContext, chatId, userId);
-            return true;
+            int? swineId = userContext.GetSwineId(chatId, userId);
+            if (swineId is null)
+            {
+                swineId = -1;
+
+                if (botMessage is not IStaticMessage and not PiggeryMessage)
+                    botMessage = MessageFactory.Create<PiggeryMessage>(userId);
+            }
+
+            var isPrivate = userContext.IsPrivateChat(chatId);
+            await botMessage.Init(userContext, swineId.Value, isPrivate);
+            return botMessage;
         }
         catch (Exception e)
         {
+            Logger.LogCritical(e, "Failed to initialize {message}", botMessage.GetType().Name);
+
             if (botMessage is InvalidMessage)
             {
-                Logger.LogCritical("Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
+                Logger.LogCritical(e, "Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
                 throw;
             }
-            else
-            {
-                Logger.LogCritical(e.ToString());
-                return false;
-            }
+
+            var invalidMessage = MessageFactory.Create<InvalidMessage>();
+            return await InitMessage(userContext, chatId, userId, invalidMessage);
         }
     }
 
@@ -43,11 +54,7 @@ public class BotMessageSender(ILogger<BotMessageSender> Logger, ITelegramBotClie
     {
         try
         {
-            var didInit = await InitMessage(userContext, chatId, userId, botMessage);
-            if (didInit == false)
-            {
-                return await Send(userContext, chatId, userId, MessageFactory.Create<InvalidMessage>());
-            }
+            botMessage = await InitMessage(userContext, chatId, userId, botMessage);
         }
         catch
         {
@@ -66,7 +73,6 @@ public class BotMessageSender(ILogger<BotMessageSender> Logger, ITelegramBotClie
             if (botMessage.PhotoFilePath is null)
             {
                 message = await Client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
-
             }
             else
             {
@@ -81,14 +87,26 @@ public class BotMessageSender(ILogger<BotMessageSender> Logger, ITelegramBotClie
 
             Logger.LogInformation("Sent '{text}' to [{id}], messageId [{messageId}]", text, chatId, message.MessageId);
 
+            if (botMessage is IPinnableMessage { ShouldPin: true })
+            {
+                await Client.UnpinAllChatMessages(chatId);
+                await Client.PinChatMessage(chatId, message.MessageId);
+
+                Logger.LogInformation("Pinned [{messageId}] in chat [{id}]", message.MessageId, chatId);
+            }
+
             return message;
         }
         catch (Exception e)
         {
-            Logger.LogCritical(e.ToString());
+            Logger.LogCritical(e, "Sending message failed");
             return null;
         }
     }
 }
 
+// TODO: Rewrite the whole app and throw away passing UserContext in method parameters
+// Change Singletons to Scoped when needed, pass actual data instead of Context when possible
+// Minimize usage of IServiceScopeFactory
+// Replace this event with direct call (connect via DI ctor)
 public delegate Task BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);

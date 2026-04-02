@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using SwineBot.BotMessages;
+using SwineBot.BotMessages.Feed;
+using Telegram.Bot.Types;
 
 namespace SwineBot.Model;
 
@@ -21,6 +23,49 @@ public class UserContext : DbContext
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
+    }
+
+    public bool IsPrivateChat(ChatId chatId) => this.Users.Any(u => u.TelegramId == chatId.Identifier);
+
+    // TODO Move to separate class, add logs
+    public int? GetSwineId(ChatId chatId, int userId)
+    {
+        var isPrivate = IsPrivateChat(chatId);
+
+        if (!isPrivate)
+        {
+            var group = this.Groups.First(g => g.TelegramId == chatId.Identifier);
+
+            return this.Swines
+                .Where(s => s.GroupId == group.GroupId)
+                .First(s => s.OwnerId == userId)
+                .SwineId;
+        }
+
+        var user = this.Users.First(u => u.UserId == userId);
+        var privateSwineId = user.PrivateSwineId;
+
+        if (this.Swines.AsNoTracking().All(s => s.SwineId != privateSwineId))
+        {
+            user.PrivateSwineId = null;
+            this.SaveChanges();
+        }
+
+        // If no private swine is selected, auto-select the swine if it's user's only one
+        if (privateSwineId is null)
+        {
+            var userSwines = this.Swines.AsNoTracking().Where(s => s.OwnerId == userId).ToList();
+
+            if (userSwines.Count == 1)
+            {
+                user.PrivateSwineId = userSwines.First().SwineId;
+                privateSwineId = user.PrivateSwineId;
+
+                this.SaveChanges();
+            }
+        }
+
+        return privateSwineId;
     }
 
     public IReadOnlyList<Feed> GetRecentFeeds(int swineId, DateTime utcNow)
@@ -64,41 +109,50 @@ public class UserContext : DbContext
             SaveChanges();
         }
 
+        // Private message
+        var isPrivate = IsPrivateChat(chatId);
+
         var group = this.Groups.FirstOrDefault(g => g.TelegramId == chatId);
         bool newGroup = group is null;
 
-        if (newGroup)
+        if (!isPrivate)
         {
-            group = new Group()
+            if (newGroup)
             {
-                Title = title,
-                TelegramId = chatId,
-            };
+                group = new Group()
+                {
+                    Title = title,
+                    TelegramId = chatId,
+                };
 
-            Groups.Add(group);
-            SaveChanges();
-        }
+                Groups.Add(group);
+                SaveChanges();
+            }
 
-        if (newUser || newGroup)
-        {
-            var swine = new Swine()
+            if (newUser || newGroup)
             {
-                Name = firstName,
-                Weight = 1,
-                OwnerId = user.UserId,
-                GroupId = group.GroupId
-            };
+                var swine = new Swine()
+                {
+                    Name = firstName,
+                    Weight = 1,
+                    OwnerId = user.UserId,
+                    GroupId = group.GroupId
+                };
 
-            Swines.Add(swine);
-            SaveChanges();
+                Swines.Add(swine);
+                SaveChanges();
 
-            var info = new SwineInfo()
-            {
-                SwineId = swine.SwineId
-            };
+                var info = new SwineInfo()
+                {
+                    SwineId = swine.SwineId
+                };
 
-            Infos.Add(info);
-            SaveChanges();
+                Infos.Add(info);
+                SaveChanges();
+            }
+
+            if (group.Title != title)
+                group.Title = title;
         }
 
         if (user.FirstName != firstName)
@@ -106,9 +160,6 @@ public class UserContext : DbContext
 
         if (user.Tag != username)
             user.Tag = username;
-
-        if (group.Title != title)
-            group.Title = title;
 
         SaveChanges();
 
@@ -148,6 +199,8 @@ public class User
     public long TelegramId { get; set; }
     [Required] public string FirstName { get; set; }
     public string Tag { get; set; }
+
+    public int? PrivateSwineId { get; set; }
 
     public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 2);
 }

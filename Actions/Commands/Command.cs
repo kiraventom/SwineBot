@@ -17,7 +17,7 @@ public abstract class Command<T>(ILogger<Command<T>> logger, IMessageFactory mes
         return base.IsMatch(name);
     }
 
-    public override BotMessage Execute(string actionText) => CreateMessage();
+    public override BotMessage Execute(int userId, string actionText) => CreateMessage();
 
     protected T CreateMessage(params object[] args) => messageFactory.Create<T>(args);
 }

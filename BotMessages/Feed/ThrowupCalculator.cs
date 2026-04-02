@@ -1,9 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements.Effects;
-using SwineBot.Model;
 
-namespace SwineBot.BotMessages;
+namespace SwineBot.BotMessages.Feed;
 
 public interface IThrowupCalculatorFactory
 {
@@ -17,13 +16,13 @@ public class ThrowupCalculatorFactory(IServiceProvider sp) : IThrowupCalculatorF
 
 public interface IThrowupCalculator
 {
-    bool IsThrowup(IReadOnlyCollection<Feed> recentFeeds);
-    int Calculate(IReadOnlyCollection<Feed> recentFeeds, int oldWeight, int amount);
+    bool IsThrowup(IReadOnlyCollection<Model.Feed> recentFeeds);
+    int Calculate(IReadOnlyCollection<Model.Feed> recentFeeds, int oldWeight, int amount);
 }
 
 public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNow, IReadOnlyCollection<IAchievementEffect> Effects) : IThrowupCalculator
 {
-    public bool IsThrowup(IReadOnlyCollection<Feed> recentFeeds)
+    public bool IsThrowup(IReadOnlyCollection<Model.Feed> recentFeeds)
     {
         const double OVERFEED_THROWUP_BASE_CHANCE = 0.01;
 
@@ -47,7 +46,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         return isThrowup;
     }
 
-    public int Calculate(IReadOnlyCollection<Feed> recentFeeds, int oldWeight, int amount)
+    public int Calculate(IReadOnlyCollection<Model.Feed> recentFeeds, int oldWeight, int amount)
     {
         int sum = recentFeeds.Sum(f => f.Amount);
         var amountLost = sum + amount;
@@ -78,7 +77,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         return clampedAmountLost;
     }
 
-    private double GetOverfeedScale(IReadOnlyCollection<Feed> recentFeeds)
+    private double GetOverfeedScale(IReadOnlyCollection<Model.Feed> recentFeeds)
     {
         const double BASE_OVERFEED_SCALE = 2.5;
 

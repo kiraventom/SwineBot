@@ -2,43 +2,40 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.Model;
 using SwineBot.Text;
-using Telegram.Bot.Types;
 
 namespace SwineBot.BotMessages;
 
 public interface IMessageFactory
 {
-    T Create<T>(params object[] args) where T : BotMessage;
+    T Create<T>(params object[] args) where T : IBotMessage;
 }
 
 public class MessageFactory(IServiceProvider sp) : IMessageFactory
 {
-    public T Create<T>(params object[] args) where T : BotMessage => ActivatorUtilities.CreateInstance<T>(sp, args);
+    public T Create<T>(params object[] args) where T : IBotMessage => ActivatorUtilities.CreateInstance<T>(sp, args);
 }
 
-public abstract class BotMessage(ILogger<BotMessage> Logger)
+public abstract class BotMessage(ILogger<BotMessage> Logger) : IBotMessage
 {
     private bool _isInited;
+
+    public bool IsPrivate { get; private set; }
 
     public MessageText Text { get; } = new();
 
     public string PhotoFilePath { get; protected set; }
 
-    public async Task Init(UserContext userContext, ChatId chatId, int userId)
+    public async Task Init(UserContext userContext, int swineId, bool isPrivate)
     {
         if (_isInited)
             return;
 
-        var group = userContext.Groups.First(g => g.TelegramId == chatId.Identifier);
+        IsPrivate = isPrivate;
 
-        var swine = userContext.Swines
-            .Where(s => s.GroupId == group.GroupId)
-            .First(s => s.OwnerId == userId);
-
-        await InitInternal(userContext, swine.SwineId);
+        await InitInternal(userContext, swineId);
 
         _isInited = true;
     }
-    
+
     protected abstract Task InitInternal(UserContext userContext, int swineId);
 }

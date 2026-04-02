@@ -3,7 +3,7 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class InvalidMessage(ILogger<InvalidMessage> Logger) : BotMessage(Logger)
+public class InvalidMessage(ILogger<InvalidMessage> Logger) : BotMessage(Logger), IStaticMessage
 {
     protected override Task InitInternal(UserContext userContext, int swineId)
     {

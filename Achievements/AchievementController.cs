@@ -111,12 +111,13 @@ public class AchievementController : IAchievementController
         if (message is AchievementMessage)
             return;
 
-        var group = userContext.Groups.First(g => g.TelegramId == chatId.Identifier);
-        var swine = userContext.Swines.First(s => s.OwnerId == userId && s.GroupId == group.GroupId);
+        int? swineId = userContext.GetSwineId(chatId, userId);
+        if (swineId is null)
+            return;
 
         foreach (var checker in Checkers)
         {
-            if (checker.TryApply(message, userContext, swine.SwineId, out var achievementLevel))
+            if (checker.TryApply(message, userContext, swineId.Value, out var achievementLevel))
             {
                 await Sender.Send(userContext, chatId, userId, MessageFactory.Create<AchievementMessage>(achievementLevel));
             }

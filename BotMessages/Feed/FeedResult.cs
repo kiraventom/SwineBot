@@ -1,4 +1,4 @@
-namespace SwineBot.BotMessages;
+namespace SwineBot.BotMessages.Feed;
 
 public enum Result { FirstFeed, Overfeed, Throwup, Full }
 

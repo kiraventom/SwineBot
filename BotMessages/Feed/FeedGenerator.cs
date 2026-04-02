@@ -5,7 +5,7 @@ using SwineBot.Achievements;
 using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 
-namespace SwineBot.BotMessages;
+namespace SwineBot.BotMessages.Feed;
 
 public interface IFeedGeneratorFactory
 {
@@ -123,7 +123,7 @@ public class FeedGenerator : IFeedGenerator
         return amount;
     }
 
-    private Result RollResult(IReadOnlyCollection<Feed> recentFeeds)
+    private Result RollResult(IReadOnlyCollection<Model.Feed> recentFeeds)
     {
         var recentThrowups = Context.GetRecentThrowups(SwineId, UtcNow);
 
@@ -160,7 +160,7 @@ public class FeedGenerator : IFeedGenerator
         return rounded;
     }
 
-    private int ApplyResult(IReadOnlyCollection<Feed> recentFeeds, int amount, Result result)
+    private int ApplyResult(IReadOnlyCollection<Model.Feed> recentFeeds, int amount, Result result)
     {
         var swine = Context.Swines.First(s => s.SwineId == SwineId);
         if (result == Result.Throwup)

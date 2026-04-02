@@ -17,7 +17,7 @@ public class NewNameMessage(ILogger<NewNameMessage> Logger, string name) : BotMe
             return Task.CompletedTask;
         }
 
-        name = name.Trim();
+        name = name.Split('\n', StringSplitOptions.RemoveEmptyEntries).First().Trim();
 
         var swine = userContext.Swines.First(s => s.SwineId == swineId);
         if (swine.Name == name)
