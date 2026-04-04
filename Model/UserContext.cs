@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using SwineBot.BotMessages;
 using SwineBot.BotMessages.Feed;
 using Telegram.Bot.Types;
 
@@ -175,11 +174,51 @@ public class UserContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Achievement>().Property(e => e.Type).HasConversion<int>();
+        modelBuilder.Entity<User>(u =>
+        {
+            u.HasIndex(u => u.TelegramId).IsUnique();
+            u.HasOne<Swine>().WithOne().HasForeignKey<User>(u => u.PrivateSwineId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Group>().HasIndex(g => g.TelegramId).IsUnique();
+
+        modelBuilder.Entity<Swine>(s =>
+        {
+            s.HasOne<User>().WithMany().HasForeignKey(s => s.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            s.HasOne<Group>().WithMany().HasForeignKey(s => s.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SwineInfo>().HasOne<Swine>().WithOne().HasForeignKey<SwineInfo>(i => i.SwineId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Feed>().HasOne<Swine>().WithMany().HasForeignKey(i => i.SwineId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<WeightLoss>().HasOne<Swine>().WithMany().HasForeignKey(i => i.SwineId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DuelRequest>(s =>
+        {
+            s.HasOne<Swine>().WithMany().HasForeignKey(i => i.AttackerId).OnDelete(DeleteBehavior.Cascade);
+            s.HasOne<Swine>().WithMany().HasForeignKey(i => i.DefenderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DuelResult>(s =>
+        {
+            s.HasOne<Swine>().WithMany().HasForeignKey(i => i.AttackerId).OnDelete(DeleteBehavior.SetNull);
+            s.HasOne<Swine>().WithMany().HasForeignKey(i => i.DefenderId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Achievement>(s =>
+        {
+            s.HasOne<SwineInfo>().WithMany().HasForeignKey(i => i.SwineInfoId).OnDelete(DeleteBehavior.Cascade);
+            s.Property(e => e.Type).HasConversion<int>();
+        });
+
+        modelBuilder.Entity<Slaughter>(s =>
+        {
+            s.HasOne<User>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Cascade);
+            s.HasOne<Group>().WithMany().HasForeignKey(i => i.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }
 
-[Index(nameof(TelegramId), IsUnique = true)]
 public class Group
 {
     [Key] public int GroupId { get; set; }
@@ -189,7 +228,6 @@ public class Group
     public string Title { get; set; }
 }
 
-[Index(nameof(TelegramId), IsUnique = true)]
 public class User
 {
     private const double GROWTH_MOD_MULT = 0.0002;
@@ -257,15 +295,15 @@ public class DuelResult
 {
     [Key] public int DuelResultId { get; set; }
 
-    public int AttackerId { get; set; }
-    public int DefenderId { get; set; }
+    public int? AttackerId { get; set; }
+    public int? DefenderId { get; set; }
     public bool AttackerWon { get; set; }
 
     [NotMapped]
-    public int WinnerId => AttackerWon ? AttackerId : DefenderId;
+    public int? WinnerId => AttackerWon ? AttackerId : DefenderId;
 
     [NotMapped]
-    public int LoserId => AttackerWon ? DefenderId : AttackerId;
+    public int? LoserId => AttackerWon ? DefenderId : AttackerId;
 
     public DateTime DateTime { get; set; }
 
