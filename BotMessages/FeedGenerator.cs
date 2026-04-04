@@ -130,18 +130,16 @@ public class FeedGenerator : IFeedGenerator
         if (recentThrowups.Count != 0)
             return Result.Full;
 
-        var dateToCountFrom = UtcNow.AddHours(THROWUP_COOLDOWN * -1);
         var lastThrowup = Context.WeightLosses
             .AsNoTracking()
             .Where(wl => wl.IsThrowUp)
-            .Where(wl => wl.DateTime >= dateToCountFrom)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefault();
 
-        if (recentFeeds.Count == 0 && lastThrowup is not { Ignored: true })
-            return Result.FirstFeed;
+        if (recentFeeds.Count != 0 || lastThrowup is { Ignored: true })
+            return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
 
-        return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
+        return Result.FirstFeed;
     }
 
     private int ApplyGrowthModifier(double amount)
