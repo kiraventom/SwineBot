@@ -130,9 +130,11 @@ public class FeedGenerator : IFeedGenerator
         if (recentThrowups.Count != 0)
             return Result.Full;
 
+        var dateToCountFrom = UtcNow.AddHours(THROWUP_COOLDOWN * -1);
         var lastThrowup = Context.WeightLosses
             .AsNoTracking()
             .Where(wl => wl.IsThrowUp)
+            .Where(wl => wl.DateTime >= dateToCountFrom)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefault();
 
