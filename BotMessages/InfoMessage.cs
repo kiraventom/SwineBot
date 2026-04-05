@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages.Feed;
@@ -7,28 +8,28 @@ using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
-public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnProvider) : BotMessage(Logger)
+public class InfoMessage(ILogger<InfoMessage> logger, UserContext context, IDateTimeNowProvider dtnProvider) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
-        var swine = userContext.Swines.First(s => s.SwineId == swineId);
+        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
 
-        var duels = userContext.DuelResults.ToList();
-        var wonDuels = duels.Count(d => d.WinnerId == swineId);
-        var lostDuels = duels.Count(d => d.LoserId == swineId);
+        var duels = await context.DuelResults.ToListAsync();
+        var wonDuels = duels.Count(d => d.WinnerId == update.SwineId);
+        var lostDuels = duels.Count(d => d.LoserId == update.SwineId);
 
         var current = dtnProvider.UtcNow;
 
-        var recentFeeds = userContext.GetRecentFeeds(swineId, current);
-        var recentThrowups = userContext.GetRecentThrowups(swineId, current);
+        var recentFeeds = await context.GetRecentFeeds(update.SwineId, current);
+        var recentThrowups = await context.GetRecentThrowups(update.SwineId, current);
 
         string lastFeedDTStr = GetLastDTStr(recentFeeds.Select(f => f.DateTime).ToList(), current);
         string lastThrowUpDTStr = GetLastDTStr(recentThrowups.Select(f => f.DateTime).ToList(), current);
 
-        int consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(userContext, swineId);
-        int consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(userContext, swineId);
+        int consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, update.SwineId);
+        int consecutiveNoOverfeeds = await NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(context, update.SwineId);
 
-        var owner = userContext.Users.First(u => u.UserId == swine.OwnerId);
+        var owner = context.Users.First(u => u.UserId == swine.OwnerId);
         Text.Bold("Информация о свине ").InlineMention(owner).Bold(":").LineBreak()
             .LineBreak()
             .Italic("Имя: ").Verbatim(swine.Name).LineBreak()
@@ -37,7 +38,7 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
         var mealsDecl = MessageTextUtils.GetDeclinatedNoun(recentFeeds.Count, Unit.Meal);
         mealsDecl = char.ToUpper(mealsDecl[0]) + mealsDecl[1..];
 
-        Logger.LogInformation(mealsDecl);
+        logger.LogInformation(mealsDecl);
 
         Text.Italic(mealsDecl)
            .Italic($" пищи (за {FeedGenerator.OVERFEED_COOLDOWN} ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
@@ -71,10 +72,10 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
                 .LineBreak();
         }
 
-        var slaughters = userContext.Slaughters
+        var slaughters = await context.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
             .Where(s => s.GroupId == swine.GroupId)
-            .ToList();
+            .ToListAsync();
 
         var totalSlaughteredWeight = slaughters
             .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
@@ -96,8 +97,6 @@ public class InfoMessage(ILogger<InfoMessage> Logger, IDateTimeNowProvider dtnPr
         }
 
         // TODO active duel requests (incoming and outcoming)
-
-        return Task.CompletedTask;
     }
 
     private static string GetLastDTStr(IReadOnlyCollection<DateTime> recentDTs, DateTime current)

@@ -17,8 +17,8 @@ public class ThrowupIgnoreChanceEffect : StaticAchievementEffect<int>
             + "свин не блеванёт при неудачном перекорме";
     }
 
-    public override int Apply(int value)
+    public override Task<int> Apply(int value)
     {
-        return Random.Shared.NextDouble() < Chance ? 0 : value;
+        return Task.FromResult(Random.Shared.NextDouble() < Chance ? 0 : value);
     }
 }

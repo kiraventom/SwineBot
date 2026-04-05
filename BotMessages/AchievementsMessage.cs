@@ -4,14 +4,14 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class AchievementsMessage(ILogger<AchievementsMessage> Logger, IAchievementController achievController) : BotMessage(Logger)
+public class AchievementsMessage(ILogger<AchievementsMessage> logger, UserContext context, AchievementController achievController) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override Task InitInternal(Update update)
     {
-        var swine = userContext.Swines.First(s => s.SwineId == swineId);
-        var infoId = userContext.Infos.First(i => i.SwineId == swineId).InfoId;
+        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
+        var infoId = context.Infos.First(i => i.SwineId == update.SwineId).InfoId;
 
-        if (userContext.Achievements.Where(a => a.SwineInfoId == infoId).Count() == 0)
+        if (context.Achievements.Where(a => a.SwineInfoId == infoId).Count() == 0)
         {
             Text.Italic("У ").Bold(swine.Name).Italic(" пока нет достижений :(").LineBreak();
             return Task.CompletedTask;
@@ -20,7 +20,7 @@ public class AchievementsMessage(ILogger<AchievementsMessage> Logger, IAchieveme
         Text.Bold("Достижения ").Bold(swine.Name).Bold(":").LineBreak().LineBreak();
 
         int index = 0;
-        foreach (var achiev in userContext.Achievements.Where(a => a.SwineInfoId == infoId).OrderByDescending(a => a.DateTime))
+        foreach (var achiev in context.Achievements.Where(a => a.SwineInfoId == infoId).OrderByDescending(a => a.DateTime))
         {
             WriteAchievement(achiev, index);
             ++index;
@@ -34,7 +34,7 @@ public class AchievementsMessage(ILogger<AchievementsMessage> Logger, IAchieveme
         var level = achievController.GetLevel(achiev);
         if (level is null)
         {
-            Logger.LogError("Level for achievement {type} with value {value} was not found", achiev.Type.ToString(), achiev.Value);
+            logger.LogError("Level for achievement {type} with value {value} was not found", achiev.Type.ToString(), achiev.Value);
             return;
         }
 

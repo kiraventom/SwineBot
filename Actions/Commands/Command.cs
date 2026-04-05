@@ -5,6 +5,8 @@ namespace SwineBot.Actions.Commands;
 
 public abstract class Command<T>(ILogger<Command<T>> logger, IMessageFactory messageFactory) : UserAction(logger), ICommand where T : BotMessage
 {
+    protected IMessageFactory MessageFactory { get; } = messageFactory;
+
     public virtual string Title => Name;
     public abstract string Description { get; }
 
@@ -17,7 +19,7 @@ public abstract class Command<T>(ILogger<Command<T>> logger, IMessageFactory mes
         return base.IsMatch(name);
     }
 
-    public override BotMessage Execute(int userId, string actionText) => CreateMessage();
+    public override BotMessage Execute(Update update, string actionText) => CreateMessage();
 
-    protected T CreateMessage(params object[] args) => messageFactory.Create<T>(args);
+    protected T CreateMessage(params object[] args) => MessageFactory.Create<T>(args);
 }

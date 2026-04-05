@@ -25,11 +25,11 @@ public static class ServiceCollectionExtensions
 
         foreach (var actionType in actionTypes)
         {
-            collection.AddSingleton(actionType);
-            collection.AddSingleton(typeof(UserAction), sp => sp.GetRequiredService(actionType));
+            collection.AddTransient(actionType);
+            collection.AddTransient(typeof(UserAction), sp => sp.GetRequiredService(actionType));
 
             if (actionType.IsAssignableTo(typeof(ICommand)))
-                collection.AddSingleton(typeof(ICommand), sp => sp.GetRequiredService(actionType));
+                collection.AddTransient(typeof(ICommand), sp => sp.GetRequiredService(actionType));
         }
 
         return collection;

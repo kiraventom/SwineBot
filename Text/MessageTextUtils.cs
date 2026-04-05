@@ -5,13 +5,14 @@ namespace SwineBot.Text;
 
 public static class MessageTextUtils
 {
+    private static HashSet<char> CharsToEscape { get; } = [ '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' ];
+
     public static StringBuilder EscapeString(string str, StringBuilder stringBuilder = null)
     {
         var sb = stringBuilder ?? new StringBuilder();
         foreach (var ch in str)
         {
-            var charCode = (int)ch;
-            if (charCode is >= 1 and <= 126)
+            if (CharsToEscape.Contains(ch))
                 sb.Append('\\');
 
             sb.Append(ch);

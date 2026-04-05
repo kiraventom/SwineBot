@@ -6,57 +6,55 @@ using SwineBot.Text;
 
 namespace SwineBot.BotMessages.Feed;
 
-public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory FeedGeneratorFactory) : BotMessage(Logger)
+public class FeedMessage(ILogger<FeedMessage> logger, IFeedGeneratorFactory FeedGeneratorFactory, UserContext context) : BotMessage(logger)
 {
     private const double LOW_LUCK_THRESHOLD = 0.15;
     private const double HIGH_LUCK_THRESHOLD = 0.85;
 
     public FeedResult FeedResult { get; private set; }
 
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
-        var feedManager = FeedGeneratorFactory.Create(userContext, swineId);
-        var result = feedManager.Generate();
+        var feedManager = FeedGeneratorFactory.Create(update.SwineId);
+        var result = await feedManager.Generate();
 
         switch (result.Result)
         {
             case Result.FirstFeed:
             case Result.Overfeed:
-                HandleFeed(userContext, swineId, result);
+                HandleFeed(update, result);
                 break;
 
             case Result.Throwup:
-                HandleThrowup(userContext, swineId, result);
+                await HandleThrowup(update, result);
                 break;
 
             case Result.Full:
-                HandleFull(userContext, swineId);
+                HandleFull(update);
                 break;
         }
 
         FeedResult = result;
 
-        userContext.SaveChanges();
-
-        return Task.CompletedTask;
+        await context.SaveChangesAsync();
     }
 
-    private void HandleFull(UserContext context, int swineId)
+    private void HandleFull(Update update)
     {
-        var name = context.Swines.First(s => s.SwineId == swineId).Name;
+        var name = context.Swines.First(s => s.SwineId == update.SwineId).Name;
         Text.Verbatim("После недавнего инцидента с перееданием ")
             .Bold(name)
             .Verbatim(" совсем не до еды...");
     }
 
-    private void HandleThrowup(UserContext context, int swineId, FeedResult result)
+    private async Task HandleThrowup(Update update, FeedResult result)
     {
-        var swine = context.Swines.First(s => s.SwineId == swineId);
+        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
         swine.Weight = result.NewWeight;
 
         context.WeightLosses.Add(new WeightLoss()
         {
-            SwineId = swineId,
+            SwineId = swine.SwineId,
             DateTime = result.UtcDT,
             IsThrowUp = true,
             Amount = result.Amount
@@ -71,7 +69,7 @@ public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory Feed
                     .LineBreak()
                     .Bold($"Вес не изменился: {result.NewWeight} кг");
 
-                var consecutiveOverfeeds = OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
+                var consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
                 if (consecutiveOverfeeds != 0)
                     Text.LineBreak()
                         .Italic($"Это происшествие не нарушит ваш стрик в {consecutiveOverfeeds} {MessageTextUtils.GetDeclinatedNoun(consecutiveOverfeeds, Unit.Overfeed)}");
@@ -90,14 +88,14 @@ public class FeedMessage(ILogger<FeedMessage> Logger, IFeedGeneratorFactory Feed
         }
     }
 
-    private void HandleFeed(UserContext context, int swineId, FeedResult result)
+    private void HandleFeed(Update update, FeedResult result)
     {
-        var swine = context.Swines.First(s => s.SwineId == swineId);
+        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
         swine.Weight = result.NewWeight;
 
         context.Feeds.Add(new Model.Feed()
         {
-            SwineId = swineId,
+            SwineId = swine.SwineId,
             DateTime = result.UtcDT,
             Amount = result.Amount,
         });

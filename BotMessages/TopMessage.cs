@@ -1,16 +1,15 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class TopMessage(ILogger<TopMessage> Logger) : BotMessage(Logger)
+public class TopMessage(ILogger<TopMessage> logger, UserContext context) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
-        var groupId = userContext.Swines.First(s => s.SwineId == swineId).GroupId;
-
-        var topSwines = userContext.Swines
-            .Where(s => s.GroupId == groupId)
+        var topSwines = context.Swines
+            .Where(s => s.GroupId == update.GroupId)
             .OrderByDescending(s => s.Weight)
             .Take(10)
             .Where(s => s.Weight > 1);
@@ -23,25 +22,23 @@ public class TopMessage(ILogger<TopMessage> Logger) : BotMessage(Logger)
 
         foreach (var swine in topSwines)
         {
-            if (swine.SwineId == swineId)
+            if (swine.SwineId == update.SwineId)
                 isSenderSwineInTop = true;
 
-            OutputSwine(counter++, swine, swine.SwineId == swineId);
+            OutputSwine(counter++, swine, swine.SwineId == update.SwineId);
         }
 
         if (isSenderSwineInTop == false)
         {
-            var senderSwine = userContext.Swines.First(s => s.SwineId == swineId);
-            var senderIndex = userContext.Swines
+            var senderSwine = context.Swines.First(s => s.SwineId == update.SwineId);
+            var senderIndex = (await context.Swines
                 .OrderByDescending(s => s.Weight)
-                .ToList()
+                .ToListAsync())
                 .IndexOf(senderSwine);
 
             Text.Verbatim("...").LineBreak();
             OutputSwine(senderIndex + 1, senderSwine, true);
         }
-
-        return Task.CompletedTask;
     }
 
     private void OutputSwine(int rank, Swine swine, bool isSender)

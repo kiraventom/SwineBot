@@ -20,9 +20,9 @@ public class ThrowupScaleEffect : StaticAchievementEffect<int>
             + " веса";
     }
 
-    public override int Apply(int value)
+    public override Task<int> Apply(int value)
     {
-        return (int)(value * Modifier);
+        return Task.FromResult((int)(value * Modifier));
     }
 }
 

@@ -6,18 +6,18 @@ using SwineBot.Text;
 
 namespace SwineBot.BotMessages;
 
-public class SlaughterMessage(ILogger<SlaughterMessage> Logger, IDateTimeNowProvider dtnProvider, string confirmation) : BotMessage(Logger)
+public class SlaughterMessage(ILogger<SlaughterMessage> logger, UserContext context, IDateTimeNowProvider dtnProvider, string confirmation) : BotMessage(logger)
 {
     private const string CONFIRMATION = "yes";
     private const int SLAUGHTER_COOLDOWN = 24;
 
     public const int MIN_SWINE_WEIGHT = 75;
 
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
-        var swine = userContext.Swines.First(s => s.SwineId == swineId);
+        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
 
-        var lastSlaughter = userContext.Slaughters
+        var lastSlaughter = context.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
             .OrderByDescending(s => s.DateTime)
             .FirstOrDefault();
@@ -25,11 +25,11 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, IDateTimeNowProv
         if (lastSlaughter is not null && (dtnProvider.UtcNow - lastSlaughter.DateTime).TotalHours < SLAUGHTER_COOLDOWN)
         {
             Text.Italic("Нельзя марать руки в крови так часто.");
-            return Task.CompletedTask;
+            return;
         }
 
-        var infoId = userContext.Infos.First(i => i.SwineId == swineId).InfoId;
-        var achievsCount = userContext.Achievements.Where(s => s.SwineInfoId == infoId).Count();
+        var infoId = context.Infos.First(i => i.SwineId == update.SwineId).InfoId;
+        var achievsCount = context.Achievements.Where(s => s.SwineInfoId == infoId).Count();
 
         if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
         {
@@ -44,41 +44,39 @@ public class SlaughterMessage(ILogger<SlaughterMessage> Logger, IDateTimeNowProv
             Text.Italic("Чтобы убить ").Bold(swine.Name).Italic(", отправьте ")
                .Monospace($"{SlaughterCommand.COMMAND_NAME} {CONFIRMATION}");
 
-            return Task.CompletedTask;
+            return;
         }
 
         var slaughteredWeight = swine.Weight - 1;
-        userContext.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
+        context.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
 
         Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
 
-        userContext.Swines.Remove(swine);
-        userContext.SaveChanges();
+        context.Swines.Remove(swine);
+        await context.SaveChangesAsync();
 
         var newSwine = new Swine()
         {
-            Name = userContext.Users.First(u => u.UserId == swine.OwnerId).FirstName,
+            Name = context.Users.First(u => u.UserId == swine.OwnerId).FirstName,
             Weight = 1,
             GroupId = swine.GroupId,
             OwnerId = swine.OwnerId
         };
 
-        userContext.Swines.Add(newSwine);
-        userContext.SaveChanges();
+        context.Swines.Add(newSwine);
+        await context.SaveChangesAsync();
 
         var info = new SwineInfo()
         {
             SwineId = newSwine.SwineId
         };
 
-        userContext.Infos.Add(info);
-        userContext.SaveChanges();
+        context.Infos.Add(info);
+        await context.SaveChangesAsync();
 
         if (slaughteredWeight >= MIN_SWINE_WEIGHT)
             Text.Italic("Теперь ваши будущие свинки будут расти быстрее...");
         else
             Text.Italic("Это жестокое убийство не принесло никакого эффекта.");
-
-        return Task.CompletedTask;
     }
 }

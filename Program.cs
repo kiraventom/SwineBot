@@ -45,25 +45,34 @@ internal class Program
             var builder = Host.CreateApplicationBuilder();
 
             builder.Services
+                // Singleton
                 .AddSingleton<Paths>(BuildPaths)
                 .AddSingleton<Config>(BuildConfig)
                 .AddSerilog(ConfigureLogger)
                 .AddSingleton<TelegramBotClientOptions>(BuildTelegramBotClientOptions)
                 .AddSingleton<IDateTimeNowProvider, DateTimeNowProvider>()
-                .AddSingleton<IFeedGeneratorFactory, FeedGeneratorFactory>()
-                .AddSingleton<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
-                .AddSingleton<IMessageFactory, MessageFactory>()
                 .AddSingleton<StartLinkBuilder>()
+                .AddSingleton<ITelegramBotClient, TelegramBotClient>()
+                .AddSingleton<IAchievementCheckerBuilders, AchievementCheckerBuilders>()
+
+                // Transient
                 .AddStartLinkActions()
                 .AddTransient<IStartLinkParser, StartLinkParser>()
-                .AddSingleton<ITelegramBotClient, TelegramBotClient>()
-                .AddSingleton<IBotMessageSender, BotMessageSender>()
-                .AddSingleton<IAchievementController, AchievementController>()
-                .AddDbContext<UserContext>(ConfigureContext)
                 .AddUserActions()
-                .AddScoped<IUpdateHandler, UpdateHandler>()
-                .AddSingleton<IAchievementCheckerFactory, AchievementCheckerFactory>()
                 .AddTransient<AchievementCheckerBuilder>()
+
+                // Scoped
+                .AddDbContext<UserContext>(ConfigureContext)
+                .AddScoped<AchievementCheckerFactory>()
+                .AddScoped<AchievementController>()
+                .AddScoped<IFeedGeneratorFactory, FeedGeneratorFactory>()
+                .AddScoped<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
+                .AddScoped<IMessageFactory, MessageFactory>()
+                .AddScoped<UserContextHelpers>()
+                .AddScoped<IBotMessageSender, BotMessageSender>()
+                .AddScoped<IUpdateHandler, UpdateHandler>()
+
+                // Host
                 .AddHostedService<AppService>();
 
             var host = builder.Build();

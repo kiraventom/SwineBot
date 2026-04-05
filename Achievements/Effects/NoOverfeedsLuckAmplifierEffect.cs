@@ -10,9 +10,9 @@ public class NoOverfeedsLuckAmplifierEffect : DynamicAchievementEffect<double>
 
     public override AchievementEffectType Type => AchievementEffectType.LuckAmplify;
 
-    public override double Apply(UserContext context, int swineId, double value)
+    public override async Task<double> Apply(UserContext context, int swineId, double value)
     {
-        var consecutiveNoOverfeeds = NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(context, swineId);
+        var consecutiveNoOverfeeds = await NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(context, swineId);
         var luckAmplify = LUCK_AMPLIFY_MODIFIER * consecutiveNoOverfeeds;
         value = value + value * luckAmplify;
 

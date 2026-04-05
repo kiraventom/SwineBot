@@ -9,7 +9,7 @@ public abstract class UserAction(ILogger<UserAction> logger)
 
     public abstract string Name { get; }
 
-    public abstract BotMessage Execute(int userId, string actionText);
+    public abstract BotMessage Execute(Update update, string actionText);
 
     public virtual bool IsMatch(string name) => name == Name;
 }

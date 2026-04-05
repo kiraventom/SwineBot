@@ -4,12 +4,12 @@ using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class InvalidAchievementChecker(ILogger<InvalidAchievementChecker> Logger, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, Array.Empty<AchievementLevel>())
+public class InvalidAchievementChecker(ILogger<InvalidAchievementChecker> Logger, IDateTimeNowProvider dtnProvider, UserContext context) : AchievementChecker(Logger, dtnProvider, context, Array.Empty<AchievementLevel>())
 {
     public override AchievementType Type => AchievementType.None;
 
     protected override bool DoesLevelApply(int value, int level) => false;
 
-    protected override int? GetValue(BotMessage botMessage, UserContext context, int swineId) => null;
+    protected override Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId) => null;
 }
 

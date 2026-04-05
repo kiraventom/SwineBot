@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
+using SwineBot.Achievements;
 using SwineBot.BotMessages;
-using SwineBot.BotMessages.Start;
 using SwineBot.Model;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -10,103 +10,129 @@ namespace SwineBot;
 
 public interface IBotMessageSender
 {
-    event BeforeMessageSendDelegate BeforeMessageSend;
-    Task<Message> Send(UserContext context, ChatId chatId, int userId, BotMessage botMessage);
+    Task<Message> Send(Update update, BotMessage botMessage);
 }
 
-public class BotMessageSender(ILogger<BotMessageSender> Logger, ITelegramBotClient Client, IMessageFactory MessageFactory) : IBotMessageSender
+public class BotMessageSender(ILogger<BotMessageSender> logger, UserContext context, ITelegramBotClient client, IMessageFactory messageFactory, AchievementController achievController) : IBotMessageSender
 {
-    public event BeforeMessageSendDelegate BeforeMessageSend;
+    public async Task<Message> Send(Update update, BotMessage botMessage)
+    {
+        botMessage = await InitMessage(update, botMessage);
+        if (botMessage is null)
+            return null;
 
-    private async Task<BotMessage> InitMessage(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
+        await SendAchievementMessages(update, botMessage);
+
+        var message = await SendMessage(update, botMessage);
+
+        if (botMessage is IPinnableMessage { ShouldPin: true })
+            await PinMessage(update, message);
+
+        return message;
+    }
+
+    private async Task<BotMessage> InitMessage(Update update, BotMessage botMessage)
     {
         try
         {
-            int? swineId = userContext.GetSwineId(chatId, userId);
-            if (swineId is null)
+            if (update.SwineId is null)
             {
-                swineId = -1;
-
                 if (botMessage is not IStaticMessage and not PiggeryMessage)
-                    botMessage = MessageFactory.Create<PiggeryMessage>(userId);
+                    botMessage = messageFactory.Create<PiggeryMessage>();
             }
 
-            var isPrivate = userContext.IsPrivateChat(chatId);
-            await botMessage.Init(userContext, swineId.Value, isPrivate);
+            await botMessage.Init(update);
             return botMessage;
         }
         catch (Exception e)
         {
-            Logger.LogCritical(e, "Failed to initialize {message}", botMessage.GetType().Name);
+            logger.LogCritical(e, "Failed to initialize {message}", botMessage.GetType().Name);
 
             if (botMessage is InvalidMessage)
             {
-                Logger.LogCritical(e, "Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
-                throw;
+                logger.LogCritical(e, "Failed to initialize {invalidMessageName}, shit got real", nameof(InvalidMessage));
+                return null;
             }
 
-            var invalidMessage = MessageFactory.Create<InvalidMessage>();
-            return await InitMessage(userContext, chatId, userId, invalidMessage);
+            var invalidMessage = messageFactory.Create<InvalidMessage>();
+            return await InitMessage(update, invalidMessage);
         }
     }
 
-    public async Task<Message> Send(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage)
+    private async Task<Message> SendMessage(Update update, BotMessage botMessage)
     {
         try
         {
-            botMessage = await InitMessage(userContext, chatId, userId, botMessage);
-        }
-        catch
-        {
-            return null;
-        }
-
-        if (BeforeMessageSend != null)
-            await BeforeMessageSend.Invoke(userContext, chatId, userId, botMessage);
-
-        try
-        {
-            Message message;
+            var chatId = update.IsPrivateChat 
+                ? context.Users.First(u => u.UserId == update.UserId).TelegramId
+                : context.Groups.First(g => g.GroupId == update.GroupId).TelegramId;
 
             var text = botMessage.Text.ToString();
+            var message = await SendMessage(chatId, botMessage.PhotoFilePath, text);
 
-            if (botMessage.PhotoFilePath is null)
-            {
-                message = await Client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
-            }
-            else
-            {
-                using (var stream = File.OpenRead(botMessage.PhotoFilePath))
-                {
-                    var photo = InputFile.FromStream(stream);
-                    message = await Client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
-                }
-
-                File.Delete(botMessage.PhotoFilePath);
-            }
-
-            Logger.LogInformation("Sent '{text}' to [{id}], messageId [{messageId}]", text, chatId, message.MessageId);
-
-            if (botMessage is IPinnableMessage { ShouldPin: true })
-            {
-                await Client.UnpinAllChatMessages(chatId);
-                await Client.PinChatMessage(chatId, message.MessageId);
-
-                Logger.LogInformation("Pinned [{messageId}] in chat [{id}]", message.MessageId, chatId);
-            }
-
+            logger.LogInformation("Sent \"{text}\" to chat [{id}], messageId [{messageId}]", text, chatId, message.MessageId);
             return message;
         }
         catch (Exception e)
         {
-            Logger.LogCritical(e, "Sending message failed");
+            logger.LogCritical(e, "Sending message failed");
             return null;
         }
     }
-}
 
-// TODO: Rewrite the whole app and throw away passing UserContext in method parameters
-// Change Singletons to Scoped when needed, pass actual data instead of Context when possible
-// Minimize usage of IServiceScopeFactory
-// Replace this event with direct call (connect via DI ctor)
-public delegate Task BeforeMessageSendDelegate(UserContext userContext, ChatId chatId, int userId, BotMessage botMessage);
+    private async Task PinMessage(Update update, Message message)
+    {
+        if (message is null)
+            return;
+
+        if (!update.IsPrivateChat)
+            return;
+
+        var chatId = context.Users.First(u => u.UserId == update.UserId).TelegramId;
+
+        try
+        {
+            await client.UnpinAllChatMessages(chatId);
+            await client.PinChatMessage(chatId, message.MessageId);
+
+            logger.LogInformation("Pinned [{messageId}] for user [{user}]", message.MessageId, update.UserId);
+        }
+        catch (Exception e)
+        {
+            logger.LogCritical(e, "Pinning message [{messageId}] for user [{user}] failed", message.MessageId, update.UserId);
+        }
+    }
+
+    private async Task<Message> SendMessage(ChatId chatId, string photoFilePath, string text)
+    {
+        if (photoFilePath is null)
+            return await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
+
+        Message message;
+        try
+        {
+            using (var stream = File.OpenRead(photoFilePath))
+            {
+                var photo = InputFile.FromStream(stream);
+                message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
+            }
+        }
+        finally
+        {
+            if (File.Exists(photoFilePath))
+                File.Delete(photoFilePath);
+        }
+
+        return message;
+    }
+
+    private async Task SendAchievementMessages(Update update, BotMessage botMessage)
+    {
+        if (update.SwineId is null || botMessage is AchievementMessage)
+            return;
+
+        var achievMessages = achievController.GetAchievMessages(update.SwineId.Value, botMessage);
+        await foreach (var achievMessage in achievMessages)
+            await Send(update, achievMessage);
+    }
+}

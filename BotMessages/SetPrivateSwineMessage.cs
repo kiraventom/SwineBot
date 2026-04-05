@@ -3,7 +3,7 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class SetPrivateSwineMessage(ILogger<SetPrivateSwineMessage> logger, int userId) : BotMessage(logger), ISettableSwineId, IPinnableMessage, IStaticMessage
+public class SetPrivateSwineMessage(ILogger<SetPrivateSwineMessage> logger, UserContext context) : BotMessage(logger), ISettableSwineId, IPinnableMessage, IStaticMessage
 {
     void ISettableSwineId.SetSwineId(int swineId) => SwineIdToSet = swineId;
 
@@ -11,30 +11,26 @@ public class SetPrivateSwineMessage(ILogger<SetPrivateSwineMessage> logger, int 
 
     private int? SwineIdToSet { get; set; }
 
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
         if (SwineIdToSet == null)
-            throw new NotSupportedException($"Can't set selected swine of [{userId}]: {nameof(SwineIdToSet)} is null");
+            throw new NotSupportedException($"Can't set selected swine of [{update.UserId}]: {nameof(SwineIdToSet)} is null");
 
-        if (!IsPrivate)
-            throw new NotSupportedException($"Can't set selected swine of [{userId}] to [{SwineIdToSet}]: message not private");
+        if (!update.IsPrivateChat)
+            throw new NotSupportedException($"Can't set selected swine of [{update.UserId}] to [{SwineIdToSet}]: message not private");
 
-        var swineToSet = userContext.Swines.FirstOrDefault(s => s.SwineId == SwineIdToSet);
+        var swineToSet = context.Swines.FirstOrDefault(s => s.SwineId == SwineIdToSet);
         if (swineToSet is null)
-            throw new NotSupportedException($"Can't set selected swine of [{userId}] to [{SwineIdToSet}]: no such swine in db");
+            throw new NotSupportedException($"Can't set selected swine of [{update.UserId}] to [{SwineIdToSet}]: no such swine in db");
 
-        if (swineToSet.OwnerId != userId)
-            throw new NotSupportedException($"Can't set selected swine of [{userId}] to [{SwineIdToSet}]: it belongs to [{swineToSet.OwnerId}]");
+        if (swineToSet.OwnerId != update.UserId)
+            throw new NotSupportedException($"Can't set selected swine of [{update.UserId}] to [{SwineIdToSet}]: it belongs to [{swineToSet.OwnerId}]");
 
-        swineId = SwineIdToSet.Value;
+        context.Users.First(u => u.UserId == update.UserId).PrivateSwineId = SwineIdToSet.Value;
+        await context.SaveChangesAsync();
 
-        userContext.Users.First(u => u.UserId == userId).PrivateSwineId = SwineIdToSet.Value;
-        userContext.SaveChanges();
-
-        var groupTitle = userContext.Groups.First(g => g.GroupId == swineToSet.GroupId).Title;
+        var groupTitle = context.Groups.First(g => g.GroupId == swineToSet.GroupId).Title;
         Text.Verbatim("Выбранный свин: ").Bold(swineToSet.Name).Verbatim($" из \"{groupTitle}\"");
-
-        return Task.CompletedTask;
     }
 }
 

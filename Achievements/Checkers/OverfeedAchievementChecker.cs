@@ -6,17 +6,17 @@ using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, levels)
+public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logger, UserContext context, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger,  dtnProvider, context, levels)
 {
     public override AchievementType Type => AchievementType.Overfeed;
 
-    public static int CountConsecutiveOverfeeds(UserContext context, int swineId)
+    public static async Task<int> CountConsecutiveOverfeeds(UserContext context, int? swineId)
     {
-        var throwUps = context.WeightLosses
+        var throwUps = await context.WeightLosses
             .AsNoTracking()
             .Where(wl => wl.SwineId == swineId)
             .Where(wl => wl.IsThrowUp)
-            .ToList();
+            .ToListAsync();
 
         var lastActualThrowUp = throwUps
             .Where(wl => !wl.Ignored)
@@ -25,12 +25,12 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
 
         var dateToCountFrom = lastActualThrowUp?.DateTime ?? DateTime.MinValue;
 
-        var feedsSinceThrowup = context.Feeds
+        var feedsSinceThrowup = await context.Feeds
             .AsNoTracking()
             .Where(wl => wl.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
-            .ToList();
+            .ToListAsync();
 
         int overfeedCount = 0;
         for (int i = 0; i < feedsSinceThrowup.Count - 1; i++)
@@ -57,12 +57,12 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
         return overfeedCount;
     }
 
-    protected override int? GetValue(BotMessage botMessage, UserContext context, int swineId)
+    protected override async Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId)
     {
         if (botMessage is not FeedMessage feedMessage)
             return null;
 
-        var overfeedCount = CountConsecutiveOverfeeds(context, swineId);
+        var overfeedCount = await CountConsecutiveOverfeeds(context, swineId);
         return overfeedCount;
     }
 

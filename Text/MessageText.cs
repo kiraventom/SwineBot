@@ -3,6 +3,7 @@ using SwineBot.Model;
 
 namespace SwineBot.Text;
 
+// TODO Refactor to List<TextPart>, TextPart.IsBold/IsItalic/IsUnderline etc., merge them and turn into text on ToString()
 public class MessageText
 {
     private readonly StringBuilder _sb = new();
@@ -53,7 +54,6 @@ public class MessageText
 
         ApplyTabLevel(_tabLevel, _sb);
 
-        // TODO Refactor
         if (_sb.Length > 0 && _sb[_sb.Length - 1] == '*')
             _sb.Remove(_sb.Length - 1, 1);
         else
@@ -71,8 +71,6 @@ public class MessageText
 
         var text = obj.ToString();
 
-        // check for underline
-        // TODO mess
         if ((_sb.Length == 1 && _sb[_sb.Length - 1] == '_') || (_sb.Length > 1 && _sb[_sb.Length - 1] == '_' && _sb[_sb.Length - 2] != '_'))
             _sb.Remove(_sb.Length - 1, 1);
         else

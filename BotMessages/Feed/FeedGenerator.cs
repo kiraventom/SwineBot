@@ -9,17 +9,17 @@ namespace SwineBot.BotMessages.Feed;
 
 public interface IFeedGeneratorFactory
 {
-    IFeedGenerator Create(UserContext context, int swineId);
+    IFeedGenerator Create(int? swineId);
 }
 
 public class FeedGeneratorFactory(IServiceProvider sp) : IFeedGeneratorFactory
 {
-    public IFeedGenerator Create(UserContext context, int swineId) => ActivatorUtilities.CreateInstance<FeedGenerator>(sp, context, swineId);
+    public IFeedGenerator Create(int? swineId) => ActivatorUtilities.CreateInstance<FeedGenerator>(sp, swineId);
 }
 
 public interface IFeedGenerator
 {
-    FeedResult Generate();
+    Task<FeedResult> Generate();
 }
 
 public class FeedGenerator : IFeedGenerator
@@ -29,14 +29,14 @@ public class FeedGenerator : IFeedGenerator
 
     private ILogger<FeedGenerator> Logger { get; }
     private UserContext Context { get; }
-    private IAchievementController AchievController { get; }
+    private AchievementController AchievController { get; }
     private IThrowupCalculator ThrowupCalculator { get; }
     private int SwineId { get; }
 
     public IReadOnlyCollection<IAchievementEffect> Effects { get; }
     public DateTime UtcNow { get; }
 
-    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, IAchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
+    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, AchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
     {
         Logger = logger;
         Context = context;
@@ -59,18 +59,18 @@ public class FeedGenerator : IFeedGenerator
         ThrowupCalculator = throwupCalcFactory.Create(UtcNow, Effects);
     }
 
-    public FeedResult Generate()
+    public async Task<FeedResult> Generate()
     {
         var swine = Context.Swines.First(s => s.SwineId == SwineId);
-        var recentFeeds = Context.GetRecentFeeds(SwineId, UtcNow);
+        var recentFeeds = await Context.GetRecentFeeds(SwineId, UtcNow);
 
-        Result result = RollResult(recentFeeds);
+        Result result = await RollResult(recentFeeds);
         if (result == Result.Full)
             return FeedResult.Full;
 
-        double luck = RollLuck();
+        double luck = await RollLuck();
         int absAmount = RollAmount(luck);
-        int amount = ApplyResult(recentFeeds, absAmount, result);
+        int amount = await ApplyResult(recentFeeds, absAmount, result);
         Logger.LogInformation("Final amount: {amount}", amount);
 
         var oldWeight = swine.Weight;
@@ -86,22 +86,21 @@ public class FeedGenerator : IFeedGenerator
         };
     }
 
-    private double RollLuck()
+    private async Task<double> RollLuck()
     {
         var baseLuck = Random.Shared.NextDouble();
         Logger.LogInformation("Luck rolled: {luck}", baseLuck);
 
-        var luck = ApplyLuckEffects(baseLuck);
-
+        var luck = await ApplyLuckEffects(baseLuck);
         return luck;
     }
 
-    private double ApplyLuckEffects(double luck)
+    private async Task<double> ApplyLuckEffects(double luck)
     {
         foreach (var effect in Effects.OfType<NoOverfeedsLuckAmplifierEffect>())
         {
             var oldLuck = luck;
-            luck = effect.Apply(Context, SwineId, luck);
+            luck = await effect.Apply(Context, SwineId, luck);
             if (luck != oldLuck)
                 Logger.LogInformation("Applied effect {effect}, luck changed from {old} to {new}", effect.Type.ToString(), oldLuck, luck);
         }
@@ -123,9 +122,9 @@ public class FeedGenerator : IFeedGenerator
         return amount;
     }
 
-    private Result RollResult(IReadOnlyCollection<Model.Feed> recentFeeds)
+    private async Task<Result> RollResult(IReadOnlyCollection<Model.Feed> recentFeeds)
     {
-        var recentThrowups = Context.GetRecentThrowups(SwineId, UtcNow);
+        var recentThrowups = await Context.GetRecentThrowups(SwineId, UtcNow);
 
         if (recentThrowups.Count != 0)
             return Result.Full;
@@ -137,7 +136,7 @@ public class FeedGenerator : IFeedGenerator
             .FirstOrDefault();
 
         if (recentFeeds.Count != 0 || lastThrowup is { Ignored: true })
-            return ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
+            return await ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
 
         return Result.FirstFeed;
     }
@@ -160,11 +159,11 @@ public class FeedGenerator : IFeedGenerator
         return rounded;
     }
 
-    private int ApplyResult(IReadOnlyCollection<Model.Feed> recentFeeds, int amount, Result result)
+    private async Task<int> ApplyResult(IReadOnlyCollection<Model.Feed> recentFeeds, int amount, Result result)
     {
         var swine = Context.Swines.First(s => s.SwineId == SwineId);
         if (result == Result.Throwup)
-            return ThrowupCalculator.Calculate(recentFeeds, swine.Weight, amount) * -1;
+            return await ThrowupCalculator.Calculate(recentFeeds, swine.Weight, amount) * -1;
 
         return amount;
     }

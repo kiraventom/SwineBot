@@ -1,22 +1,18 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
 using SwineBot.BotMessages.Start;
 
 namespace SwineBot.Actions.Commands;
 
-public class StartCommand(ILogger<StartCommand> logger, IMessageFactory messageFactory, IServiceScopeFactory spf) : ParameterizedCommand<StartMessage>(logger, messageFactory)
+public class StartCommand(ILogger<StartCommand> logger, IMessageFactory messageFactory, IStartLinkParser parser) : ParameterizedCommand<StartMessage>(logger, messageFactory)
 {
     public override string Name => "/start";
     public override string Description => "Вывести это сообщение \U0001F928";
 
-    protected override BotMessage ExecuteWithParameter(int userId, string parameter)
+    protected override BotMessage ExecuteWithParameter(Update update, string parameter)
     {
         if (string.IsNullOrEmpty(parameter))
             return CreateMessage();
-
-        using var scope = spf.CreateScope();
-        var parser = scope.ServiceProvider.GetRequiredService<IStartLinkParser>();
 
         var didParse = parser.TryParse(parameter, out var action);
 
@@ -26,7 +22,7 @@ public class StartCommand(ILogger<StartCommand> logger, IMessageFactory messageF
             return CreateMessage();
         }
 
-        var setSwineMessage = messageFactory.Create<SetPrivateSwineMessage>(userId);
+        var setSwineMessage = MessageFactory.Create<SetPrivateSwineMessage>();
         action.Execute(setSwineMessage);
         return setSwineMessage;
     }

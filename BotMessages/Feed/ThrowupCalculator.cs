@@ -16,17 +16,17 @@ public class ThrowupCalculatorFactory(IServiceProvider sp) : IThrowupCalculatorF
 
 public interface IThrowupCalculator
 {
-    bool IsThrowup(IReadOnlyCollection<Model.Feed> recentFeeds);
-    int Calculate(IReadOnlyCollection<Model.Feed> recentFeeds, int oldWeight, int amount);
+    Task<bool> IsThrowup(IReadOnlyCollection<Model.Feed> recentFeeds);
+    Task<int> Calculate(IReadOnlyCollection<Model.Feed> recentFeeds, int oldWeight, int amount);
 }
 
 public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNow, IReadOnlyCollection<IAchievementEffect> Effects) : IThrowupCalculator
 {
-    public bool IsThrowup(IReadOnlyCollection<Model.Feed> recentFeeds)
+    public async Task<bool> IsThrowup(IReadOnlyCollection<Model.Feed> recentFeeds)
     {
         const double OVERFEED_THROWUP_BASE_CHANCE = 0.01;
 
-        var overfeedScale = GetOverfeedScale(recentFeeds);
+        var overfeedScale = await GetOverfeedScale(recentFeeds);
         var throwupThreshold = OVERFEED_THROWUP_BASE_CHANCE * Math.Pow(overfeedScale, recentFeeds.Count);
         Logger.LogInformation("Throwup threshold: {baseChance} * {scale} ^ {recentFeedsCount} = {threshold}", OVERFEED_THROWUP_BASE_CHANCE, overfeedScale, recentFeeds.Count, throwupThreshold);
 
@@ -46,7 +46,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         return isThrowup;
     }
 
-    public int Calculate(IReadOnlyCollection<Model.Feed> recentFeeds, int oldWeight, int amount)
+    public async Task<int> Calculate(IReadOnlyCollection<Model.Feed> recentFeeds, int oldWeight, int amount)
     {
         int sum = recentFeeds.Sum(f => f.Amount);
         var amountLost = sum + amount;
@@ -56,7 +56,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         foreach (var effect in Effects.OfType<ThrowupScaleEffect>())
         {
             var oldAmountLost = amountLost;
-            amountLost = effect.Apply(amountLost);
+            amountLost = await effect.Apply(amountLost);
             if (amountLost != oldAmountLost)
                 Logger.LogInformation("Applied effect {effect}, amount lost changed from {old} to {new}", effect.Type.ToString(), oldAmountLost, amountLost);
         }
@@ -64,7 +64,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         foreach (var effect in Effects.OfType<ThrowupIgnoreChanceEffect>())
         {
             var oldAmountLost = amountLost;
-            amountLost = effect.Apply(amountLost);
+            amountLost = await effect.Apply(amountLost);
             if (amountLost != oldAmountLost)
                 Logger.LogInformation("Applied effect {effect}, amount lost changed from {old} to {new}", effect.Type.ToString(), oldAmountLost, amountLost);
         }
@@ -77,7 +77,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         return clampedAmountLost;
     }
 
-    private double GetOverfeedScale(IReadOnlyCollection<Model.Feed> recentFeeds)
+    private async Task<double> GetOverfeedScale(IReadOnlyCollection<Model.Feed> recentFeeds)
     {
         const double BASE_OVERFEED_SCALE = 2.5;
 
@@ -104,7 +104,7 @@ public class ThrowupCalculator(ILogger<ThrowupCalculator> Logger, DateTime UtcNo
         foreach (var effect in Effects.OfType<OverfeedScaleModifierEffect>())
         {
             var oldScale = overfeedScale;
-            overfeedScale = effect.Apply(overfeedScale);
+            overfeedScale = await effect.Apply(overfeedScale);
             if (oldScale != overfeedScale)
                 Logger.LogInformation("Applied effect {effect}, overfeed scale changed from {old} to {new}", effect.Type.ToString(), oldScale, overfeedScale);
         }

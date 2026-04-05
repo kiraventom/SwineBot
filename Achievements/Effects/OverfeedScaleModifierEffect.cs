@@ -19,8 +19,8 @@ public class OverfeedScaleModifierEffect : StaticAchievementEffect<double>
             + (mod < 0 ? "медленнее" : "быстрее");
     }
 
-    public override double Apply(double value)
+    public override Task<double> Apply(double value)
     {
-        return value * Modifier;
+        return Task.FromResult(value * Modifier);
     }
 }

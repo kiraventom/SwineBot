@@ -6,13 +6,10 @@ namespace SwineBot.BotMessages.Start;
 
 public class StartMessage : BotMessage, IStaticMessage
 {
-    private static IReadOnlyCollection<ICommand> _commands;
+    private IReadOnlyCollection<ICommand> _commands;
 
-    public StartMessage(ILogger<StartMessage> Logger, IEnumerable<ICommand> commands) : base(Logger)
+    public StartMessage(ILogger<StartMessage> logger, UserContext context, IEnumerable<ICommand> commands) : base(logger)
     {
-        if (_commands is not null)
-            return;
-
         var commandsList = commands.ToList();
 
         commandsList.Sort((a, b) => a.Title.CompareTo(b.Title));
@@ -25,16 +22,14 @@ public class StartMessage : BotMessage, IStaticMessage
         _commands = commandsList;
     }
 
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override Task InitInternal(Update update)
     {
         Text.Bold("\U0001F437 Бот с кормлением свинок \U0001F43D").LineBreak()
             .LineBreak()
             .Italic("Доступные команды:").LineBreak();
 
         foreach (var command in _commands)
-        {
             Text.Verbatim(command.Title).Verbatim(" - ").Verbatim(command.Description).LineBreak();
-        }
 
         return Task.CompletedTask;
     }

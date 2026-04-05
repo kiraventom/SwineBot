@@ -28,7 +28,7 @@ public abstract class AchievementEffect : IAchievementEffect
 /// </summary>
 public abstract class StaticAchievementEffect<T> : AchievementEffect
 {
-    public abstract T Apply(T value);
+    public abstract Task<T> Apply(T value);
 }
 
 /// <summary>
@@ -36,5 +36,5 @@ public abstract class StaticAchievementEffect<T> : AchievementEffect
 /// </summary>
 public abstract class DynamicAchievementEffect<T> : AchievementEffect
 {
-    public abstract T Apply(UserContext context, int swineId, T value);
+    public abstract Task<T> Apply(UserContext context, int swineId, T value);
 }

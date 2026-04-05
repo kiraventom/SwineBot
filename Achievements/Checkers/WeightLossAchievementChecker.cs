@@ -5,16 +5,16 @@ using SwineBot.Model;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, levels)
+public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider, UserContext context) : AchievementChecker(Logger, dtnProvider, context, levels)
 {
     public override AchievementType Type => AchievementType.WeightLoss;
 
-    protected override int? GetValue(BotMessage botMessage, UserContext context, int swineId)
+    protected override Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId)
     {
         if (botMessage is not FeedMessage feedMessage)
             return null;
 
-        return feedMessage.FeedResult.Amount;
+        return Task.FromResult<int?>(feedMessage.FeedResult.Amount);
     }
 
     protected override bool DoesLevelApply(int value, int level)

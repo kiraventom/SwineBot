@@ -1,3 +1,0 @@
-namespace SwineBot.BotMessages;
-
-

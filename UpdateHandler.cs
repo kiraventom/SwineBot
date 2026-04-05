@@ -6,20 +6,22 @@ using Telegram.Bot.Types.Enums;
 
 namespace SwineBot;
 
+public record Update(string MessageText, int? GroupId, int UserId, int? SwineId, bool IsPrivateChat);
+
 public interface IUpdateHandler
 {
-    Task Handle(Update update, CancellationToken token);
+    Task Handle(Telegram.Bot.Types.Update update, CancellationToken token);
 }
 
-public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, Config Config, IBotMessageSender Sender, IEnumerable<UserAction> actions) : IUpdateHandler
+public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, IEnumerable<UserAction> actions) : IUpdateHandler
 {
     private IReadOnlyCollection<UserAction> Actions { get; } = actions.ToList();
 
-    public async Task Handle(Update update, CancellationToken token)
+    public async Task Handle(Telegram.Bot.Types.Update update, CancellationToken token)
     {
-        Logger.LogInformation("Received update: {updateType}", update.Type);
+        logger.LogInformation("Received update: {updateType}", update.Type);
 
-        using var transaction = Context.Database.BeginTransaction();
+        using var transaction = await context.Database.BeginTransactionAsync(token);
         try
         {
             if (update.Message is not { } message)
@@ -28,14 +30,14 @@ public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, C
             var didHandle = await HandleMessageAsync(message);
 
             if (didHandle)
-                Context.SaveChanges();
+                await context.SaveChangesAsync(token);
 
-            transaction.Commit();
+            await transaction.CommitAsync(token);
         }
         catch (Exception e)
         {
-            transaction.Rollback();
-            Logger.LogError(e, "Transaction failed, rolling back");
+            await transaction.RollbackAsync(token);
+            logger.LogError(e, "Transaction failed, rolling back");
         }
     }
 
@@ -46,51 +48,58 @@ public class UpdateHandler(ILogger<UpdateHandler> Logger, UserContext Context, C
 
         if (sender is null)
         {
-            Logger.LogWarning("Sender is null");
+            logger.LogWarning("Sender is null");
             return false;
         }
 
         // Bot received its own message (e.g., pinned message notification)
-        if (sender.Username == Config.Username)
+        if (sender.Username == config.Username)
             return false;
 
-        var isPrivate = chat.Id == sender.Id;
+        var userId = await contextHelpers.GetOrAddUser(chat.Id, chat.Title, sender.Id, sender.FirstName, sender.Username);
+        var groupId = context.Groups.FirstOrDefault(g => g.TelegramId == chat.Id)?.GroupId;
+        var isPrivateChat = groupId == null;
+        var swineId = await contextHelpers.GetOrSetSwine(groupId, userId);
 
-        var user = Context.GetOrAddUser(chat.Id, chat.Title, sender.Id, sender.FirstName, sender.Username);
-
-        if (isPrivate)
-        {
-            Logger.LogInformation("Received private message [{messageId}] with text '{text}' from user [{userId}] '{firstname}'", message.MessageId, message.Text, user.UserId, user.FirstName);
-        }
-        else
-        {
-            Logger.LogInformation("Received message [{messageId}] with text '{text}' in chat [{chatId}] from user [{userId}] '{firstname}'", message.MessageId, message.Text, message.Chat.Id, user.UserId, user.FirstName);
-        }
+        var update = new Update(message.Text, groupId, userId, swineId, isPrivateChat);
+        LogUpdate(update);
 
         var botCommand = message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
         if (botCommand is not null)
-            return await HandleBotCommandAsync(message.Chat.Id, user, botCommand, message.Text);
+            return await HandleBotCommandAsync(update, botCommand);
 
         return false;
     }
 
-    private async Task<bool> HandleBotCommandAsync(ChatId chatId, Model.User user, MessageEntity botCommand, string messageText)
+    private void LogUpdate(Update update)
     {
-        var commandText = messageText.Substring(botCommand.Offset, botCommand.Length);
-        return await HandleUserActionAsync(chatId, user, commandText, messageText);
+        if (update.IsPrivateChat)
+        {
+            logger.LogInformation("Received private message with text '{text}' from user [{userId}]", update.MessageText, update.UserId);
+        }
+        else
+        {
+            logger.LogInformation("Received message with text '{text}' in group [{groupId}] from user [{userId}]", update.MessageText, update.GroupId, update.UserId);
+        }
     }
 
-    private async Task<bool> HandleUserActionAsync(ChatId chatId, Model.User user, string actionText, string fullText)
+    private async Task<bool> HandleBotCommandAsync(Update update, MessageEntity botCommand)
+    {
+        var commandText = update.MessageText.Substring(botCommand.Offset, botCommand.Length);
+        return await HandleUserActionAsync(update, commandText);
+    }
+
+    private async Task<bool> HandleUserActionAsync(Update update, string actionText)
     {
         var action = Actions.FirstOrDefault(c => c.IsMatch(actionText));
         if (action is null)
         {
-            Logger.LogWarning("Action '{actionText}' does not match any of actions: [ {actions} ]", actionText, string.Join(", ", Actions.Select(c => c.Name)));
+            logger.LogWarning("Action '{actionText}' does not match any of actions: [ {actions} ]", actionText, string.Join(", ", Actions.Select(c => c.Name)));
             return false;
         }
 
-        var botMessage = action.Execute(user.UserId, fullText);
-        await Sender.Send(Context, chatId, user.UserId, botMessage);
+        var botMessage = action.Execute(update, actionText);
+        await sender.Send(update, botMessage);
         return true;
     }
 }

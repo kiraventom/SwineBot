@@ -7,49 +7,47 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class PiggeryMessage(ILogger<PiggeryMessage> logger, StartLinkBuilder linkBuilder, Config config, int userId) : BotMessage(logger)
+public class PiggeryMessage(ILogger<PiggeryMessage> logger, UserContext context, StartLinkBuilder linkBuilder, Config config) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
-        // Contains SelectedSwine if IsPrivate, contains current group swine if not
-        Swine swine = null;
-        if (swineId >= 0)
-            swine = userContext.Swines.First(s => s.SwineId == swineId);
+        Swine selectedSwine = null;
+        if (update.SwineId >= 0)
+            selectedSwine = context.Swines.First(s => s.SwineId == update.SwineId);
 
-        var swines = userContext.Swines
+        var swines = await context.Swines
             .AsNoTracking()
-            .Where(s => s.OwnerId == userId).ToList();
+            .Where(s => s.OwnerId == update.UserId)
+            .ToListAsync();
 
         if (swines.Count == 0)
         {
             Text.Verbatim("Ваш свинарник пуст :(").LineBreak();
             Text.Verbatim($"Для того, чтобы завести свинку, добавьте бота в группу и отправьте {InfoCommand.NAME}").LineBreak();
-            return Task.CompletedTask;
+            return;
         }
 
         if (swines.Count == 1)
         {
-            if (swine is null)
+            if (selectedSwine is null)
             {
                 var onlySwine = swines.First();
                 throw new NotSupportedException($"User [{onlySwine.OwnerId}] has one swine [{onlySwine.SwineId}], but it is not selected as private one");
             }
 
-            Text.Verbatim("В вашем свинарнике всего один свин, ").Bold(swine.Name);
+            Text.Verbatim("В вашем свинарнике всего один свин, ").Bold(selectedSwine.Name);
 
-            if (IsPrivate)
+            if (update.IsPrivateChat)
             {
-                var groupTitle = userContext.Groups.First(g => g.GroupId == swine.GroupId).Title;
+                var groupTitle = context.Groups.First(g => g.GroupId == selectedSwine.GroupId).Title;
                 Text.Verbatim($" из \"{groupTitle}\"");
             }
 
             Text.LineBreak();
             Text.Verbatim("Для увеличения свинарника добавляйте бота в другие группы");
-
-            return Task.CompletedTask;
         }
 
-        if (swine is null && IsPrivate)
+        if (selectedSwine is null && update.IsPrivateChat)
             Text.Verbatim("Для использования бота в личных сообщениях необходимо выбрать свина:").LineBreak().LineBreak();
 
         Text.Bold("Ваш свинарник:").LineBreak();
@@ -57,7 +55,7 @@ public class PiggeryMessage(ILogger<PiggeryMessage> logger, StartLinkBuilder lin
         var pairs = swines.Select(s => new
         {
             Swine = s,
-            Group = userContext.Groups
+            Group = context.Groups
             .AsNoTracking()
             .First(g => g.GroupId == s.GroupId)
         });
@@ -70,13 +68,13 @@ public class PiggeryMessage(ILogger<PiggeryMessage> logger, StartLinkBuilder lin
 
             Text.Verbatim($"{index}. ");
 
-            if (!IsPrivate)
+            if (!update.IsPrivateChat)
             {
                 Text.Verbatim(caption).LineBreak();
                 continue;
             }
 
-            if (swine != null && pair.Swine.SwineId == swine.SwineId)
+            if (selectedSwine != null && pair.Swine.SwineId == selectedSwine.SwineId)
             {
                 Text.Underline(caption);
             }
@@ -89,12 +87,10 @@ public class PiggeryMessage(ILogger<PiggeryMessage> logger, StartLinkBuilder lin
             Text.LineBreak();
         }
 
-        if (!IsPrivate)
+        if (!update.IsPrivateChat)
         {
             Text.LineBreak();
             Text.Italic("Отправьте эту команду в ").InlineMention("личном диалоге с ботом", config.Username).Italic(", чтобы кормить свинов там").LineBreak();
         }
-
-        return Task.CompletedTask;
     }
 }

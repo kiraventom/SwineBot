@@ -4,11 +4,11 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class AchievementMessage(ILogger<AchievementMessage> Logger, AchievementLevel achievementLevel) : BotMessage(Logger)
+public class AchievementMessage(ILogger<AchievementMessage> logger, UserContext context, AchievementLevel achievementLevel) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override Task InitInternal(Update update)
     {
-        var swine = userContext.Swines.First(s => s.SwineId == swineId);
+        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
         
         Text.Verbatim("🏆")
             .Bold(swine.Name)

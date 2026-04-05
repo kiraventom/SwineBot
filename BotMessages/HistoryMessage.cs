@@ -5,15 +5,13 @@ using SwineBot.Model;
 
 namespace SwineBot.BotMessages;
 
-public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
+public class HistoryMessage(ILogger<HistoryMessage> logger, UserContext context) : BotMessage(logger)
 {
-    protected override Task InitInternal(UserContext userContext, int swineId)
+    protected override async Task InitInternal(Update update)
     {
-        var groupId = userContext.Swines.First(s => s.SwineId == swineId).GroupId;
-
-        var swines = userContext.Swines
-            .Where(s => s.GroupId == groupId)
-            .Where(s => userContext.Feeds.Where(f => f.SwineId == s.SwineId).Any())
+        var swines = context.Swines
+            .Where(s => s.GroupId == update.GroupId)
+            .Where(s => context.Feeds.Where(f => f.SwineId == s.SwineId).Any())
             .OrderByDescending(s => s.Weight)
             .Take(10);
 
@@ -21,20 +19,20 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
 
         foreach (var swine in swines)
         {
-            var feeds = userContext.Feeds
+            var feeds = context.Feeds
                 .Where(f => f.SwineId == swine.SwineId)
                 .Select(f => new { f.DateTime, f.Amount });
 
-            var losses = userContext.WeightLosses
+            var losses = context.WeightLosses
                 .Where(f => f.SwineId == swine.SwineId)
                 .Select(f => new { f.DateTime, f.Amount });
 
-            var changes = feeds
+            var changes = await feeds
                 .Concat(losses)
                 .OrderBy(wc => wc.DateTime)
-                .AsEnumerable()
+                .ToAsyncEnumerable()
                 .Select(x => new WeightChange(x.DateTime, x.Amount))
-                .ToList();
+                .ToListAsync();
 
             AddChanges(plot, changes, swine.Name);
         }
@@ -44,8 +42,6 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
         PhotoFilePath = path;
 
         Text.Italic("История веса свинок");
-
-        return Task.CompletedTask;
     }
 
     private Plot CreatePlot(bool showLegend = false)
@@ -98,7 +94,7 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
 
     private static string SavePlot(Plot plot)
     {
-        var path = System.IO.Path.GetTempFileName();
+        var path = Path.Combine(System.IO.Path.GetTempPath(), $"{Guid.NewGuid()}.png");
         plot.SavePng(path, 1000, 1000);
         return path;
     }
@@ -108,7 +104,7 @@ public class HistoryMessage(ILogger<HistoryMessage> Logger) : BotMessage(Logger)
         var fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts", "Roboto-Regular.ttf");
         if (File.Exists(fontPath) == false)
         {
-            Logger.LogError("Default font {path} was not found", fontPath);
+            logger.LogError("Default font {path} was not found", fontPath);
             return;
         }
 
