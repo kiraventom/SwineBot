@@ -176,7 +176,7 @@ public class MessageText
         _sb.Append(']');
 
         _sb.Append('(')
-            .Append(@"t.me/")
+            .Append(@"https://t.me/")
             .Append(tag)
             .Append(')');
 

@@ -1,25 +1,25 @@
-using Microsoft.Extensions.Logging;
+using SwineBot.Achievements;
 using SwineBot.BotMessages;
+using SwineBot.ViewModels;
 
 namespace SwineBot.Actions.Commands;
 
-public abstract class Command<T>(ILogger<Command<T>> logger, IMessageFactory messageFactory) : UserAction(logger), ICommand where T : BotMessage
+public abstract class Command<TMessage, TViewModel>(IMessageFactory messageFactory, AchievementController achievController) : ICommand 
+    where TMessage : BotMessage<TViewModel>, new()
+    where TViewModel : ViewModel
 {
-    protected IMessageFactory MessageFactory { get; } = messageFactory;
+    protected AchievementController AchievController { get; } = achievController;
 
-    public virtual string Title => Name;
-    public abstract string Description { get; }
+    protected abstract Task<TViewModel> ExecuteInternal(Update update, string parameter);
 
-    public override bool IsMatch(string name)
+    public async Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter = null)
     {
-        var index = name.IndexOf('@');
-        if (index != -1)
-            return base.IsMatch(name.Substring(0, index));
+        var viewModel = await ExecuteInternal(update, parameter);
 
-        return base.IsMatch(name);
+        var achievMessages = await AchievController.GetAchievMessages(update.SwineId.Value, viewModel);
+        var mainMessage = messageFactory.Create<TMessage, TViewModel>(viewModel);
+
+        return achievMessages.OfType<IBotMessage>().Append(mainMessage).ToList();
     }
-
-    public override BotMessage Execute(Update update, string actionText) => CreateMessage();
-
-    protected T CreateMessage(params object[] args) => MessageFactory.Create<T>(args);
 }
+

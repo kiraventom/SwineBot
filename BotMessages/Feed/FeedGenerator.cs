@@ -1,20 +1,25 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Effects;
+using SwineBot.Actions.Commands;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages.Feed;
 
 public interface IFeedGeneratorFactory
 {
-    IFeedGenerator Create(int? swineId);
+    Task<IFeedGenerator> Create(int? swineId);
 }
 
-public class FeedGeneratorFactory(IServiceProvider sp) : IFeedGeneratorFactory
+public class FeedGeneratorFactory(ILogger<FeedGenerator> logger, UserContext context, AchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory) : IFeedGeneratorFactory
 {
-    public IFeedGenerator Create(int? swineId) => ActivatorUtilities.CreateInstance<FeedGenerator>(sp, swineId);
+    public async Task<IFeedGenerator> Create(int? swineId)
+    { 
+        var gen = new FeedGenerator(logger, context, achievController, dtnProvider, throwupCalcFactory);
+        await gen.Init(swineId.Value);
+        return gen;
+    }
 }
 
 public interface IFeedGenerator
@@ -31,37 +36,40 @@ public class FeedGenerator : IFeedGenerator
     private UserContext Context { get; }
     private AchievementController AchievController { get; }
     private IThrowupCalculator ThrowupCalculator { get; }
-    private int SwineId { get; }
 
-    public IReadOnlyCollection<IAchievementEffect> Effects { get; }
+    private int SwineId { get; set; }
+
+    public IReadOnlyCollection<IAchievementEffect> Effects { get; private set; }
     public DateTime UtcNow { get; }
 
-    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, AchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory, int swineId)
+    public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, AchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory)
     {
         Logger = logger;
         Context = context;
         AchievController = achievController;
-        SwineId = swineId;
-
-        var swine = Context.Swines.First(s => s.SwineId == swineId);
-        var swineInfoId = Context.Infos.First(i => i.SwineId == swineId).InfoId;
-
-        Effects = Context.Achievements
-            .AsNoTracking()
-            .Where(a => a.SwineInfoId == swineInfoId)
-            .AsEnumerable()
-            .Select(a => AchievController.GetLevel(a))
-            .Where(a => a.Effect != null)
-            .Select(a => a.Effect)
-            .ToList();
 
         UtcNow = dtnProvider.UtcNow;
         ThrowupCalculator = throwupCalcFactory.Create(UtcNow, Effects);
     }
 
+    public async Task Init(int swineId)
+    {
+        SwineId = swineId;
+
+        var swineInfoId = (await Context.Infos.FirstAsync(i => i.SwineId == SwineId)).InfoId;
+
+        Effects = await Context.Achievements
+            .Where(a => a.SwineInfoId == swineInfoId)
+            .AsAsyncEnumerable()
+            .Select(a => AchievController.GetLevel(a))
+            .Where(a => a.Effect != null)
+            .Select(a => a.Effect)
+            .ToListAsync();
+    }
+
     public async Task<FeedResult> Generate()
     {
-        var swine = Context.Swines.First(s => s.SwineId == SwineId);
+        var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
         var recentFeeds = await Context.GetRecentFeeds(SwineId, UtcNow);
 
         Result result = await RollResult(recentFeeds);
@@ -69,7 +77,7 @@ public class FeedGenerator : IFeedGenerator
             return FeedResult.Full;
 
         double luck = await RollLuck();
-        int absAmount = RollAmount(luck);
+        int absAmount = await RollAmount(luck);
         int amount = await ApplyResult(recentFeeds, absAmount, result);
         Logger.LogInformation("Final amount: {amount}", amount);
 
@@ -108,7 +116,7 @@ public class FeedGenerator : IFeedGenerator
         return luck;
     }
 
-    private int RollAmount(double luck)
+    private async Task<int> RollAmount(double luck)
     {
         const int MAX_AMOUNT = 20;
         var baseAmount = MAX_AMOUNT * luck;
@@ -118,7 +126,7 @@ public class FeedGenerator : IFeedGenerator
         if (baseAmount != nonZeroBaseAmount)
             Logger.LogInformation("Base amount adjusted to not being zero from {baseAmount} to {nonZero}", baseAmount, nonZeroBaseAmount);
 
-        var amount = ApplyGrowthModifier(nonZeroBaseAmount);
+        var amount = await ApplyGrowthModifier(nonZeroBaseAmount);
         return amount;
     }
 
@@ -129,27 +137,27 @@ public class FeedGenerator : IFeedGenerator
         if (recentThrowups.Count != 0)
             return Result.Full;
 
-        var lastThrowup = Context.WeightLosses
-            .AsNoTracking()
+        var lastThrowup = await Context.WeightLosses
             .Where(wl => wl.IsThrowUp)
             .OrderByDescending(wl => wl.DateTime)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
 
-        if (recentFeeds.Count != 0 || lastThrowup is { Ignored: true })
+        if (recentFeeds.Count != 0 || lastThrowup is { Amount: 0 } /*Ignored*/)
             return await ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
 
         return Result.FirstFeed;
     }
 
-    private int ApplyGrowthModifier(double amount)
+    private async Task<int> ApplyGrowthModifier(double amount)
     {
-        var swine = Context.Swines.First(s => s.SwineId == SwineId);
+        var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
 
-        var totalSlaughteredWeight = Context.Slaughters
+        var slaughters = Context.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
             .Where(s => s.GroupId == swine.GroupId)
-            .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
-            .Sum(s => s.SwineWeight);
+            .Where(s => s.SwineWeight >= SlaughterCommand.MIN_SWINE_WEIGHT);
+
+        var totalSlaughteredWeight = await slaughters.CountAsync() > 0 ? await slaughters.SumAsync(s => s.SwineWeight) : 0;
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
 
@@ -161,7 +169,7 @@ public class FeedGenerator : IFeedGenerator
 
     private async Task<int> ApplyResult(IReadOnlyCollection<Model.Feed> recentFeeds, int amount, Result result)
     {
-        var swine = Context.Swines.First(s => s.SwineId == SwineId);
+        var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
         if (result == Result.Throwup)
             return await ThrowupCalculator.Calculate(recentFeeds, swine.Weight, amount) * -1;
 

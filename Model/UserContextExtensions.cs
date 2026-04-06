@@ -10,7 +10,7 @@ public static class UserContextExtensions
         var dateToCountFeedsFrom = utcNow.AddHours(FeedGenerator.OVERFEED_COOLDOWN * -1);
 
         return await context.Feeds
-            .AsNoTracking()
+            
             .Where(f => f.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFeedsFrom)
             .ToListAsync();
@@ -21,7 +21,6 @@ public static class UserContextExtensions
         var dateToCountThrowupsFrom = utcNow.AddHours(FeedGenerator.THROWUP_COOLDOWN * -1);
 
         return await context.WeightLosses
-            .AsNoTracking()
             .Where(wl => wl.SwineId == swineId)
             .Where(wl => wl.IsThrowUp)
             .Where(f => f.DateTime > dateToCountThrowupsFrom)

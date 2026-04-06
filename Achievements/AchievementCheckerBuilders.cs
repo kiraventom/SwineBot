@@ -1,6 +1,5 @@
 ﻿using SwineBot.Model;
 using SwineBot.Achievements.Effects;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace SwineBot.Achievements.Checkers;
 
@@ -10,15 +9,16 @@ public interface IAchievementCheckerBuilders
     IEnumerable<AchievementCheckerBuilder> GetAll();
 }
 
+// TODO JSONLEVELS: Move levels to json file
 public class AchievementCheckerBuilders : IAchievementCheckerBuilders
 {
     private readonly Dictionary<AchievementType, AchievementCheckerBuilder> _checkerBuilders;
 
-    public AchievementCheckerBuilders(IServiceProvider sp)
+    public AchievementCheckerBuilders(IAchievementCheckerBuilderFactory factory)
     {
         List<AchievementCheckerBuilder> checkerBuilders = 
         [
-            sp.GetRequiredService<AchievementCheckerBuilder>()
+            factory.Create()
                 .Type(AchievementType.Weight)
                 .Description("Набрать {0} {1}", Unit.Kg)
                 .AddLevel(100, "Сотка")
@@ -38,15 +38,17 @@ public class AchievementCheckerBuilders : IAchievementCheckerBuilders
                 .AddLevel(2000, "2K")
                 .AddLevel(2007, "Вернулся")
                 .AddLevel(2022, "Свой парень")
-                .AddLevel(5000, "А хули вы хотели?"),
+                .AddLevel(5000, "А хули вы хотели?")
+                .Seal(),
 
-            sp.GetRequiredService<AchievementCheckerBuilder>()
+            factory.Create()
                 .Type(AchievementType.WeightGain)
                 .Description("Поесть на {0} {1}", Unit.Kg)
                 .AddLevel(1, "Заморил червячка")
-                .AddLevel(22, "От пуза"),
+                .AddLevel(22, "От пуза")
+                .Seal(),
 
-            sp.GetRequiredService<AchievementCheckerBuilder>()
+            factory.Create()
                 .Type(AchievementType.WeightLoss)
                 .Description("Похудеть на {0} {1}", Unit.Kg)
                 .AddLevel(-1, "И не заметил")
@@ -54,9 +56,10 @@ public class AchievementCheckerBuilders : IAchievementCheckerBuilders
                 .AddLevel(-40, "Жадность фраера сгубила")
                 .AddLevel(-60, "he bought", new ThrowupScaleEffect(0.95))
                 .AddLevel(-80, "После такого не встают", new ThrowupScaleEffect(0.85))
-                .AddLevel(-100, "Булимия", new ThrowupScaleEffect(0.70)),
+                .AddLevel(-100, "Булимия", new ThrowupScaleEffect(0.70))
+                .Seal(),
 
-            sp.GetRequiredService<AchievementCheckerBuilder>()
+            factory.Create()
                 .Type(AchievementType.Overfeed)
                 .Description("Успешный перекорм {0} {1} подряд", Unit.Time)
                 .AddLevel(3, "Завтрак, обед, ужин")
@@ -64,9 +67,10 @@ public class AchievementCheckerBuilders : IAchievementCheckerBuilders
                 .AddLevel(7, "Недельный рацион")
                 .AddLevel(14, "Двухнедельный рацион", new ThrowupIgnoreChanceEffect(0.25))
                 .AddLevel(21, "Трёхнедельный рацион", new ThrowupIgnoreChanceEffect(0.50))
-                .AddLevel(31, "Месячная порция", new ThrowupIgnoreChanceEffect(0.75)),
+                .AddLevel(31, "Месячная порция", new ThrowupIgnoreChanceEffect(0.75))
+                .Seal(),
 
-            sp.GetRequiredService<AchievementCheckerBuilder>()
+            factory.Create()
                 .Type(AchievementType.NoOverfeed)
                 .Description("Без перекорма {0} {1} подряд", Unit.Time)
                 .AddLevel(3, "Пивная диета")
@@ -74,7 +78,8 @@ public class AchievementCheckerBuilders : IAchievementCheckerBuilders
                 .AddLevel(7, "Яблочная диета")
                 .AddLevel(14, "Водная диета")
                 .AddLevel(21, "Диета Типичной Анорексички")
-                .AddLevel(31, "Диета Ларисы Долиной", new NoOverfeedsLuckAmplifierEffect()),
+                .AddLevel(31, "Диета Ларисы Долиной", new NoOverfeedsLuckAmplifierEffect())
+                .Seal(),
         ];
 
         _checkerBuilders = checkerBuilders.ToDictionary(b => b.CheckerType);

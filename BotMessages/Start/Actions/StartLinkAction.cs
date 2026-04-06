@@ -3,7 +3,7 @@ using SwineBot.BotMessages.Start.Actions.Params;
 
 namespace SwineBot.BotMessages.Start.Actions;
 
-public abstract class StartLinkAction<T> : IStartLinkAction where T : IBotMessage 
+public abstract class StartLinkAction<T> : IStartLinkAction where T : IActionTarget
 {
     public const char ACTION_PARAM_SEPARATOR = ':';
     public const char PARAMS_SEPARATOR = ';';
@@ -41,7 +41,7 @@ public abstract class StartLinkAction<T> : IStartLinkAction where T : IBotMessag
         return sb.ToString();
     }
 
-    public void Execute(IBotMessage message) => ExecuteInternal((T)message);
+    public void Execute(IActionTarget message) => ExecuteInternal((T)message);
 
     protected abstract void ExecuteInternal(T message);
 }

@@ -1,57 +1,40 @@
 using Microsoft.Extensions.Logging;
-using SwineBot.Achievements;
-using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class AchievementsMessage(ILogger<AchievementsMessage> logger, UserContext context, AchievementController achievController) : BotMessage(logger)
+public class AchievementsMessage : BotMessage<AchievsViewModel>
 {
-    protected override Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, AchievsViewModel viewModel)
     {
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
-        var infoId = context.Infos.First(i => i.SwineId == update.SwineId).InfoId;
-
-        if (context.Achievements.Where(a => a.SwineInfoId == infoId).Count() == 0)
+        if (viewModel.AchievementLevels.Count == 0)
         {
-            Text.Italic("У ").Bold(swine.Name).Italic(" пока нет достижений :(").LineBreak();
-            return Task.CompletedTask;
-        }
-
-        Text.Bold("Достижения ").Bold(swine.Name).Bold(":").LineBreak().LineBreak();
-
-        int index = 0;
-        foreach (var achiev in context.Achievements.Where(a => a.SwineInfoId == infoId).OrderByDescending(a => a.DateTime))
-        {
-            WriteAchievement(achiev, index);
-            ++index;
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private void WriteAchievement(Achievement achiev, int index)
-    {
-        var level = achievController.GetLevel(achiev);
-        if (level is null)
-        {
-            logger.LogError("Level for achievement {type} with value {value} was not found", achiev.Type.ToString(), achiev.Value);
+            Text.Italic("У ").Bold(viewModel.SwineName).Italic(" пока нет достижений :(").LineBreak();
             return;
         }
 
-        Text.Verbatim(index + 1).Verbatim(". ").Bold(level.Name).LineBreak();
+        Text.Bold("Достижения ").Bold(viewModel.SwineName).Bold(":").LineBreak().LineBreak();
+
+        int index = 0;
+        foreach (var datedLevel in viewModel.AchievementLevels)
+        {
+            WriteAchievement(datedLevel, index);
+            ++index;
+        }
+    }
+
+    private void WriteAchievement(DatedAchievementLevel datedLevel, int index)
+    {
+        Text.Verbatim(index + 1).Verbatim(". ").Bold(datedLevel.Level.Name).LineBreak();
         Text.Tab(text =>
         {
-            Text.Italic(level.Description).LineBreak();
-            Text.Verbatim("Получено ").Monospace(achiev.DateTime.ToString("d MMMM yyyy", Common.RuCulture)).LineBreak();
+            Text.Italic(datedLevel.Level.Description).LineBreak();
+            Text.Verbatim("Получено ").Monospace(datedLevel.DT.ToString("d MMMM yyyy", Common.RuCulture)).LineBreak();
 
-            if (level.Effect != null)
-                Text.Verbatim("Эффект: ").Italic(level.Effect.Description).LineBreak();
+            if (datedLevel.Level.Effect != null)
+                Text.Verbatim("Эффект: ").Italic(datedLevel.Level.Effect.Description).LineBreak();
 
             Text.LineBreak();
         });
     }
 }
-
-
-
-

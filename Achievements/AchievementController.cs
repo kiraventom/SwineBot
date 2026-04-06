@@ -1,10 +1,12 @@
 using SwineBot.BotMessages;
 using SwineBot.Model;
 using SwineBot.Achievements.Checkers;
+using SwineBot.ViewModels;
+using Microsoft.EntityFrameworkCore;
 
 namespace SwineBot.Achievements;
 
-public class AchievementController(IMessageFactory messageFactory, AchievementCheckerFactory checkerFactory)
+public class AchievementController(IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory)
 {
     public AchievementLevel GetLevel(Achievement achievement)
     {
@@ -13,16 +15,23 @@ public class AchievementController(IMessageFactory messageFactory, AchievementCh
         return level;
     }
 
-    public async IAsyncEnumerable<AchievementMessage> GetAchievMessages(int swineId, BotMessage message)
+    public async Task<IReadOnlyCollection<AchievementMessage>> GetAchievMessages(int swineId, ViewModel viewModel)
     {
-        if (message is AchievementMessage)
-            yield break;
+        var swineName = (await context.Swines.FirstAsync(s => s.SwineId == swineId)).Name;
+        var infoId = (await context.Infos.FirstAsync(i => i.SwineId == swineId)).InfoId;
+
+        List<AchievementMessage> messages = [];
 
         foreach (var checker in checkerFactory.BuildAll())
         {
-            var level = await checker.TryApply(message, swineId);
+            var level = await checker.TryApply(viewModel, infoId, swineId);
             if (level is not null)
-                yield return messageFactory.Create<AchievementMessage>(level);
+            {
+                var achievViewModel = new AchievementViewModel(swineName, level);
+                messages.Add(messageFactory.Create<AchievementMessage, AchievementViewModel>(achievViewModel));
+            }
         }
+
+        return messages;
     }
 }

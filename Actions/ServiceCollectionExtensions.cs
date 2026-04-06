@@ -10,7 +10,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddStartLinkActions(this IServiceCollection collection)
     {
         var baseActionType = typeof(IStartLinkAction);
-        var actionTypes = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(baseActionType));
+        var actionTypes = Assembly.GetAssembly(baseActionType).GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(baseActionType));
 
         foreach (var actionType in actionTypes)
             collection.AddTransient(typeof(IStartLinkAction), actionType);
@@ -18,22 +18,14 @@ public static class ServiceCollectionExtensions
         return collection;
     }
 
-    public static IServiceCollection AddUserActions(this IServiceCollection collection)
+    public static IServiceCollection AddCommands(this IServiceCollection collection)
     {
-        var baseActionType = typeof(UserAction);
-        var actionTypes = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(baseActionType));
+        var baseCommandType = typeof(ICommand);
+        var commandTypes = Assembly.GetAssembly(baseCommandType).GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(baseCommandType));
 
-        foreach (var actionType in actionTypes)
-        {
-            collection.AddTransient(actionType);
-            collection.AddTransient(typeof(UserAction), sp => sp.GetRequiredService(actionType));
-
-            if (actionType.IsAssignableTo(typeof(ICommand)))
-                collection.AddTransient(typeof(ICommand), sp => sp.GetRequiredService(actionType));
-        }
+        foreach (var commandType in commandTypes)
+            collection.AddTransient(commandType);
 
         return collection;
     }
 }
-
-

@@ -1,151 +1,116 @@
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
-using SwineBot.Achievements.Checkers;
-using SwineBot.Model;
+using SwineBot.Actions.Commands;
 using SwineBot.Text;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages.Feed;
 
-public class FeedMessage(ILogger<FeedMessage> logger, IFeedGeneratorFactory FeedGeneratorFactory, UserContext context) : BotMessage(logger)
+public class FeedMessage : BotMessage<FeedViewModel>
 {
-    private const double LOW_LUCK_THRESHOLD = 0.15;
-    private const double HIGH_LUCK_THRESHOLD = 0.85;
-
-    public FeedResult FeedResult { get; private set; }
-
-    protected override async Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, FeedViewModel viewModel)
     {
-        var feedManager = FeedGeneratorFactory.Create(update.SwineId);
-        var result = await feedManager.Generate();
-
-        switch (result.Result)
+        switch (viewModel.Result.Result)
         {
             case Result.FirstFeed:
             case Result.Overfeed:
-                HandleFeed(update, result);
+                HandleFeed(viewModel);
                 break;
 
             case Result.Throwup:
-                await HandleThrowup(update, result);
+                HandleThrowup(viewModel);
                 break;
 
             case Result.Full:
-                HandleFull(update);
+                HandleFull(viewModel);
                 break;
         }
-
-        FeedResult = result;
-
-        await context.SaveChangesAsync();
     }
 
-    private void HandleFull(Update update)
+    private void HandleFull(FeedViewModel viewModel)
     {
-        var name = context.Swines.First(s => s.SwineId == update.SwineId).Name;
         Text.Verbatim("После недавнего инцидента с перееданием ")
-            .Bold(name)
+            .Bold(viewModel.SwineName)
             .Verbatim(" совсем не до еды...");
     }
 
-    private async Task HandleThrowup(Update update, FeedResult result)
+    private void HandleThrowup(FeedViewModel viewModel)
     {
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
-        swine.Weight = result.NewWeight;
-
-        context.WeightLosses.Add(new WeightLoss()
-        {
-            SwineId = swine.SwineId,
-            DateTime = result.UtcDT,
-            IsThrowUp = true,
-            Amount = result.Amount
-        });
-
-        switch (result.Amount)
+        switch (viewModel.Result.Amount)
         {
             case 0:
-                Text.Bold(swine.Name)
+                Text.Bold(viewModel.SwineName)
                     .Verbatim(" уже почти стошнило, но в последний момент свин сдержал позыв и, нахмурившись, утопал обратно на своё место.")
                     .LineBreak()
                     .LineBreak()
-                    .Bold($"Вес не изменился: {result.NewWeight} кг");
+                    .Bold($"Вес не изменился: {viewModel.Result.NewWeight} кг");
 
-                var consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
-                if (consecutiveOverfeeds != 0)
+                if (viewModel.ConsecutiveOverfeeds != 0)
                     Text.LineBreak()
-                        .Italic($"Это происшествие не нарушит ваш стрик в {consecutiveOverfeeds} {MessageTextUtils.GetDeclinatedNoun(consecutiveOverfeeds, Unit.Overfeed)}");
+                        .Italic($"Это происшествие не нарушит ваш стрик в {viewModel.ConsecutiveOverfeeds} {MessageTextUtils.GetDeclinatedNoun(viewModel.ConsecutiveOverfeeds, Unit.Overfeed)}");
 
                 break;
 
             default:
                 Text.Verbatim("Едва глаза ")
-                    .Bold(swine.Name)
+                    .Bold(viewModel.SwineName)
                     .Verbatim(" увидели еду, всё его тело содрогнулось в рвотном позыве... Заблевав всю кормушку, изрядно исхудавший хряк грустно вернулся в глубину хлева.")
                     .LineBreak()
                     .LineBreak()
-                    .Bold($"{result.OldWeight} кг - {result.AbsAmount} кг → {result.NewWeight} кг");
+                    .Bold($"{viewModel.Result.OldWeight} кг - {viewModel.Result.AbsAmount} кг → {viewModel.Result.NewWeight} кг");
 
                 break;
         }
     }
 
-    private void HandleFeed(Update update, FeedResult result)
+    private void HandleFeed(FeedViewModel viewModel)
     {
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
-        swine.Weight = result.NewWeight;
-
-        context.Feeds.Add(new Model.Feed()
+        switch (viewModel.Result.Luck)
         {
-            SwineId = swine.SwineId,
-            DateTime = result.UtcDT,
-            Amount = result.Amount,
-        });
-
-        switch (result.Luck)
-        {
-            case < LOW_LUCK_THRESHOLD when result.Result == Result.FirstFeed:
+            case < FeedCommand.LOW_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
                 Text.Verbatim("К сожалению, ")
-                    .Bold(swine.Name)
+                    .Bold(viewModel.SwineName)
                     .Verbatim(" сегодня ночью приснился кошмар, поэтому он выглядит угрюмым и почти не ест...").LineBreak();
                 break;
 
-            case < LOW_LUCK_THRESHOLD when result.Result == Result.Overfeed:
-                Text.Bold(swine.Name).Verbatim(", явно сытый, неохотно жуёт очередную порцию...").LineBreak();
+            case < FeedCommand.LOW_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
+                Text.Bold(viewModel.SwineName).Verbatim(", явно сытый, неохотно жуёт очередную порцию...").LineBreak();
                 break;
 
-            case > LOW_LUCK_THRESHOLD and < HIGH_LUCK_THRESHOLD when result.Result == Result.FirstFeed:
-                Text.Bold(swine.Name)
+            case > FeedCommand.LOW_LUCK_THRESHOLD and < FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
+                Text.Bold(viewModel.SwineName)
                     .Verbatim(" спокойно ест из своей кормушки.").LineBreak();
                 break;
 
-            case > LOW_LUCK_THRESHOLD and < HIGH_LUCK_THRESHOLD when result.Result == Result.Overfeed:
-                Text.Bold(swine.Name)
+            case > FeedCommand.LOW_LUCK_THRESHOLD and < FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
+                Text.Bold(viewModel.SwineName)
                     .Verbatim(" довольно поедает добавку.").LineBreak();
                 break;
 
-            case > HIGH_LUCK_THRESHOLD when result.Result == Result.FirstFeed:
+            case > FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
                 Text.Verbatim("Сегодня ")
-                    .Bold(swine.Name)
+                    .Bold(viewModel.SwineName)
                     .Verbatim(" проснулся с отличным аппетитом и радостно хрюкает при вашем приближении!").LineBreak();
                 break;
 
-            case > HIGH_LUCK_THRESHOLD when result.Result == Result.Overfeed:
+            case > FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
                 Text.Verbatim("Как ни в чём ни бывало, ")
-                    .Bold(swine.Name)
+                    .Bold(viewModel.SwineName)
                     .Verbatim(" налетает на новую порцию!").LineBreak();
                 break;
 
             default:
-                throw new NotSupportedException($"Unreachable code: luck is {result.Luck}, result is {result.Result.ToString()}");
+                throw new NotSupportedException($"Unreachable code: luck is {viewModel.Result.Luck}, result is {viewModel.Result.Result.ToString()}");
         }
 
         Text.LineBreak()
-            .Bold($"{result.OldWeight} кг + {result.Amount} кг → {result.NewWeight} кг");
+            .Bold($"{viewModel.Result.OldWeight} кг + {viewModel.Result.Amount} кг → {viewModel.Result.NewWeight} кг");
 
-        if (result.Result == Result.Overfeed)
+        if (viewModel.Result.Result == Result.Overfeed)
         {
-            var feedDecl = MessageTextUtils.GetDeclinatedNoun(result.RecentFeedsCount, Unit.Meal);
+            var feedDecl = MessageTextUtils.GetDeclinatedNoun(viewModel.Result.RecentFeedsCount, Unit.Meal);
             Text.LineBreak()
-                .Italic($"⚠ Перекорм! {result.RecentFeedsCount} {feedDecl} пищи за последние {FeedGenerator.OVERFEED_COOLDOWN} часа!");
+                .Italic($"⚠ Перекорм! {viewModel.Result.RecentFeedsCount} {feedDecl} пищи за последние {FeedGenerator.OVERFEED_COOLDOWN} часа!");
         }
     }
 }

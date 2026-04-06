@@ -12,6 +12,7 @@ using SwineBot.BotMessages;
 using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages.Feed;
 using SwineBot.BotMessages.Start;
+using SwineBot.Actions.Commands;
 
 namespace SwineBot;
 
@@ -52,14 +53,17 @@ internal class Program
                 .AddSingleton<TelegramBotClientOptions>(BuildTelegramBotClientOptions)
                 .AddSingleton<IDateTimeNowProvider, DateTimeNowProvider>()
                 .AddSingleton<StartLinkBuilder>()
+                .AddSingleton<IMessageFactory, MessageFactory>()
                 .AddSingleton<ITelegramBotClient, TelegramBotClient>()
+                .AddSingleton<IBotMessageSender, BotMessageSender>()
+                .AddSingleton<IAchievementCheckerBuilderFactory, AchievementCheckerBuilderFactory>()
                 .AddSingleton<IAchievementCheckerBuilders, AchievementCheckerBuilders>()
+                .AddSingleton<ICommandInfos, CommandInfos>()
 
                 // Transient
                 .AddStartLinkActions()
+                .AddCommands()
                 .AddTransient<IStartLinkParser, StartLinkParser>()
-                .AddUserActions()
-                .AddTransient<AchievementCheckerBuilder>()
 
                 // Scoped
                 .AddDbContext<UserContext>(ConfigureContext)
@@ -67,9 +71,8 @@ internal class Program
                 .AddScoped<AchievementController>()
                 .AddScoped<IFeedGeneratorFactory, FeedGeneratorFactory>()
                 .AddScoped<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
-                .AddScoped<IMessageFactory, MessageFactory>()
                 .AddScoped<UserContextHelpers>()
-                .AddScoped<IBotMessageSender, BotMessageSender>()
+                .AddScoped<ICommandFactory, CommandFactory>()
                 .AddScoped<IUpdateHandler, UpdateHandler>()
 
                 // Host
@@ -78,6 +81,12 @@ internal class Program
             var host = builder.Build();
 
             Log.Information("Starting host...");
+
+            using (var scope = host.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<UserContext>();
+                db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+            }
 
             await host.RunAsync();
         }
@@ -106,7 +115,7 @@ internal class Program
 
         if (!File.Exists(configFilePath))
         {
-            var defaultConfig = new Config("TOKEN", "@USERNAME_BOT", "Data Source=PATH_TO.db");
+            var defaultConfig = new Config("TOKEN", "@USERNAME_BOT", "Data Source=PATH_TO.db;Cache=Shared");
             defaultConfig.Save(configFilePath); 
             throw new InvalidOperationException($"Default config created at {configFilePath}. Fill it out and restart.");
         }

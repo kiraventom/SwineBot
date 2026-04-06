@@ -6,7 +6,7 @@ namespace SwineBot.BotMessages.Start;
 
 public class StartLinkBuilder(Config config)
 {
-    public const string START_LINK_HEAD = "t.me/";
+    public const string START_LINK_HEAD = "https://t.me/";
     public const string START_LINK_TAIL = "?start=";
 
     public string Build(IStartLinkAction action)

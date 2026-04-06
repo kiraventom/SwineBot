@@ -1,96 +1,72 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SwineBot.Actions.Commands;
-using SwineBot.BotMessages.Start;
-using SwineBot.BotMessages.Start.Actions;
-using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class PiggeryMessage(ILogger<PiggeryMessage> logger, UserContext context, StartLinkBuilder linkBuilder, Config config) : BotMessage(logger)
+public class PiggeryMessage : BotMessage<PiggeryViewModel>
 {
-    protected override async Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, PiggeryViewModel viewModel)
     {
-        Swine selectedSwine = null;
-        if (update.SwineId >= 0)
-            selectedSwine = context.Swines.First(s => s.SwineId == update.SwineId);
-
-        var swines = await context.Swines
-            .AsNoTracking()
-            .Where(s => s.OwnerId == update.UserId)
-            .ToListAsync();
-
-        if (swines.Count == 0)
+        if (viewModel.SwinesCount == 0)
         {
             Text.Verbatim("Ваш свинарник пуст :(").LineBreak();
-            Text.Verbatim($"Для того, чтобы завести свинку, добавьте бота в группу и отправьте {InfoCommand.NAME}").LineBreak();
+            Text.Verbatim($"Для того, чтобы завести свинку, добавьте бота в группу и отправьте {InfoCommand.COMMAND_NAME}").LineBreak();
             return;
         }
 
-        if (swines.Count == 1)
+        if (viewModel.SwinesCount == 1)
         {
-            if (selectedSwine is null)
+            if (viewModel.SelectedSwine is null)
             {
-                var onlySwine = swines.First();
+                var onlySwine = viewModel.SwinesFromGroups.First().Swine;
                 throw new NotSupportedException($"User [{onlySwine.OwnerId}] has one swine [{onlySwine.SwineId}], but it is not selected as private one");
             }
 
-            Text.Verbatim("В вашем свинарнике всего один свин, ").Bold(selectedSwine.Name);
+            Text.Verbatim("В вашем свинарнике всего один свин, ").Bold(viewModel.SelectedSwine.Name);
 
-            if (update.IsPrivateChat)
-            {
-                var groupTitle = context.Groups.First(g => g.GroupId == selectedSwine.GroupId).Title;
-                Text.Verbatim($" из \"{groupTitle}\"");
-            }
+            if (viewModel.IsPrivate)
+                Text.Verbatim($" из \"{viewModel.SelectedSwineGroupTitle}\"");
 
             Text.LineBreak();
             Text.Verbatim("Для увеличения свинарника добавляйте бота в другие группы");
         }
 
-        if (selectedSwine is null && update.IsPrivateChat)
+        if (viewModel.SelectedSwine is null && viewModel.IsPrivate)
             Text.Verbatim("Для использования бота в личных сообщениях необходимо выбрать свина:").LineBreak().LineBreak();
 
         Text.Bold("Ваш свинарник:").LineBreak();
 
-        var pairs = swines.Select(s => new
-        {
-            Swine = s,
-            Group = context.Groups
-            .AsNoTracking()
-            .First(g => g.GroupId == s.GroupId)
-        });
-
         int index = 0;
-        foreach (var pair in pairs.OrderByDescending(p => p.Swine.Weight))
+        foreach (var swineFromGroup in viewModel.SwinesFromGroups)
         {
             ++index;
-            var caption = $"{pair.Swine.Name} из \"{pair.Group.Title}\": {pair.Swine.Weight} кг";
+            var caption = $"{swineFromGroup.Swine.Name} из \"{swineFromGroup.GroupTitle}\": {swineFromGroup.Swine.Weight} кг";
 
             Text.Verbatim($"{index}. ");
 
-            if (!update.IsPrivateChat)
+            if (!viewModel.IsPrivate)
             {
                 Text.Verbatim(caption).LineBreak();
                 continue;
             }
 
-            if (selectedSwine != null && pair.Swine.SwineId == selectedSwine.SwineId)
+            if (viewModel.SelectedSwine != null && swineFromGroup.Swine.SwineId == viewModel.SelectedSwine.SwineId)
             {
                 Text.Underline(caption);
             }
             else
             {
-                var selectSwineAction = new SetSwineAction() { SwineId = pair.Swine.SwineId };
-                Text.InlineUrl(caption, linkBuilder.Build(selectSwineAction));
+                Text.InlineUrl(caption, swineFromGroup.SelectStartLink);
             }
 
             Text.LineBreak();
         }
 
-        if (!update.IsPrivateChat)
+        if (!viewModel.IsPrivate)
         {
             Text.LineBreak();
-            Text.Italic("Отправьте эту команду в ").InlineMention("личном диалоге с ботом", config.Username).Italic(", чтобы кормить свинов там").LineBreak();
+            Text.Italic("Отправьте эту команду в ").InlineMention("личном диалоге с ботом", viewModel.BotUsername).Italic(", чтобы кормить свинов там").LineBreak();
         }
     }
 }

@@ -1,15 +1,24 @@
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-
 public interface IMessageFactory
 {
-    T Create<T>(params object[] args) where T : IBotMessage;
+    TMessage Create<TMessage, TViewModel>(TViewModel viewModel) 
+        where TMessage : BotMessage<TViewModel>, new() 
+        where TViewModel : ViewModel;
 }
 
-public class MessageFactory(IServiceProvider sp) : IMessageFactory
+public class MessageFactory(ILoggerFactory loggerFactory) : IMessageFactory
 {
-    public T Create<T>(params object[] args) where T : IBotMessage => ActivatorUtilities.CreateInstance<T>(sp, args);
+    public TMessage Create<TMessage, TViewModel>(TViewModel viewModel)
+        where TMessage : BotMessage<TViewModel>, new()
+        where TViewModel : ViewModel
+    {
+        var message = new TMessage();
+        message.Init(loggerFactory.CreateLogger<TMessage>(), viewModel);
+        return message;
+    }
 }
 

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements.Effects;
 
@@ -9,9 +8,9 @@ public interface IThrowupCalculatorFactory
     IThrowupCalculator Create(DateTime utcNow, IReadOnlyCollection<IAchievementEffect> effects);
 }
 
-public class ThrowupCalculatorFactory(IServiceProvider sp) : IThrowupCalculatorFactory
+public class ThrowupCalculatorFactory(ILogger<ThrowupCalculator> Logger) : IThrowupCalculatorFactory
 {
-    public IThrowupCalculator Create(DateTime utcNow, IReadOnlyCollection<IAchievementEffect> effects) => ActivatorUtilities.CreateInstance<ThrowupCalculator>(sp, utcNow, effects);
+    public IThrowupCalculator Create(DateTime utcNow, IReadOnlyCollection<IAchievementEffect> effects) => new ThrowupCalculator(Logger, utcNow, effects);
 }
 
 public interface IThrowupCalculator

@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
-using SwineBot.BotMessages;
-using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
@@ -9,12 +8,12 @@ public class WeightGainAchievementChecker(ILogger<WeightGainAchievementChecker> 
 {
     public override AchievementType Type => AchievementType.WeightGain;
 
-    protected override Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId)
+    protected override Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId)
     {
-        if (botMessage is not FeedMessage feedMessage)
+        if (viewModel is not FeedViewModel feedViewModel)
             return null;
 
-        return Task.FromResult<int?>(feedMessage.FeedResult.Amount);
+        return Task.FromResult<int?>(feedViewModel.Result.Amount);
     }
 
     protected override bool DoesLevelApply(int value, int level) => value == level;

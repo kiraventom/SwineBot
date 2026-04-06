@@ -1,7 +1,6 @@
 ﻿namespace SwineBot.BotMessages;
 
-public interface ISettableSwineId : IBotMessage
+public interface ISettableSwineId : IActionTarget
 {
     void SetSwineId(int swineId);
 }
-

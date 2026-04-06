@@ -1,33 +1,28 @@
 ﻿using Microsoft.Extensions.Logging;
-using SwineBot.Achievements;
-using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class AchievementMessage(ILogger<AchievementMessage> logger, UserContext context, AchievementLevel achievementLevel) : BotMessage(logger)
+public class AchievementMessage : BotMessage<AchievementViewModel>
 {
-    protected override Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, AchievementViewModel viewModel)
     {
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
-        
         Text.Verbatim("🏆")
-            .Bold(swine.Name)
+            .Bold(viewModel.SwineName)
             .Verbatim(" получает достижение \"")
-            .Bold(achievementLevel.Name)
+            .Bold(viewModel.Level.Name)
             .Verbatim("\"! 🏆")
             .LineBreak().LineBreak()
-            .Italic(achievementLevel.Description);
+            .Italic(viewModel.Level.Description);
 
-        if (achievementLevel.Effect != null)
+        if (viewModel.Level.Effect != null)
         {
             Text
                 .LineBreak().LineBreak()
                 .Verbatim("✨ Новый эффект: ")
-                .Italic(achievementLevel.Effect.Description)
+                .Italic(viewModel.Level.Effect.Description)
                 .Verbatim(" ✨");
         }
-
-        return Task.CompletedTask;
     }
 }
 

@@ -1,8 +1,9 @@
+using SwineBot.BotMessages;
+
 namespace SwineBot.Actions.Commands;
 
 public interface ICommand
 {
-    string Title { get; }
-    string Description { get; }
+    Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter = null);
 }
 

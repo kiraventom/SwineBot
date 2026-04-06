@@ -3,16 +3,17 @@ using Microsoft.Extensions.Logging;
 
 namespace SwineBot.Model;
 
+public record SenderInfo(int UserId, int? GroupId);
+
 public class UserContextHelpers(ILogger<UserContextHelpers> logger, UserContext context)
 {
-    public async Task<int> GetOrAddUser(long chatId, string title, long senderId, string firstName, string username)
+    public async Task<SenderInfo> GetOrAddUser(long chatId, string title, long senderId, string firstName, string username)
     {
         var isPrivate = chatId > 0;
 
-        var user = context.Users.FirstOrDefault(u => u.TelegramId == senderId);
+        var user = await context.Users.AsTracking().FirstOrDefaultAsync(u => u.TelegramId == senderId);
 
-        bool newUser = user is null;
-        if (newUser)
+        if (user is null)
         {
             user = new User()
             {
@@ -27,12 +28,12 @@ public class UserContextHelpers(ILogger<UserContextHelpers> logger, UserContext 
             logger.LogInformation("Created new user [{user}] \"{name}\"", user.UserId, user.FirstName);
         }
 
-        var group = context.Groups.FirstOrDefault(g => g.TelegramId == chatId);
-        bool newGroup = group is null;
+        var senderInfo = new SenderInfo(user.UserId, null);
 
         if (!isPrivate)
         {
-            if (newGroup)
+            var group = await context.Groups.AsTracking().FirstOrDefaultAsync(g => g.TelegramId == chatId);
+            if (group is null)
             {
                 group = new Group()
                 {
@@ -46,7 +47,11 @@ public class UserContextHelpers(ILogger<UserContextHelpers> logger, UserContext 
                 logger.LogInformation("Created new group [{group}] \"{name}\"", group.GroupId, group.Title);
             }
 
-            if (newUser || newGroup)
+            senderInfo = senderInfo with { GroupId = group.GroupId };
+
+            bool hasSwine = context.Swines.Any(s => s.OwnerId == user.UserId && s.GroupId == group.GroupId);
+
+            if (!hasSwine)
             {
                 var swine = new Swine()
                 {
@@ -95,49 +100,45 @@ public class UserContextHelpers(ILogger<UserContextHelpers> logger, UserContext 
             logger.LogInformation("Detected user tag changing from \"{old}\" to \"{new}\"", oldTag, username);
         }
 
-        await context.SaveChangesAsync();
-
-        return user.UserId;;
+        return senderInfo;
     }
 
-    public async Task<int?> GetOrSetSwine(int? groupId, int userId)
+    public async Task<int?> GetOrSetSwine(SenderInfo senderInfo)
     {
-        var isPrivate = groupId == null;
+        var isPrivate = senderInfo.GroupId == null;
 
         if (!isPrivate)
         {
-            var swineId = context.Swines
-                .Where(s => s.GroupId == groupId)
-                .First(s => s.OwnerId == userId)
+            var swineId = (await context.Swines
+                .Where(s => s.GroupId == senderInfo.GroupId)
+                .FirstAsync(s => s.OwnerId == senderInfo.UserId))
                 .SwineId;
 
-            logger.LogInformation("Found swine [{swine}] for user [{user}] in group [{group}]", swineId, userId, groupId);
+            logger.LogInformation("Found swine [{swine}] for user [{user}] in group [{group}]", swineId, senderInfo.UserId, senderInfo.GroupId);
             return swineId;
         }
 
-        var user = context.Users.First(u => u.UserId == userId);
-        var userSwines = await context.Swines.AsNoTracking().Where(s => s.OwnerId == userId).ToListAsync();
+        var user = await context.Users.AsTracking().FirstAsync(u => u.UserId == senderInfo.UserId);
+        var userSwines = context.Swines.Where(s => s.OwnerId == user.UserId);
+        var userSwinesCount = await userSwines.CountAsync();
         var privateSwineId = user.PrivateSwineId;
 
         if (userSwines.All(s => s.SwineId != privateSwineId))
         {
             user.PrivateSwineId = null;
-            await context.SaveChangesAsync();
 
-            logger.LogInformation("User [{user}] has private swine [{private}], but his swines are [ {swines} ]. Probably slaughtered swine, set private swine to null", userId, privateSwineId, string.Join(", ", userSwines.Select(s => s.SwineId)));
+            logger.LogInformation("User [{user}] has private swine [{private}], but his swines are [ {swines} ]. Probably slaughtered swine, set private swine to null", user.UserId, privateSwineId, string.Join(", ", userSwines.Select(s => s.SwineId)));
         }
 
         // If no private swine is selected, auto-select the swine if it's user's only one
         if (privateSwineId is null)
         {
-            if (userSwines.Count == 1)
+            if (userSwinesCount == 1)
             {
-                user.PrivateSwineId = userSwines.First().SwineId;
+                user.PrivateSwineId = (await userSwines.FirstAsync()).SwineId;
                 privateSwineId = user.PrivateSwineId;
 
-                await context.SaveChangesAsync();
-
-                logger.LogInformation("User [{user}] has no private swine, but his only swine is [{swine}]. Set private swine to [{swine}]", userId, privateSwineId, privateSwineId);
+                logger.LogInformation("User [{user}] has no private swine, but his only swine is [{swine}]. Set private swine to [{swine}]", user.UserId, privateSwineId, privateSwineId);
             }
         }
 

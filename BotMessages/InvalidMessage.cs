@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Logging;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class InvalidMessage(ILogger<InvalidMessage> logger) : BotMessage(logger), IStaticMessage
+public class InvalidMessage : BotMessage<InvalidViewModel>
 {
-    protected override Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, InvalidViewModel viewModel)
     {
         Text.Bold("Что-то пошло не так :(");
-        return Task.CompletedTask;
     }
 }

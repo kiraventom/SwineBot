@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SwineBot.BotMessages;
 using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
@@ -9,7 +9,7 @@ public interface IAchievementChecker
 {
     AchievementType Type { get; }
     AchievementLevel GetLevel(Achievement achievement);
-    Task<AchievementLevel> TryApply(BotMessage botMessage, int swineId);
+    Task<AchievementLevel> TryApply(ViewModel viewModel, int infoId, int swineId);
 }
  
 public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDateTimeNowProvider dtnProvider, UserContext context, IReadOnlyCollection<AchievementLevel> values) : IAchievementChecker
@@ -17,13 +17,12 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDa
     public abstract AchievementType Type { get; }
     protected IReadOnlyCollection<AchievementLevel> Levels { get; } = values;
 
-    protected abstract Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId);
+    protected abstract Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId);
 
     protected abstract bool DoesLevelApply(int value, int level);
 
-    private async Task<CheckerResult> CheckLevel(BotMessage botMessage, int swineId, int levelValue)
+    private async Task<CheckerResult> CheckLevel(ViewModel viewModel, int infoId, int swineId, int levelValue)
     {
-        var infoId = context.Infos.First(i => i.SwineId == swineId).InfoId;
         // Swine already has the achievement of that of bigger level
         var higherLevelAchievement = context.Achievements
             .Where(a => a.SwineInfoId == infoId)
@@ -37,7 +36,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDa
             return CheckerResult.Break;
         }
 
-        var value = await GetValue(botMessage, context, swineId);
+        var value = await GetValue(viewModel, context, swineId);
 
         if (value is null)
             return CheckerResult.Break;
@@ -61,13 +60,11 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDa
         return null;
     }
 
-    public async Task<AchievementLevel> TryApply(BotMessage botMessage, int swineId)
+    public async Task<AchievementLevel> TryApply(ViewModel viewModel, int infoId, int swineId)
     {
-        var swine = context.Swines.First(s => s.SwineId == swineId);
-
         foreach (var level in Levels)
         {
-            var checkerResult = await CheckLevel(botMessage, swineId, level.Value);
+            var checkerResult = await CheckLevel(viewModel, infoId, swineId, level.Value);
             logger.LogDebug("Checked {checker}, level {level}, result {result}", this.Type.ToString(), level.Value.ToString(), checkerResult.ToString());
 
             switch (checkerResult)
@@ -89,7 +86,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDa
 
     private async Task Apply(int swineId, int levelValue)
     {
-        var infoId = context.Infos.First(i => i.SwineId == swineId).InfoId;
+        var infoId = (await context.Infos.FirstAsync(i => i.SwineId == swineId)).InfoId;
         var newLevelAchiev = new Achievement()
         {
             Type = Type,

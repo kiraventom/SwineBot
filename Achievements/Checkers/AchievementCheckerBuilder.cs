@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SwineBot.Achievements.Effects;
 using SwineBot.Model;
 using SwineBot.Text;
@@ -13,10 +12,13 @@ public class AchievementCheckerBuilder(ILogger<AchievementCheckerBuilder> logger
     private Unit _levelUnit;
     private readonly List<AchievementLevel> _levels = [];
 
+    private bool _isSealed = false;
+
     public AchievementType CheckerType => _type;
 
     public AchievementCheckerBuilder Type(AchievementType type)
     {
+        CheckForSealed();
         if (_type != AchievementType.None)
         {
             logger.LogError("Attempted to set type twice: old type {old}, new type {new}", _type.ToString(), type.ToString());
@@ -29,6 +31,7 @@ public class AchievementCheckerBuilder(ILogger<AchievementCheckerBuilder> logger
 
     public AchievementCheckerBuilder Description(string descriptionFormat, Unit unit)
     {
+        CheckForSealed();
         if (_descriptionFormat != null)
         {
             logger.LogError("Attempted to set description format twice: old format {old}, new format {new}", _descriptionFormat, descriptionFormat);
@@ -42,6 +45,7 @@ public class AchievementCheckerBuilder(ILogger<AchievementCheckerBuilder> logger
 
     public AchievementCheckerBuilder AddLevel(int value, string name, IAchievementEffect effect = null)
     {
+        CheckForSealed();
         if (_type == AchievementType.None)
         {
             logger.LogError("Attempted to add level before setting type");
@@ -55,18 +59,31 @@ public class AchievementCheckerBuilder(ILogger<AchievementCheckerBuilder> logger
         return this;
     }
 
-    public AchievementChecker Build(IServiceProvider sp)
+    public AchievementCheckerBuilder Seal()
     {
+        CheckForSealed();
         _levels.Sort((a, b) => -1 * Math.Abs(a.Value).CompareTo(Math.Abs(b.Value)));
+        _isSealed = true;
+        return this;
+    }
+
+    public AchievementChecker Build(BuildCheckerDelegate BuildChecker)
+    {
         return _type switch
         {
-            AchievementType.Weight => ActivatorUtilities.CreateInstance<WeightAchievementChecker>(sp, _levels),
-            AchievementType.WeightGain => ActivatorUtilities.CreateInstance<WeightGainAchievementChecker>(sp, _levels),
-            AchievementType.WeightLoss => ActivatorUtilities.CreateInstance<WeightLossAchievementChecker>(sp, _levels),
-            AchievementType.Overfeed => ActivatorUtilities.CreateInstance<OverfeedAchievementChecker>(sp, _levels),
-            AchievementType.NoOverfeed => ActivatorUtilities.CreateInstance<NoOverfeedAchievementChecker>(sp, _levels),
-            _ => ActivatorUtilities.CreateInstance<InvalidAchievementChecker>(null),
+            AchievementType.Weight => BuildChecker(typeof(WeightAchievementChecker), _levels),
+            AchievementType.WeightGain => BuildChecker(typeof(WeightGainAchievementChecker), _levels),
+            AchievementType.WeightLoss => BuildChecker(typeof(WeightLossAchievementChecker), _levels),
+            AchievementType.Overfeed => BuildChecker(typeof(OverfeedAchievementChecker), _levels),
+            AchievementType.NoOverfeed => BuildChecker(typeof(NoOverfeedAchievementChecker), _levels),
+            _ => BuildChecker(typeof(InvalidAchievementChecker), null),
         };
+    }
+
+    private void CheckForSealed()
+    {
+        if (_isSealed)
+            throw new NotSupportedException("Can't modify sealed builder");
     }
 }
 

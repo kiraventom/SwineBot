@@ -1,82 +1,44 @@
 using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Actions.Commands;
-using SwineBot.Model;
 using SwineBot.Text;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class SlaughterMessage(ILogger<SlaughterMessage> logger, UserContext context, IDateTimeNowProvider dtnProvider, string confirmation) : BotMessage(logger)
+public class SlaughterMessage : BotMessage<SlaughterViewModel>
 {
-    private const string CONFIRMATION = "yes";
-    private const int SLAUGHTER_COOLDOWN = 24;
-
-    public const int MIN_SWINE_WEIGHT = 75;
-
-    protected override async Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, SlaughterViewModel viewModel)
     {
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
+        var swine = viewModel.SenderSwine;
 
-        var lastSlaughter = context.Slaughters
-            .Where(s => s.UserId == swine.OwnerId)
-            .OrderByDescending(s => s.DateTime)
-            .FirstOrDefault();
-
-        if (lastSlaughter is not null && (dtnProvider.UtcNow - lastSlaughter.DateTime).TotalHours < SLAUGHTER_COOLDOWN)
+        if (viewModel.IsTooEarlySlaughter)
         {
             Text.Italic("Нельзя марать руки в крови так часто.");
             return;
         }
 
-        var infoId = context.Infos.First(i => i.SwineId == update.SwineId).InfoId;
-        var achievsCount = context.Achievements.Where(s => s.SwineInfoId == infoId).Count();
+        var achievsCount = viewModel.AchievsCount;
 
-        if (confirmation == null || !string.Equals(confirmation.Trim(), CONFIRMATION, StringComparison.OrdinalIgnoreCase))
+        if (viewModel.ReceivedConfirmation)
         {
-            Text.Italic("Вы собираетесь").Verbatim(" ").Underline("убить").Verbatim(" ").Italic("вашу свинку ").Bold(swine.Name).LineBreak();
-            Text.Italic("Вы потеряете ").Bold(swine.Weight).Italic($" {MessageTextUtils.GetDeclinatedNoun(swine.Weight, Unit.Kg)} сальца");
-            if (achievsCount != 0)
-                Text.Italic(", ").Bold(achievsCount).Italic($" {MessageTextUtils.GetDeclinatedNoun(achievsCount, Unit.Achievement)}");
-
-            Text.Italic(" и верного друга.").LineBreak().LineBreak();
-
-            Text.Bold(swine.Name).Verbatim(" радостно смотрит на вас, думая, что вы принесли корм.").LineBreak();
-            Text.Italic("Чтобы убить ").Bold(swine.Name).Italic(", отправьте ")
-               .Monospace($"{SlaughterCommand.COMMAND_NAME} {CONFIRMATION}");
-
+            Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
+            if (viewModel.WasSlaughterEffective.Value)
+                Text.Italic("Теперь ваши будущие свинки будут расти быстрее...");
+            else
+                Text.Italic("Это жестокое убийство не принесло никакого эффекта.");
             return;
         }
 
-        var slaughteredWeight = swine.Weight - 1;
-        context.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
+        Text.Italic("Вы собираетесь").Verbatim(" ").Underline("убить").Verbatim(" ").Italic("вашу свинку ").Bold(swine.Name).LineBreak();
+        Text.Italic("Вы потеряете ").Bold(swine.Weight).Italic($" {MessageTextUtils.GetDeclinatedNoun(swine.Weight, Unit.Kg)} сальца");
+        if (achievsCount != 0)
+            Text.Italic(", ").Bold(achievsCount).Italic($" {MessageTextUtils.GetDeclinatedNoun(achievsCount, Unit.Achievement)}");
 
-        Text.Bold(swine.Name).Italic(" жалобно визжит и испускает последний вздох.").LineBreak();
+        Text.Italic(" и верного друга.").LineBreak().LineBreak();
 
-        context.Swines.Remove(swine);
-        await context.SaveChangesAsync();
-
-        var newSwine = new Swine()
-        {
-            Name = context.Users.First(u => u.UserId == swine.OwnerId).FirstName,
-            Weight = 1,
-            GroupId = swine.GroupId,
-            OwnerId = swine.OwnerId
-        };
-
-        context.Swines.Add(newSwine);
-        await context.SaveChangesAsync();
-
-        var info = new SwineInfo()
-        {
-            SwineId = newSwine.SwineId
-        };
-
-        context.Infos.Add(info);
-        await context.SaveChangesAsync();
-
-        if (slaughteredWeight >= MIN_SWINE_WEIGHT)
-            Text.Italic("Теперь ваши будущие свинки будут расти быстрее...");
-        else
-            Text.Italic("Это жестокое убийство не принесло никакого эффекта.");
+        Text.Bold(swine.Name).Verbatim(" радостно смотрит на вас, думая, что вы принесли корм.").LineBreak();
+        Text.Italic("Чтобы убить ").Bold(swine.Name).Italic(", отправьте ")
+           .Monospace($"{SlaughterCommand.COMMAND_NAME} {SlaughterCommand.CONFIRMATION}");
     }
 }

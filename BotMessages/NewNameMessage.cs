@@ -1,14 +1,14 @@
 ﻿using Microsoft.Extensions.Logging;
 using SwineBot.Actions.Commands;
-using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class NewNameMessage(ILogger<NewNameMessage> logger, UserContext context, string name) : BotMessage(logger)
+public class NewNameMessage : BotMessage<SetNameViewModel>
 {
-    protected override async Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, SetNameViewModel viewModel)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (!viewModel.IsNameProvided)
         {
             Text.Italic("Формат команды:")
                 .LineBreak()
@@ -17,18 +17,12 @@ public class NewNameMessage(ILogger<NewNameMessage> logger, UserContext context,
             return;
         }
 
-        name = name.Split('\n', StringSplitOptions.RemoveEmptyEntries).First().Trim();
-
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
-        if (swine.Name == name)
+        if (viewModel.IsNameTheSame)
         {
-            Text.Italic("Свина и так зовут \"").Bold(name).Italic("\" \U0001F914");
+            Text.Italic("Свина и так зовут \"").Bold(viewModel.NewName).Italic("\" \U0001F914");
             return;
         }
 
-        swine.Name = name;
-        await context.SaveChangesAsync();
-
-        Text.Bold(swine.Name).Verbatim(" радостно хрюкает, будто подпевая своему новому имени!");
+        Text.Bold(viewModel.NewName).Verbatim(" радостно хрюкает, будто подпевая своему новому имени!");
     }
 }

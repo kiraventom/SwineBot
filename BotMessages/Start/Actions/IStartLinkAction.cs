@@ -6,6 +6,6 @@ public interface IStartLinkAction
     bool TryParse(string str);
     string Build();
 
-    void Execute(IBotMessage message);
+    void Execute(IActionTarget message);
 }
 

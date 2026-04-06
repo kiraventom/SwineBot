@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SwineBot.BotMessages;
 using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
@@ -12,24 +12,26 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
 
     public static async Task<int> CountConsecutiveOverfeeds(UserContext context, int? swineId)
     {
-        var throwUps = await context.WeightLosses
-            .AsNoTracking()
+        var throwUps = context.WeightLosses
             .Where(wl => wl.SwineId == swineId)
-            .Where(wl => wl.IsThrowUp)
+            .Where(wl => wl.IsThrowUp);
+
+        var ignoredThrowups = await throwUps
+            .Where(t => t.Amount == 0)
             .ToListAsync();
 
-        var lastActualThrowUp = throwUps
-            .Where(wl => !wl.Ignored)
+        var lastActualThrowUp = await throwUps
+            .Where(wl => wl.Amount != 0) // skip ignored
             .OrderByDescending(wl => wl.DateTime)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
 
         var dateToCountFrom = lastActualThrowUp?.DateTime ?? DateTime.MinValue;
 
         var feedsSinceThrowup = await context.Feeds
-            .AsNoTracking()
             .Where(wl => wl.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
+            // TODO: JSONLEVELS: Add Take({maximum level for this achievement}) here
             .ToListAsync();
 
         int overfeedCount = 0;
@@ -41,10 +43,9 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
             if (offset.TotalHours >= FeedGenerator.OVERFEED_COOLDOWN)
             {
                 // Check for ignored throwup
-                var ignoredThrowUp = throwUps
+                var ignoredThrowUp = ignoredThrowups
                     .Where(tu => tu.DateTime < newerFeed.DateTime)
                     .Where(tu => tu.DateTime > olderFeed.DateTime)
-                    .Where(tu => tu.Ignored)
                     .FirstOrDefault();
 
                 if (ignoredThrowUp is null)
@@ -57,9 +58,9 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
         return overfeedCount;
     }
 
-    protected override async Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId)
+    protected override async Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId)
     {
-        if (botMessage is not FeedMessage feedMessage)
+        if (viewModel is not FeedViewModel feedViewModel)
             return null;
 
         var overfeedCount = await CountConsecutiveOverfeeds(context, swineId);

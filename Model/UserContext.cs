@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -24,9 +23,11 @@ public class UserContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseLazyLoadingProxies(false);
-        optionsBuilder.ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning));
-        optionsBuilder.EnableSensitiveDataLogging(true);
+        optionsBuilder
+            .UseLazyLoadingProxies(false)
+            .ConfigureWarnings(w => w.Throw(RelationalEventId.MultipleCollectionIncludeWarning))
+            .EnableSensitiveDataLogging(true)
+            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -134,9 +135,6 @@ public class WeightLoss
     public int Amount { get; set; } // kg
 
     public bool IsThrowUp { get; set; }
-
-    [NotMapped]
-    public bool Ignored => Amount == 0;
 }
 
 public class DuelRequest
@@ -155,12 +153,6 @@ public class DuelResult
     public int? AttackerId { get; set; }
     public int? DefenderId { get; set; }
     public bool AttackerWon { get; set; }
-
-    [NotMapped]
-    public int? WinnerId => AttackerWon ? AttackerId : DefenderId;
-
-    [NotMapped]
-    public int? LoserId => AttackerWon ? DefenderId : AttackerId;
 
     public DateTime DateTime { get; set; }
 

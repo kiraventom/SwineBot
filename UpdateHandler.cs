@@ -1,75 +1,103 @@
 using Microsoft.Extensions.Logging;
 using SwineBot.Model;
-using SwineBot.Actions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using SwineBot.Actions.Commands;
+using SwineBot.BotMessages;
 
 namespace SwineBot;
 
-public record Update(string MessageText, int? GroupId, int UserId, int? SwineId, bool IsPrivateChat);
+public record UpdateReply(Update Update, IReadOnlyCollection<IBotMessage> Messages);
+public record Update(string MessageText, int? GroupId, int UserId, int? SwineId, long TelegramChatId, bool IsPrivateChat);
 
 public interface IUpdateHandler
 {
     Task Handle(Telegram.Bot.Types.Update update, CancellationToken token);
 }
 
-public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, IEnumerable<UserAction> actions) : IUpdateHandler
+public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, ICommandFactory commandFactory) : IUpdateHandler
 {
-    private IReadOnlyCollection<UserAction> Actions { get; } = actions.ToList();
-
-    public async Task Handle(Telegram.Bot.Types.Update update, CancellationToken token)
+    public async Task Handle(Telegram.Bot.Types.Update tgUpdate, CancellationToken token)
     {
-        logger.LogInformation("Received update: {updateType}", update.Type);
+        logger.LogInformation("Received update: {updateType}", tgUpdate.Type);
 
-        using var transaction = await context.Database.BeginTransactionAsync(token);
+        if (tgUpdate.Message is not { } tgMessage)
+            return;
+
+        var botCommand = GetBotCommand(tgMessage);
+        if (botCommand is null)
+            return;
+
+        var updateReply = await GetUpdateReply(tgMessage, botCommand, token);
+        if (updateReply is null)
+            return;
+
+        await ReplyToUpdate(updateReply);
+    }
+
+    private async Task ReplyToUpdate(UpdateReply updateReply)
+    {
         try
         {
-            if (update.Message is not { } message)
-                return;
+            foreach (var message in updateReply.Messages)
+            {
+                await sender.Send(updateReply.Update, message);
+            }
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "Sending message failed");
+        }
+    }
 
-            var didHandle = await HandleMessageAsync(message);
+    private async Task<UpdateReply> GetUpdateReply(Message message, MessageEntity botCommand, CancellationToken token)
+    {
+        Update update;
+        IReadOnlyCollection<IBotMessage> messages;
 
-            if (didHandle)
-                await context.SaveChangesAsync(token);
+        var transaction = await context.Database.BeginTransactionAsync(token);
 
+        try
+        {
+            update = await CreateUpdate(message.From, message.Chat, message.Text);
+            messages = await GetMessages(update, botCommand);
+
+            await context.SaveChangesAsync(token);
             await transaction.CommitAsync(token);
         }
         catch (Exception e)
         {
             await transaction.RollbackAsync(token);
             logger.LogError(e, "Transaction failed, rolling back");
+            return null;
         }
+
+        return new UpdateReply(update, messages);
     }
 
-    private async Task<bool> HandleMessageAsync(Message message)
+    private async Task<Update> CreateUpdate(Telegram.Bot.Types.User tgUser, Chat tgChat, string text)
     {
-        var sender = message.From;
-        var chat = message.Chat;
-
-        if (sender is null)
+        if (tgUser is null)
         {
             logger.LogWarning("Sender is null");
-            return false;
+            return null;
         }
 
         // Bot received its own message (e.g., pinned message notification)
-        if (sender.Username == config.Username)
-            return false;
+        if (tgUser.Username == config.Username)
+            return null;
 
-        var userId = await contextHelpers.GetOrAddUser(chat.Id, chat.Title, sender.Id, sender.FirstName, sender.Username);
-        var groupId = context.Groups.FirstOrDefault(g => g.TelegramId == chat.Id)?.GroupId;
-        var isPrivateChat = groupId == null;
-        var swineId = await contextHelpers.GetOrSetSwine(groupId, userId);
+        var senderInfo = await contextHelpers.GetOrAddUser(tgChat.Id, tgChat.Title, tgUser.Id, tgUser.FirstName, tgUser.Username);
+        var isPrivateChat = senderInfo.GroupId == null;
+        var swineId = await contextHelpers.GetOrSetSwine(senderInfo);
 
-        var update = new Update(message.Text, groupId, userId, swineId, isPrivateChat);
+        var update = new Update(text, senderInfo.GroupId, senderInfo.UserId, swineId, tgChat.Id, isPrivateChat);
         LogUpdate(update);
 
-        var botCommand = message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
-        if (botCommand is not null)
-            return await HandleBotCommandAsync(update, botCommand);
-
-        return false;
+        return update;
     }
+
+    private static MessageEntity GetBotCommand(Message message) => message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
 
     private void LogUpdate(Update update)
     {
@@ -83,25 +111,34 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, U
         }
     }
 
-    private async Task<bool> HandleBotCommandAsync(Update update, MessageEntity botCommand)
+    private async Task<IReadOnlyCollection<IBotMessage>> GetMessages(Update update, MessageEntity botCommand)
     {
-        var commandText = update.MessageText.Substring(botCommand.Offset, botCommand.Length);
-        return await HandleUserActionAsync(update, commandText);
+        var command = GetCommand(update, botCommand, out var parameter);
+        if (command is null)
+            return [];
+
+        return await command.Execute(update, parameter);
     }
 
-    private async Task<bool> HandleUserActionAsync(Update update, string actionText)
+    private ICommand GetCommand(Update update, MessageEntity botCommand, out string parameter)
     {
-        var action = Actions.FirstOrDefault(c => c.IsMatch(actionText));
-        if (action is null)
+        parameter = null;
+
+        var commandText = update.MessageText.Substring(botCommand.Offset, botCommand.Length);
+
+        var command = commandFactory.Create(commandText);;
+        if (command is null)
+            return null;
+
+        parameter = update.MessageText.Substring(botCommand.Offset + botCommand.Length).Trim();
+
+        // SwineId is null -> command in private chat and no private swine is selected -> prompt user to select private swine via PiggeryCommand
+        if (update.SwineId is null && command is not StartCommand and not PiggeryCommand)
         {
-            logger.LogWarning("Action '{actionText}' does not match any of actions: [ {actions} ]", actionText, string.Join(", ", Actions.Select(c => c.Name)));
-            return false;
+            command = commandFactory.Create<PiggeryCommand>();
+            parameter = string.Empty;
         }
 
-        var botMessage = action.Execute(update, actionText);
-        await sender.Send(update, botMessage);
-        return true;
+        return command;
     }
 }
-
-

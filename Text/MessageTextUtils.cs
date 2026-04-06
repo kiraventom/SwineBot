@@ -5,7 +5,7 @@ namespace SwineBot.Text;
 
 public static class MessageTextUtils
 {
-    private static HashSet<char> CharsToEscape { get; } = [ '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!' ];
+    private static HashSet<char> CharsToEscape { get; } = [ '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '\\' ];
 
     public static StringBuilder EscapeString(string str, StringBuilder stringBuilder = null)
     {

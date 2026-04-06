@@ -1,95 +1,63 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
-using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages.Feed;
-using SwineBot.Model;
 using SwineBot.Text;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class InfoMessage(ILogger<InfoMessage> logger, UserContext context, IDateTimeNowProvider dtnProvider) : BotMessage(logger)
+public class InfoMessage : BotMessage<InfoViewModel>
 {
-    protected override async Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, InfoViewModel viewModel)
     {
-        var swine = context.Swines.First(s => s.SwineId == update.SwineId);
+        string lastFeedDTStr = GetLastDTStr(viewModel.RecentFeedDTs, viewModel.UtcNow);
+        string lastThrowUpDTStr = GetLastDTStr(viewModel.RecentThrowupDTs, viewModel.UtcNow);
 
-        var duels = await context.DuelResults.ToListAsync();
-        var wonDuels = duels.Count(d => d.WinnerId == update.SwineId);
-        var lostDuels = duels.Count(d => d.LoserId == update.SwineId);
-
-        var current = dtnProvider.UtcNow;
-
-        var recentFeeds = await context.GetRecentFeeds(update.SwineId, current);
-        var recentThrowups = await context.GetRecentThrowups(update.SwineId, current);
-
-        string lastFeedDTStr = GetLastDTStr(recentFeeds.Select(f => f.DateTime).ToList(), current);
-        string lastThrowUpDTStr = GetLastDTStr(recentThrowups.Select(f => f.DateTime).ToList(), current);
-
-        int consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, update.SwineId);
-        int consecutiveNoOverfeeds = await NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(context, update.SwineId);
-
-        var owner = context.Users.First(u => u.UserId == swine.OwnerId);
-        Text.Bold("Информация о свине ").InlineMention(owner).Bold(":").LineBreak()
+        Text.Bold("Информация о свине ").InlineMention(viewModel.Sender).Bold(":").LineBreak()
             .LineBreak()
-            .Italic("Имя: ").Verbatim(swine.Name).LineBreak()
-            .Italic("Вес: ").Verbatim($"{swine.Weight} кг").LineBreak();
+            .Italic("Имя: ").Verbatim(viewModel.SenderSwine.Name).LineBreak()
+            .Italic("Вес: ").Verbatim($"{viewModel.SenderSwine.Weight} кг").LineBreak();
 
-        var mealsDecl = MessageTextUtils.GetDeclinatedNoun(recentFeeds.Count, Unit.Meal);
+        var mealsDecl = MessageTextUtils.GetDeclinatedNoun(viewModel.RecentFeedDTs.Count, Unit.Meal);
         mealsDecl = char.ToUpper(mealsDecl[0]) + mealsDecl[1..];
 
-        logger.LogInformation(mealsDecl);
-
         Text.Italic(mealsDecl)
-           .Italic($" пищи (за {FeedGenerator.OVERFEED_COOLDOWN} ч): ").Verbatim(recentFeeds.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
+           .Italic($" пищи (за {FeedGenerator.OVERFEED_COOLDOWN} ч): ").Verbatim(viewModel.RecentFeedDTs.Count).Verbatim("; последний: ").Verbatim(lastFeedDTStr).LineBreak();
 
-        if (recentThrowups.Count != 0)
-        {
+        if (viewModel.RecentThrowupDTs.Count != 0)
             Text.Italic("Неудачный перекорм: ").Verbatim(lastThrowUpDTStr).LineBreak();
-        }
 
-        if (consecutiveOverfeeds != 0)
+        if (viewModel.ConsecutiveOverfeeds != 0)
         {
-            Text.Italic("Перекормов: ").Verbatim(consecutiveOverfeeds).Verbatim(" ")
-                .Verbatim(MessageTextUtils.GetDeclinatedNoun(consecutiveOverfeeds, Unit.Time))
+            Text.Italic("Перекормов: ").Verbatim(viewModel.ConsecutiveOverfeeds).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.ConsecutiveOverfeeds, Unit.Time))
                 .Verbatim(" подряд").LineBreak();
         }
 
-        if (consecutiveNoOverfeeds != 0)
+        if (viewModel.ConsecutiveNoOverfeeds != 0)
         {
-            Text.Italic("Без перекормов: ").Verbatim(consecutiveNoOverfeeds).Verbatim(" ")
-                .Verbatim(MessageTextUtils.GetDeclinatedNoun(consecutiveNoOverfeeds, Unit.Time))
+            Text.Italic("Без перекормов: ").Verbatim(viewModel.ConsecutiveNoOverfeeds).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.ConsecutiveNoOverfeeds, Unit.Time))
                 .Verbatim(" подряд").LineBreak();
         }
 
-        if (wonDuels != 0 || lostDuels != 0)
+        if (viewModel.WonDuels != 0 || viewModel.LostDuels != 0)
         {
-            Text.Italic("Статистика дуэлей: ").Verbatim(wonDuels).Verbatim(" ")
-                .Verbatim(MessageTextUtils.GetDeclinatedNoun(wonDuels, Unit.Win))
+            Text.Italic("Статистика дуэлей: ").Verbatim(viewModel.LostDuels).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.LostDuels, Unit.Win))
                 .Verbatim(", ")
-                .Verbatim(lostDuels).Verbatim(" ")
-                .Verbatim(MessageTextUtils.GetDeclinatedNoun(lostDuels, Unit.Loss))
+                .Verbatim(viewModel.LostDuels).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.LostDuels, Unit.Loss))
                 .LineBreak();
         }
 
-        var slaughters = await context.Slaughters
-            .Where(s => s.UserId == swine.OwnerId)
-            .Where(s => s.GroupId == swine.GroupId)
-            .ToListAsync();
-
-        var totalSlaughteredWeight = slaughters
-            .Where(s => s.SwineWeight >= SlaughterMessage.MIN_SWINE_WEIGHT)
-            .Sum(s => s.SwineWeight);
-
-        var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
-
-        if (slaughters.Count > 0)
+        if (viewModel.SlaughtersCount > 0)
         {
-            Text.Italic("Предшественников погибло: ").Verbatim(slaughters.Count);
-            if (growthMod > 1)
+            Text.Italic("Предшественников погибло: ").Verbatim(viewModel.SlaughtersCount);
+            if (viewModel.GrowthPercent > 0)
             {
                 Text.Verbatim("; рост ускорен на ")
-                    .Verbatim(((growthMod - 1) * 100).ToString("##"))
+                    .Verbatim(viewModel.GrowthPercent)
                     .Verbatim("%");
             }
 

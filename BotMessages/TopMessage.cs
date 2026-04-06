@@ -1,53 +1,43 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.BotMessages;
 
-public class TopMessage(ILogger<TopMessage> logger, UserContext context) : BotMessage(logger)
+public class TopMessage : BotMessage<TopViewModel>
 {
-    protected override async Task InitInternal(Update update)
+    public override void Init<T>(ILogger<T> logger, TopViewModel viewModel)
     {
-        var topSwines = context.Swines
-            .Where(s => s.GroupId == update.GroupId)
-            .OrderByDescending(s => s.Weight)
-            .Take(10)
-            .Where(s => s.Weight > 1);
-
         Text.Bold("Топ 10 свинов")
             .LineBreak().LineBreak();
 
         int counter = 1;
         bool isSenderSwineInTop = false;
 
-        foreach (var swine in topSwines)
+        foreach (var swine in viewModel.TopSwines)
         {
-            if (swine.SwineId == update.SwineId)
+            if (swine.SwineId == viewModel.SenderSwine.SwineId)
                 isSenderSwineInTop = true;
 
-            OutputSwine(counter++, swine, swine.SwineId == update.SwineId);
+            OutputSwine(counter++, swine, swine.SwineId == viewModel.SenderSwine.SwineId);
         }
 
         if (isSenderSwineInTop == false)
         {
-            var senderSwine = context.Swines.First(s => s.SwineId == update.SwineId);
-            var senderIndex = (await context.Swines
-                .OrderByDescending(s => s.Weight)
-                .ToListAsync())
-                .IndexOf(senderSwine);
-
             Text.Verbatim("...").LineBreak();
-            OutputSwine(senderIndex + 1, senderSwine, true);
+            OutputSwine(viewModel.SenderIndex + 1, viewModel.SenderSwine, true);
         }
     }
 
     private void OutputSwine(int rank, Swine swine, bool isSender)
     {
+        var swineName = SwineUtils.GetShortName(swine);
+
         if (isSender)
         {
             Text.Bold(rank)
                 .Bold(". ")
-                .Bold(swine.Name)
+                .Bold(swineName)
                 .Bold(": ")
                 .Bold($"{swine.Weight} кг")
                 .LineBreak();
@@ -56,14 +46,10 @@ public class TopMessage(ILogger<TopMessage> logger, UserContext context) : BotMe
         {
             Text.Verbatim(rank)
                 .Verbatim(". ")
-                .Bold(swine.Name)
+                .Bold(swineName)
                 .Verbatim(": ")
                 .Verbatim($"{swine.Weight} кг")
                 .LineBreak();
         }
     }
 }
-
-
-
-

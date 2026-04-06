@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SwineBot.BotMessages;
 using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
+using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
@@ -12,39 +12,38 @@ public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> 
 
     public static async Task<int> CountConsecutiveNoOverfeeds(UserContext context, int? swineId)
     {
-        var lastThrowUp = context.WeightLosses
-            .AsNoTracking()
+        var lastThrowUp = await context.WeightLosses
             .Where(wl => wl.SwineId == swineId)
             .Where(wl => wl.IsThrowUp)
             .OrderByDescending(wl => wl.DateTime)
-            .FirstOrDefault();
+            .FirstOrDefaultAsync();
 
         var dateToCountFrom = lastThrowUp?.DateTime ?? DateTime.MinValue;
         var feedsSinceThrowup = await context.Feeds
-            .AsNoTracking()
             .Where(f => f.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
+            // TODO: JSONLEVELS: Add Take({maximum level for this achievement}) here
             .ToListAsync();
 
         int noOverfeedCount = 0;
         for (int i = 0; i < feedsSinceThrowup.Count - 1; i++)
         {
-            noOverfeedCount = i;
-
             var feed0 = feedsSinceThrowup[i];
             var feed1 = feedsSinceThrowup[i + 1];
             var offset = feed0.DateTime - feed1.DateTime;
             if (offset.TotalHours < FeedGenerator.OVERFEED_COOLDOWN)
                 break;
+
+            ++noOverfeedCount;
         }
         
         return noOverfeedCount;
     }
 
-    protected override async Task<int?> GetValue(BotMessage botMessage, UserContext context, int swineId)
+    protected override async Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId)
     {
-        if (botMessage is not FeedMessage feedMessage)
+        if (viewModel is not FeedViewModel)
             return null;
 
         var noOverfeedCount = await CountConsecutiveNoOverfeeds(context, swineId);
@@ -53,7 +52,3 @@ public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> 
 
     protected override bool DoesLevelApply(int value, int level) => value >= level;
 }
-
-
-
-
