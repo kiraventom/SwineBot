@@ -139,6 +139,7 @@ public class FeedGenerator : IFeedGenerator
             return Result.Full;
 
         var lastThrowup = await Context.WeightLosses
+            .Where(wl => wl.SwineId == SwineId)
             .Where(wl => wl.IsThrowUp)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefaultAsync();
