@@ -35,21 +35,20 @@ public class FeedGenerator : IFeedGenerator
     private ILogger<FeedGenerator> Logger { get; }
     private UserContext Context { get; }
     private AchievementController AchievController { get; }
-    private IThrowupCalculator ThrowupCalculator { get; }
+    private IThrowupCalculatorFactory ThrowupCalcFactory { get; }
 
     private int SwineId { get; set; }
-
-    public IReadOnlyCollection<IAchievementEffect> Effects { get; private set; }
-    public DateTime UtcNow { get; }
+    private IThrowupCalculator ThrowupCalculator { get; set; }
+    private IReadOnlyCollection<IAchievementEffect> Effects { get; set; }
+    private DateTime UtcNow { get; }
 
     public FeedGenerator(ILogger<FeedGenerator> logger, UserContext context, AchievementController achievController, IDateTimeNowProvider dtnProvider, IThrowupCalculatorFactory throwupCalcFactory)
     {
         Logger = logger;
         Context = context;
         AchievController = achievController;
-
+        ThrowupCalcFactory = throwupCalcFactory;
         UtcNow = dtnProvider.UtcNow;
-        ThrowupCalculator = throwupCalcFactory.Create(UtcNow, Effects);
     }
 
     public async Task Init(int swineId)
@@ -65,6 +64,8 @@ public class FeedGenerator : IFeedGenerator
             .Where(a => a.Effect != null)
             .Select(a => a.Effect)
             .ToListAsync();
+
+        ThrowupCalculator = ThrowupCalcFactory.Create(UtcNow, Effects);
     }
 
     public async Task<FeedResult> Generate()
