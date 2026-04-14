@@ -22,6 +22,8 @@ public record HistoryViewModel(byte[] PlotBytes) : ViewModel;
 
 public record WeightChange(DateTime DateTime, int Amount);
 
+public record SwineWeightChanges(string Name, IReadOnlyCollection<WeightChange> WeightChanges);
+
 public record AchievsViewModel(string SwineName, IReadOnlyCollection<DatedAchievementLevel> AchievementLevels) : ViewModel;
 
 public record DatedAchievementLevel(DateTime DT, AchievementLevel Level);

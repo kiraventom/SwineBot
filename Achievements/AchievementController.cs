@@ -33,7 +33,7 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
             catch (Exception e)
             {
                 logger.LogError(e, "Failed to try apply checker {checker}", checker.Type.ToString());
-                continue;
+                throw;
             }
 
             if (level is not null)

@@ -11,7 +11,7 @@ public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> 
     protected override Task<int?> GetValue(ViewModel viewModel, int swineId)
     {
         if (viewModel is not FeedViewModel feedViewModel)
-            return null;
+            return Task.FromResult<int?>(null);
 
         return Task.FromResult<int?>(feedViewModel.Result.Amount);
     }
