@@ -8,7 +8,7 @@ public static class CommandUtils
         if (index != -1)
         {
             var doesCommandMatch = name == text.Substring(0, index);
-            var doesBotNameMatch = botUsername == text.Substring(index);
+            var doesBotNameMatch = botUsername == text.Substring(index + 1);
             return doesCommandMatch && doesBotNameMatch;
         }
 
