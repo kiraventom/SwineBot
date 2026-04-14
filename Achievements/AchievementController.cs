@@ -18,7 +18,11 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
 
     public async Task<IReadOnlyCollection<AchievementMessage>> GetAchievMessages(int swineId, ViewModel viewModel)
     {
-        var swineName = (await context.Swines.FirstAsync(s => s.SwineId == swineId)).Name;
+        var swine = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == swineId);
+        if (swine is null) // If swine was slaughtered
+            return [];
+
+        var swineName = swine.Name;
         var infoId = (await context.Infos.FirstAsync(i => i.SwineId == swineId)).InfoId;
 
         List<AchievementMessage> messages = [];
