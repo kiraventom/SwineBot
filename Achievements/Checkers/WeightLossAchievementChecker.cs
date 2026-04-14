@@ -8,7 +8,7 @@ public class WeightLossAchievementChecker(ILogger<WeightLossAchievementChecker> 
 {
     public override AchievementType Type => AchievementType.WeightLoss;
 
-    protected override Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId)
+    protected override Task<int?> GetValue(ViewModel viewModel, int swineId)
     {
         if (viewModel is not FeedViewModel feedViewModel)
             return null;

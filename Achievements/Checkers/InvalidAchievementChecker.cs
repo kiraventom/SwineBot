@@ -10,6 +10,6 @@ public class InvalidAchievementChecker(ILogger<InvalidAchievementChecker> Logger
 
     protected override bool DoesLevelApply(int value, int level) => false;
 
-    protected override Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId) => null;
+    protected override Task<int?> GetValue(ViewModel viewModel, int swineId) => null;
 }
 

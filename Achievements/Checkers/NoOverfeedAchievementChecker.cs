@@ -41,7 +41,7 @@ public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> 
         return noOverfeedCount;
     }
 
-    protected override async Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId)
+    protected override async Task<int?> GetValue(ViewModel viewModel, int swineId)
     {
         if (viewModel is not FeedViewModel)
             return null;

@@ -3,10 +3,11 @@ using SwineBot.Model;
 using SwineBot.Achievements.Checkers;
 using SwineBot.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace SwineBot.Achievements;
 
-public class AchievementController(IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory)
+public class AchievementController(ILogger<AchievementController> logger, IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory)
 {
     public AchievementLevel GetLevel(Achievement achievement)
     {
@@ -24,7 +25,17 @@ public class AchievementController(IMessageFactory messageFactory, UserContext c
 
         foreach (var checker in checkerFactory.BuildAll())
         {
-            var level = await checker.TryApply(viewModel, infoId, swineId);
+            AchievementLevel level;
+            try
+            {
+                level = await checker.TryApply(viewModel, infoId, swineId);
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to try apply checker {checker}", checker.Type.ToString());
+                continue;
+            }
+
             if (level is not null)
             {
                 var achievViewModel = new AchievementViewModel(swineName, level);

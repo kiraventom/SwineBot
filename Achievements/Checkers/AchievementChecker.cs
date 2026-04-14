@@ -17,7 +17,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDa
     public abstract AchievementType Type { get; }
     protected IReadOnlyCollection<AchievementLevel> Levels { get; } = values;
 
-    protected abstract Task<int?> GetValue(ViewModel viewModel, UserContext context, int swineId);
+    protected abstract Task<int?> GetValue(ViewModel viewModel, int swineId);
 
     protected abstract bool DoesLevelApply(int value, int level);
 
@@ -36,7 +36,7 @@ public abstract class AchievementChecker(ILogger<AchievementChecker> logger, IDa
             return CheckerResult.Break;
         }
 
-        var value = await GetValue(viewModel, context, swineId);
+        var value = await GetValue(viewModel, swineId);
 
         if (value is null)
             return CheckerResult.Break;
