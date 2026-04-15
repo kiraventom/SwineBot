@@ -47,7 +47,8 @@ public class FeedCommand(IMessageFactory messageFactory, IFeedGeneratorFactory f
             SwineId = swine.SwineId,
             DateTime = result.UtcDT,
             IsThrowUp = true,
-            Amount = result.Amount
+            Amount = result.Amount,
+            Luck = result.Luck
         });
 
         var consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
@@ -65,6 +66,7 @@ public class FeedCommand(IMessageFactory messageFactory, IFeedGeneratorFactory f
             SwineId = swine.SwineId,
             DateTime = result.UtcDT,
             Amount = result.Amount,
+            Luck = result.Luck
         });
 
         return new FeedViewModel(result, swine.Name, 0);
