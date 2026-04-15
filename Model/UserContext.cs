@@ -124,6 +124,7 @@ public class Feed
 
     public DateTime DateTime { get; set; }
     public int Amount { get; set; } // kg
+    public double? Luck { get; set; }
 }
 
 public class WeightLoss
@@ -133,6 +134,7 @@ public class WeightLoss
 
     public DateTime DateTime { get; set; }
     public int Amount { get; set; } // kg
+    public double? Luck { get; set; }
 
     public bool IsThrowUp { get; set; }
 }
