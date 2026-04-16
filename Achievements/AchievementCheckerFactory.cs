@@ -18,7 +18,7 @@ public class AchievementCheckerFactory(ILoggerFactory loggerFactory, UserContext
             AchievementType.NoOverfeed => new NoOverfeedChecker(loggerFactory.CreateLogger<NoOverfeedChecker>(), context, dtnProvider),
             AchievementType.LowLuck => new LowLuckChecker(loggerFactory.CreateLogger<LowLuckChecker>(), context, dtnProvider),
             AchievementType.HighLuck => new HighLuckChecker(loggerFactory.CreateLogger<HighLuckChecker>(), context, dtnProvider),
-            _ => new InvalidAchievementChecker(loggerFactory.CreateLogger<InvalidAchievementChecker>(), context, dtnProvider),
+            _ => new InvalidChecker(loggerFactory.CreateLogger<InvalidChecker>(), context, dtnProvider),
         };
 
         checker.Init(data.Levels, data.IsArchived);
