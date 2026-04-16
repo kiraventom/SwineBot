@@ -13,6 +13,7 @@ using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages.Feed;
 using SwineBot.BotMessages.Start;
 using SwineBot.Actions.Commands;
+using SwineBot.Achievements.Effects;
 
 namespace SwineBot;
 
@@ -56,9 +57,10 @@ internal class Program
                 .AddSingleton<IMessageFactory, MessageFactory>()
                 .AddSingleton<ITelegramBotClient, TelegramBotClient>()
                 .AddSingleton<IBotMessageSender, BotMessageSender>()
-                .AddSingleton<IAchievementCheckerBuilderFactory, AchievementCheckerBuilderFactory>()
-                .AddSingleton<IAchievementCheckerBuilders, AchievementCheckerBuilders>()
                 .AddSingleton<ICommandInfos, CommandInfos>()
+                .AddSingleton<AchievementEffectFactory>()
+                .AddSingleton<AchievementDataParser>()
+                .AddSingleton<IReadOnlyDictionary<AchievementType, AchievementData>>(ParseAchievementData)
 
                 // Transient
                 .AddStartLinkActions()
@@ -100,12 +102,24 @@ internal class Program
         }
     }
 
+    private static IReadOnlyDictionary<AchievementType, AchievementData> ParseAchievementData(IServiceProvider provider)
+    {
+        var config = provider.GetRequiredService<Config>();
+        var achievDataFile = Path.GetFullPath(config.AchievDataFile ?? "achiev_data.json");
+        if (!File.Exists(achievDataFile))
+            throw new InvalidOperationException($"Achievements data file \"{achievDataFile}\" does not exist.");
+
+        var achievParser = provider.GetRequiredService<AchievementDataParser>();
+        var achievementDatas = achievParser.ParseJson(achievDataFile);
+        return achievementDatas.ToDictionary(d => d.Type);
+    }
+
     private static TelegramBotClientOptions BuildTelegramBotClientOptions(IServiceProvider provider) => new TelegramBotClientOptions(provider.GetRequiredService<Config>().Token);
 
     private static void ConfigureContext(IServiceProvider provider, DbContextOptionsBuilder builder)
     {
         var config = provider.GetRequiredService<Config>();
-        builder.UseSqlite(config.UserConnectionString);
+        builder.UseSqlite(config.ConnectionString);
     }
 
     private static Config BuildConfig(IServiceProvider provider)

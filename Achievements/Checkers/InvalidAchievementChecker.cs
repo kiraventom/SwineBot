@@ -4,7 +4,7 @@ using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class InvalidAchievementChecker(ILogger<InvalidAchievementChecker> Logger, IDateTimeNowProvider dtnProvider, UserContext context) : AchievementChecker(Logger, dtnProvider, context, Array.Empty<AchievementLevel>())
+public class InvalidAchievementChecker(ILogger<InvalidAchievementChecker> logger, UserContext context, IDateTimeNowProvider dtnProvider) : AchievementChecker(logger, dtnProvider, context)
 {
     public override AchievementType Type => AchievementType.None;
 

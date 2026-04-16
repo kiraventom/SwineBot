@@ -1,10 +1,8 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace SwineBot;
 
-[method: JsonConstructor]
-public class Config(string token, string username, string userConnectionString)
+public class Config(string token, string username, string connectionString, string achievDataFile = null)
 {
     /// <summary>
     /// Telegram bot token. Received from <a href="https://t.me/BotFather">BotFather</a>
@@ -12,14 +10,19 @@ public class Config(string token, string username, string userConnectionString)
     public string Token { get; } = token;
     ///
     /// <summary>
-    /// Telegram username
+    /// Telegram username, without @
     /// </summary>
     public string Username { get; } = username;
 
     /// <summary>
-    /// SQlite connection string to User DB
+    /// SQlite connection string to DB
     /// </summary>
-    public string UserConnectionString { get; } = userConnectionString;
+    public string ConnectionString { get; } = connectionString;
+
+    /// <summary>
+    /// Achievement data file path. Optional
+    /// </summary>
+    public string AchievDataFile { get; } = achievDataFile;
 
     public static Config Load(string filepath)
     {
@@ -29,7 +32,7 @@ public class Config(string token, string username, string userConnectionString)
 
     public void Save(string filepath)
     {
-        using var configFile = File.OpenWrite(filepath);
+        using var configFile = File.Create(filepath);
         JsonSerializer.Serialize<Config>(configFile, this, Common.JsonOptions);
     }
 }

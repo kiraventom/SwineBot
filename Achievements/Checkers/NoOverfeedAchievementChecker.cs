@@ -6,20 +6,20 @@ using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> Logger, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider, UserContext context) : AchievementChecker(Logger, dtnProvider, context, levels)
+public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> logger, UserContext context, IDateTimeNowProvider dtnProvider) : AchievementChecker(logger, dtnProvider, context)
 {
     public override AchievementType Type => AchievementType.NoOverfeed;
 
-    public static async Task<int> CountConsecutiveNoOverfeeds(UserContext context, int? swineId)
+    public static async Task<int> CountConsecutiveNoOverfeeds(UserContext Context, int? swineId)
     {
-        var lastThrowUp = await context.WeightLosses
+        var lastThrowUp = await Context.WeightLosses
             .Where(wl => wl.SwineId == swineId)
             .Where(wl => wl.IsThrowUp)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefaultAsync();
 
         var dateToCountFrom = lastThrowUp?.DateTime ?? DateTime.MinValue;
-        var feedsSinceThrowup = await context.Feeds
+        var feedsSinceThrowup = await Context.Feeds
             .Where(f => f.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
@@ -46,7 +46,7 @@ public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> 
         if (viewModel is not FeedViewModel)
             return null;
 
-        var noOverfeedCount = await CountConsecutiveNoOverfeeds(context, swineId);
+        var noOverfeedCount = await CountConsecutiveNoOverfeeds(Context, swineId);
         return noOverfeedCount;
     }
 

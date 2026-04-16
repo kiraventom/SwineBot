@@ -5,7 +5,7 @@ using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class WeightAchievementChecker(ILogger<WeightAchievementChecker> Logger, UserContext context, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, context, levels)
+public class WeightAchievementChecker(ILogger<WeightAchievementChecker> Logger, UserContext context, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger, dtnProvider, context)
 {
     public override AchievementType Type => AchievementType.Weight;
 
@@ -14,7 +14,7 @@ public class WeightAchievementChecker(ILogger<WeightAchievementChecker> Logger, 
         if (viewModel is not FeedViewModel)
             return null;
 
-        var weight = (await context.Swines.FirstAsync(s => s.SwineId == swineId)).Weight;
+        var weight = (await Context.Swines.FirstAsync(s => s.SwineId == swineId)).Weight;
         return weight;
     }
 

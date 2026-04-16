@@ -3,7 +3,7 @@
 public class ThrowupIgnoreChanceEffect : StaticAchievementEffect<int>
 {
     public override string Description { get; }
-    public override AchievementEffectType Type => AchievementEffectType.ThrowupChance;
+    public override AchievementEffectType Type => AchievementEffectType.ThrowupIgnoreChance;
 
     public double Chance { get; }
 
