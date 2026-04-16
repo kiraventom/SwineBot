@@ -3,7 +3,6 @@
         "Type": "Weight",
         "DescriptionFormat": "Набрать {0} {1}",
         "DescriptionUnit": "Kg",
-        "IsArchived": false,
         "Levels": [
             { "Value": 100,  "Name": "Сотка" },
             { "Value": 228,  "Name": "Да не торч я" },
@@ -39,7 +38,6 @@
         "Type": "WeightLoss",
         "DescriptionFormat": "Похудеть на {0} {1}",
         "DescriptionUnit": "Kg",
-        "IsArchived": false,
         "Levels": [
             { "Value": -1, "Name": "И не заметил" },
             { "Value": -20, "Name": "Серьёзный ущерб" },
@@ -53,7 +51,6 @@
         "Type": "Overfeed",
         "DescriptionFormat": "Успешный перекорм {0} {1} подряд",
         "DescriptionUnit": "Time",
-        "IsArchived": false,
         "Levels": [
             { "Value": 3, "Name": "Завтрак, обед, ужин" },
             { "Value": 5, "Name": "Плюс полдник и ланч" },
@@ -67,7 +64,6 @@
         "Type": "NoOverfeed",
         "DescriptionFormat": "Без перекорма {0} {1} подряд",
         "DescriptionUnit": "Time",
-        "IsArchived": false,
         "Levels": [
             { "Value": 3, "Name": "Пивная диета" },
             { "Value": 5, "Name": "Йогуртовая диета" },

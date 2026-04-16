@@ -67,7 +67,9 @@ public class AchievementDataParser(ILogger<AchievementDataParser> logger, Achiev
         var unitStr = el.GetProperty("DescriptionUnit").GetString();
         var unit = Unit.FindByName(unitStr);
 
-        var isArchived = el.GetProperty(nameof(AchievementData.IsArchived)).GetBoolean();
+        bool isArchived = false;
+        if (el.TryGetProperty(nameof(AchievementData.IsArchived), out var isArchivedProp))
+            isArchived = isArchivedProp.GetBoolean();
 
         List<AchievementLevel> levels = [];
 
