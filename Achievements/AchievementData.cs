@@ -17,6 +17,6 @@ public class AchievementData
         IsArchived = isArchived;
     }
 
-    public int GetLevelIndex(AchievementLevel level) => _levels.Count - _levels.IndexOf(level);
+    public int GetLevelIndex(AchievementLevel level) => _levels.Count - 1 - _levels.IndexOf(level);
 }
 
