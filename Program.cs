@@ -105,7 +105,7 @@ internal class Program
     private static IReadOnlyDictionary<AchievementType, AchievementData> ParseAchievementData(IServiceProvider provider)
     {
         var config = provider.GetRequiredService<Config>();
-        var achievDataFile = Path.GetFullPath(config.AchievDataFile ?? "achiev_data.json");
+        var achievDataFile = Path.GetFullPath(config.AchievDataFile ?? "Achievements/achiev_data.json");
         if (!File.Exists(achievDataFile))
             throw new InvalidOperationException($"Achievements data file \"{achievDataFile}\" does not exist.");
 

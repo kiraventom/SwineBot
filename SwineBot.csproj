@@ -28,11 +28,4 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
-
-    <ItemGroup>
-        <None Update="Achievements/achiev_data.json">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-            <Link>achiev_data.json</Link>
-        </None>
-    </ItemGroup>
 </Project>
