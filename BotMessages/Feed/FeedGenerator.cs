@@ -31,6 +31,7 @@ public class FeedGenerator : IFeedGenerator
 {
     public const int OVERFEED_COOLDOWN = 24;
     public const int THROWUP_COOLDOWN = 24;
+    public const int MAX_FEED_AMOUNT = 20;
 
     private ILogger<FeedGenerator> Logger { get; }
     private UserContext Context { get; }
@@ -119,10 +120,9 @@ public class FeedGenerator : IFeedGenerator
 
     private async Task<int> RollAmount(double luck)
     {
-        const int MAX_AMOUNT = 20;
-        var baseAmount = MAX_AMOUNT * luck;
+        var baseAmount = MAX_FEED_AMOUNT * luck;
         var nonZeroBaseAmount = Math.Max(1, baseAmount);
-        Logger.LogInformation("Base amount rolled: {luck} * {maxAmount} = {baseAmount}", luck, MAX_AMOUNT, baseAmount);
+        Logger.LogInformation("Base amount rolled: {luck} * {maxAmount} = {baseAmount}", luck, MAX_FEED_AMOUNT, baseAmount);
 
         if (baseAmount != nonZeroBaseAmount)
             Logger.LogInformation("Base amount adjusted to not being zero from {baseAmount} to {nonZero}", baseAmount, nonZeroBaseAmount);

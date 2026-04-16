@@ -172,6 +172,8 @@ public enum AchievementType
     WeightLoss = 0x4,
     Overfeed = 0x8,
     NoOverfeed = 0x10,
+    LowLuck = 0x20,
+    HighLuck = 0x40,
 }
 
 public class Achievement

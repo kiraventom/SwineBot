@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
@@ -6,7 +6,7 @@ using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class NoOverfeedAchievementChecker(ILogger<NoOverfeedAchievementChecker> logger, UserContext context, IDateTimeNowProvider dtnProvider) : AchievementChecker(logger, dtnProvider, context)
+public class NoOverfeedChecker(ILogger<NoOverfeedChecker> logger, UserContext context, IDateTimeNowProvider dtnProvider) : AchievementChecker(logger, dtnProvider, context)
 {
     public override AchievementType Type => AchievementType.NoOverfeed;
 

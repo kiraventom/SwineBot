@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages;
@@ -51,7 +51,7 @@ public class FeedCommand(IMessageFactory messageFactory, IFeedGeneratorFactory f
             Luck = result.Luck
         });
 
-        var consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
+        var consecutiveOverfeeds = await OverfeedChecker.CountConsecutiveOverfeeds(context, swine.SwineId);
 
         return new FeedViewModel(result, swine.Name, consecutiveOverfeeds);
     }

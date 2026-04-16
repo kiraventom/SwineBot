@@ -9,21 +9,8 @@ public enum AchievementEffectType
     ThrowupScale = 2,
     ThrowupIgnoreChance = 3,
     LuckAmplify = 4,
-}
-
-public class AchievementEffectFactory
-{
-    public IAchievementEffect Build(AchievementEffectType type, double value)
-    {
-        return type switch
-        {
-            AchievementEffectType.OverfeedScale => new OverfeedScaleModifierEffect(value),
-            AchievementEffectType.ThrowupScale => new ThrowupScaleEffect(value),
-            AchievementEffectType.ThrowupIgnoreChance => new ThrowupIgnoreChanceEffect(value),
-            AchievementEffectType.LuckAmplify => new NoOverfeedsLuckAmplifierEffect(value),
-            _ => throw new NotSupportedException($"Unknown effect type \"{type}\"")
-        };
-    }
+    NonClampedLuckAmplify = 5,
+    MinLuck = 6,
 }
 
 public interface IAchievementEffect

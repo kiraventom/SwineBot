@@ -11,11 +11,13 @@ public class AchievementCheckerFactory(ILoggerFactory loggerFactory, UserContext
 
         AchievementChecker checker = type switch
         {
-            AchievementType.Weight => new WeightAchievementChecker(loggerFactory.CreateLogger<WeightAchievementChecker>(), context, dtnProvider),
-            AchievementType.WeightGain => new WeightGainAchievementChecker(loggerFactory.CreateLogger<WeightGainAchievementChecker>(), context, dtnProvider),
-            AchievementType.WeightLoss => new WeightLossAchievementChecker(loggerFactory.CreateLogger<WeightLossAchievementChecker>(), context, dtnProvider),
-            AchievementType.Overfeed => new OverfeedAchievementChecker(loggerFactory.CreateLogger<OverfeedAchievementChecker>(), context, dtnProvider),
-            AchievementType.NoOverfeed => new NoOverfeedAchievementChecker(loggerFactory.CreateLogger<NoOverfeedAchievementChecker>(), context, dtnProvider),
+            AchievementType.Weight => new WeightChecker(loggerFactory.CreateLogger<WeightChecker>(), context, dtnProvider),
+            AchievementType.WeightGain => new WeightGainChecker(loggerFactory.CreateLogger<WeightGainChecker>(), context, dtnProvider),
+            AchievementType.WeightLoss => new WeightLossChecker(loggerFactory.CreateLogger<WeightLossChecker>(), context, dtnProvider),
+            AchievementType.Overfeed => new OverfeedChecker(loggerFactory.CreateLogger<OverfeedChecker>(), context, dtnProvider),
+            AchievementType.NoOverfeed => new NoOverfeedChecker(loggerFactory.CreateLogger<NoOverfeedChecker>(), context, dtnProvider),
+            AchievementType.LowLuck => new LowLuckChecker(loggerFactory.CreateLogger<LowLuckChecker>(), context, dtnProvider),
+            AchievementType.HighLuck => new HighLuckChecker(loggerFactory.CreateLogger<HighLuckChecker>(), context, dtnProvider),
             _ => new InvalidAchievementChecker(loggerFactory.CreateLogger<InvalidAchievementChecker>(), context, dtnProvider),
         };
 

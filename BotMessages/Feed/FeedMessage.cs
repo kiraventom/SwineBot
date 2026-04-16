@@ -67,13 +67,13 @@ public class FeedMessage : BotMessage<FeedViewModel>
     {
         switch (viewModel.Result.Luck)
         {
-            case < FeedCommand.LOW_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
+            case <= FeedCommand.LOW_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
                 Text.Verbatim("К сожалению, ")
                     .Bold(viewModel.SwineName)
                     .Verbatim(" сегодня ночью приснился кошмар, поэтому он выглядит угрюмым и почти не ест...").LineBreak();
                 break;
 
-            case < FeedCommand.LOW_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
+            case <= FeedCommand.LOW_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
                 Text.Bold(viewModel.SwineName).Verbatim(", явно сытый, неохотно жуёт очередную порцию...").LineBreak();
                 break;
 
@@ -87,13 +87,13 @@ public class FeedMessage : BotMessage<FeedViewModel>
                     .Verbatim(" довольно поедает добавку.").LineBreak();
                 break;
 
-            case > FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
+            case >= FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.FirstFeed:
                 Text.Verbatim("Сегодня ")
                     .Bold(viewModel.SwineName)
                     .Verbatim(" проснулся с отличным аппетитом и радостно хрюкает при вашем приближении!").LineBreak();
                 break;
 
-            case > FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
+            case >= FeedCommand.HIGH_LUCK_THRESHOLD when viewModel.Result.Result == Result.Overfeed:
                 Text.Verbatim("Как ни в чём ни бывало, ")
                     .Bold(viewModel.SwineName)
                     .Verbatim(" налетает на новую порцию!").LineBreak();
