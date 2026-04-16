@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SwineBot.Achievements;
 
-public class AchievementController(ILogger<AchievementController> logger, IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory)
+public class AchievementController(ILogger<AchievementController> logger, IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory, IReadOnlyDictionary<AchievementType, AchievementData> achievementDatas)
 {
     public AchievementLevel GetLevel(Achievement achievement)
     {
@@ -42,7 +42,11 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
 
             if (level is not null)
             {
-                var achievViewModel = new AchievementViewModel(swineName, level);
+                var data = achievementDatas[checker.Type];
+                var levelIndex = data.GetLevelIndex(level);
+                var levelsCount = data.Levels.Count;
+
+                var achievViewModel = new AchievementViewModel(swineName, level, levelIndex, levelsCount);
                 messages.Add(messageFactory.Create<AchievementMessage, AchievementViewModel>(achievViewModel));
             }
         }

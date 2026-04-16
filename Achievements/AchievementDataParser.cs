@@ -96,6 +96,9 @@ public class AchievementDataParser(ILogger<AchievementDataParser> logger, Achiev
             levels.Add(level);
         }
 
+        // Sorting by descending absolute value, so that higher levels will be checked first
+        levels.Sort((a, b) => -1 * Math.Abs(a.Value).CompareTo(Math.Abs(b.Value))); 
+
         var data = new AchievementData(type, levels, isArchived);
         return data;
     }
@@ -108,5 +111,3 @@ public class AchievementDataParser(ILogger<AchievementDataParser> logger, Achiev
         return description;
     }
 }
-
-public record AchievementData(AchievementType Type, IReadOnlyCollection<AchievementLevel> Levels, bool IsArchived);

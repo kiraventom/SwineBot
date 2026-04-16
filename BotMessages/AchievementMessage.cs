@@ -11,17 +11,28 @@ public class AchievementMessage : BotMessage<AchievementViewModel>
             .Bold(viewModel.SwineName)
             .Verbatim(" получает достижение \"")
             .Bold(viewModel.Level.Name)
-            .Verbatim("\"! 🏆")
+            .Verbatim("\"");
+
+        if (viewModel.LevelsCount > 1)
+        {
+            if (viewModel.LevelIndex == viewModel.LevelsCount - 1)
+                Text.Verbatim(" (макс. уровень)");
+            else 
+                Text.Verbatim($" (уровень {viewModel.LevelIndex + 1}/{viewModel.LevelsCount})");
+        }
+
+        Text.Verbatim("! 🏆")
             .LineBreak().LineBreak()
-            .Italic(viewModel.Level.Description);
+            .Italic(viewModel.Level.Description).LineBreak();
+
 
         if (viewModel.Level.Effect != null)
         {
             Text
-                .LineBreak().LineBreak()
+                .LineBreak()
                 .Verbatim("✨ Новый эффект: ")
                 .Italic(viewModel.Level.Effect.Description)
-                .Verbatim(" ✨");
+                .Verbatim(" ✨").LineBreak();
         }
     }
 }
