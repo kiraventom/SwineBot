@@ -17,6 +17,7 @@ public class HighLuckChecker(ILogger<HighLuckChecker> logger, UserContext contex
 
         var feeds = Context.Feeds
             .Where(f => f.SwineId == swineId)
+            .Where(f => f.Luck != null)
             .OrderByDescending(f => f.DateTime)
             .AsAsyncEnumerable();
 
