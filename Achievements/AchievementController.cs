@@ -16,11 +16,12 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
         return level;
     }
 
-    public async Task<IReadOnlyCollection<AchievementMessage>> GetAchievMessages(int swineId, ViewModel viewModel)
+    public async Task<IReadOnlyCollection<AchievementMessage>> GetAchievMessages(int? swineId, ViewModel viewModel)
     {
-        var swine = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == swineId);
-        if (swine is null) // If swine was slaughtered
+        if (swineId is null)
             return [];
+
+        var swine = await context.Swines.FirstAsync(s => s.SwineId == swineId);
 
         var swineName = swine.Name;
         var infoId = (await context.Infos.FirstAsync(i => i.SwineId == swineId)).InfoId;
@@ -32,7 +33,7 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
             AchievementLevel level;
             try
             {
-                level = await checker.TryApply(viewModel, infoId, swineId);
+                level = await checker.TryApply(viewModel, infoId, swineId.Value);
             }
             catch (Exception e)
             {
