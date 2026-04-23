@@ -28,6 +28,8 @@ public class FeedCommand(IMessageFactory messageFactory, IFeedGeneratorFactory f
             _ => throw new NotSupportedException($"Unexpected feed result type \"{result.Result.ToString()}\"")
         };
 
+        await context.SaveChangesAsync();
+
         return feedViewModel;
     }
 
