@@ -24,6 +24,9 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, U
         if (tgUpdate.Message is not { } tgMessage)
             return;
 
+        if (tgUpdate.Message.ForwardOrigin is not null)
+            return;
+
         var botCommand = GetBotCommand(tgMessage);
         if (botCommand is null)
             return;
