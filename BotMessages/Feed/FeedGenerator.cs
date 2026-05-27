@@ -74,6 +74,9 @@ public class FeedGenerator : IFeedGenerator
         var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
         var recentFeeds = await Context.GetRecentFeeds(SwineId, UtcNow);
 
+        if (recentFeeds.Count > 0)
+            Logger.LogDebug("Recent feeds detected, IDs=[{ids}]", string.Join(", ", recentFeeds.Select(f => f.FeedId)));
+
         Result result = await RollResult(recentFeeds);
         if (result == Result.Full)
             return FeedResult.Full;
@@ -143,6 +146,9 @@ public class FeedGenerator : IFeedGenerator
             .Where(wl => wl.IsThrowUp)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefaultAsync();
+
+        if (lastThrowup is not null)
+            Logger.LogDebug("Last throwup detected ID={id}", lastThrowup.LossId);
 
         if (recentFeeds.Count != 0 || lastThrowup is { Amount: 0 } /*Ignored*/)
             return await ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;
