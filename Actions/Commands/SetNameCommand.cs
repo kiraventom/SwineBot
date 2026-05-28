@@ -6,7 +6,7 @@ using SwineBot.ViewModels;
 
 namespace SwineBot.Actions.Commands;
 
-[CommandInfo(COMMAND_NAME, "Поменять имя свинки \u270f", Title = $"{COMMAND_NAME} <имя>")]
+[CommandInfo(COMMAND_NAME, "Поменять имя свинки \u270f", Title = $"{COMMAND_NAME} имя")]
 public class SetNameCommand(UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<NewNameMessage, SetNameViewModel>(messageFactory, achievController)
 {
     private const int MAX_NAME_LENGTH = 50;

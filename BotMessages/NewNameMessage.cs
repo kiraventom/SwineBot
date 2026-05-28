@@ -12,7 +12,7 @@ public class NewNameMessage : BotMessage<SetNameViewModel>
         {
             Text.Italic("Формат команды:")
                 .LineBreak()
-                .Monospace($"{SetNameCommand.COMMAND_NAME} <новое имя>");
+                .Monospace($"{SetNameCommand.COMMAND_NAME} имя");
 
             return;
         }

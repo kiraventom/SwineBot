@@ -29,7 +29,12 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, U
 
         var botCommand = GetBotCommand(tgMessage);
         if (botCommand is null)
+        {
+            if (tgMessage.Text is {} text)
+                logger.LogInformation("Not command: {text}", text);
+
             return;
+        }
 
         var updateReply = await GetUpdateReply(tgMessage, botCommand, token);
         if (updateReply is null)
