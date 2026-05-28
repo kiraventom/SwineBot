@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages;
@@ -9,7 +10,7 @@ using SwineBot.ViewModels;
 namespace SwineBot.Actions.Commands;
 
 [CommandInfo("/feed",  "Покормить своего свина \U0001F416")]
-public class FeedCommand(IMessageFactory messageFactory, IFeedGeneratorFactory feedGeneratorFactory, UserContext context, AchievementController achievController) : Command<FeedMessage, FeedViewModel>(messageFactory, achievController)
+public class FeedCommand(ILogger<FeedCommand> logger, IMessageFactory messageFactory, IFeedGeneratorFactory feedGeneratorFactory, UserContext context, AchievementController achievController) : Command<FeedMessage, FeedViewModel>(messageFactory, achievController)
 {
     public const double LOW_LUCK_THRESHOLD = 0.15;
     public const double HIGH_LUCK_THRESHOLD = 0.85;
@@ -29,6 +30,12 @@ public class FeedCommand(IMessageFactory messageFactory, IFeedGeneratorFactory f
         };
 
         await context.SaveChangesAsync();
+
+        // DBG
+        if (feedViewModel.Result.Result != Result.FirstFeed && feedViewModel.Result.RecentFeedsCount == 1)
+        {
+            logger.LogWarning("Not first feed but 1 consecutive feed, something is wrong");
+        }
 
         return feedViewModel;
     }
