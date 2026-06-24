@@ -31,7 +31,7 @@ public class OverfeedChecker(ILogger<OverfeedChecker> Logger, UserContext contex
             .Where(wl => wl.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
-            // TODO: JSONLEVELS: Add Take({maximum level for this achievement}) here
+            // TODO: Add Take({maximum level for this achievement}) here
             .ToListAsync();
 
         int overfeedCount = 0;
