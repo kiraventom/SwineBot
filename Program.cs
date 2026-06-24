@@ -14,6 +14,7 @@ using SwineBot.BotMessages.Feed;
 using SwineBot.BotMessages.Start;
 using SwineBot.Actions.Commands;
 using SwineBot.Achievements.Effects;
+using SwineBot.Utils;
 
 namespace SwineBot;
 
@@ -29,9 +30,43 @@ public class DateTimeNowProvider : IDateTimeNowProvider
 
 public record Paths(string ConfigDir, string DataDir);
 
-internal class Program
+public class Program
 {
     private const string PROJECT_NAME = "SwineBot";
+
+    public static IServiceCollection RegisterServices(IServiceCollection collection)
+    {
+        return collection
+            // Singleton
+            .AddSingleton<Paths>(BuildPaths)
+            .AddSingleton<Config>(BuildConfig)
+            .AddSingleton<TelegramBotClientOptions>(BuildTelegramBotClientOptions)
+            .AddSingleton<IDateTimeNowProvider, DateTimeNowProvider>()
+            .AddSingleton<StartLinkBuilder>()
+            .AddSingleton<IMessageFactory, MessageFactory>()
+            .AddSingleton<ITelegramBotClient, TelegramBotClient>()
+            .AddSingleton<IBotMessageSender, BotMessageSender>()
+            .AddSingleton<ICommandInfos, CommandInfos>()
+            .AddSingleton<AchievementEffectFactory>()
+            .AddSingleton<AchievementDataParser>()
+            .AddSingleton<IReadOnlyDictionary<AchievementType, AchievementData>>(ParseAchievementData)
+
+            // Transient
+            .AddStartLinkActions()
+            .AddCommands()
+            .AddTransient<IStartLinkParser, StartLinkParser>()
+
+            // Scoped
+            .AddDbContext<UserContext>(ConfigureContext)
+            .AddScoped<GraphBuilder>()
+            .AddScoped<AchievementCheckerFactory>()
+            .AddScoped<AchievementController>()
+            .AddScoped<IFeedGeneratorFactory, FeedGeneratorFactory>()
+            .AddScoped<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
+            .AddScoped<UserContextHelpers>()
+            .AddScoped<ICommandFactory, CommandFactory>()
+            .AddScoped<IUpdateHandler, UpdateHandler>();
+    }
 
     private static async Task Main(string[] args)
     {
@@ -46,38 +81,9 @@ internal class Program
         {
             var builder = Host.CreateApplicationBuilder();
 
-            builder.Services
-                // Singleton
-                .AddSingleton<Paths>(BuildPaths)
-                .AddSingleton<Config>(BuildConfig)
-                .AddSerilog(ConfigureLogger)
-                .AddSingleton<TelegramBotClientOptions>(BuildTelegramBotClientOptions)
-                .AddSingleton<IDateTimeNowProvider, DateTimeNowProvider>()
-                .AddSingleton<StartLinkBuilder>()
-                .AddSingleton<IMessageFactory, MessageFactory>()
-                .AddSingleton<ITelegramBotClient, TelegramBotClient>()
-                .AddSingleton<IBotMessageSender, BotMessageSender>()
-                .AddSingleton<ICommandInfos, CommandInfos>()
-                .AddSingleton<AchievementEffectFactory>()
-                .AddSingleton<AchievementDataParser>()
-                .AddSingleton<IReadOnlyDictionary<AchievementType, AchievementData>>(ParseAchievementData)
+            builder.Services.AddSerilog(ConfigureLogger);
 
-                // Transient
-                .AddStartLinkActions()
-                .AddCommands()
-                .AddTransient<IStartLinkParser, StartLinkParser>()
-
-                // Scoped
-                .AddDbContext<UserContext>(ConfigureContext)
-                .AddScoped<AchievementCheckerFactory>()
-                .AddScoped<AchievementController>()
-                .AddScoped<IFeedGeneratorFactory, FeedGeneratorFactory>()
-                .AddScoped<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
-                .AddScoped<UserContextHelpers>()
-                .AddScoped<ICommandFactory, CommandFactory>()
-                .AddScoped<IUpdateHandler, UpdateHandler>()
-
-                // Host
+            RegisterServices(builder.Services)
                 .AddHostedService<AppService>();
 
             var host = builder.Build();

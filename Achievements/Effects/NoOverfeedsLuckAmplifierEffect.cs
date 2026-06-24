@@ -7,6 +7,7 @@ namespace SwineBot.Achievements.Effects;
 public class NoOverfeedsLuckAmplifierEffect(double luckAmplifyMod) : DynamicAchievementEffect<double>
 {
     // TODO GetDescription
+    // TODO Fix to max luck=1.0
     public override string Description => $"Свин ест на {(int)Math.Round(LuckAmplifyModifier * 100)}% больше за каждый день без перекорма подряд (максимум {FeedGenerator.MAX_FEED_AMOUNT} кг)";
 
     public override AchievementEffectType Type => AchievementEffectType.LuckAmplify;

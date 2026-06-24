@@ -12,20 +12,22 @@ public record Update(string MessageText, int? GroupId, int UserId, int? SwineId,
 
 public interface IUpdateHandler
 {
-    Task Handle(Telegram.Bot.Types.Update update, CancellationToken token);
+    Task<UpdateHandleResult> Handle(Telegram.Bot.Types.Update update, CancellationToken token);
 }
+
+public enum UpdateHandleResult { OK, NotMessage, Forward, NotCommand, DatabaseFail, SendMessageFail }
 
 public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, ICommandFactory commandFactory) : IUpdateHandler
 {
-    public async Task Handle(Telegram.Bot.Types.Update tgUpdate, CancellationToken token)
+    public async Task<UpdateHandleResult> Handle(Telegram.Bot.Types.Update tgUpdate, CancellationToken token)
     {
         logger.LogInformation("Received update: {updateType}", tgUpdate.Type);
 
         if (tgUpdate.Message is not { } tgMessage)
-            return;
+            return UpdateHandleResult.NotMessage;
 
         if (tgUpdate.Message.ForwardOrigin is not null)
-            return;
+            return UpdateHandleResult.Forward;
 
         var botCommand = GetBotCommand(tgMessage);
         if (botCommand is null)
@@ -33,28 +35,33 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, UserContext context, U
             if (tgMessage.Text is {} text)
                 logger.LogInformation("Not command: {text}", text);
 
-            return;
+            return UpdateHandleResult.NotCommand;
         }
 
         var updateReply = await GetUpdateReply(tgMessage, botCommand, token);
         if (updateReply is null)
-            return;
+            return UpdateHandleResult.DatabaseFail;
 
-        await ReplyToUpdate(updateReply);
+        var didReply = await ReplyToUpdate(updateReply);
+        if (!didReply)
+            return UpdateHandleResult.SendMessageFail;
+
+        return UpdateHandleResult.OK;
     }
 
-    private async Task ReplyToUpdate(UpdateReply updateReply)
+    private async Task<bool> ReplyToUpdate(UpdateReply updateReply)
     {
         try
         {
             foreach (var message in updateReply.Messages)
-            {
                 await sender.Send(updateReply.Update, message);
-            }
+
+            return true;
         }
         catch (Exception e)
         {
             logger.LogError(e, "Sending message failed");
+            return false;
         }
     }
 

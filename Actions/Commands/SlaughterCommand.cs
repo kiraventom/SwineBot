@@ -17,7 +17,7 @@ public class SlaughterCommand(UserContext context, IDateTimeNowProvider dtnProvi
 
     protected override async Task<SlaughterViewModel> ExecuteInternal(Update update, string parameter)
     {
-        var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
+        var swine = await context.Swines.AsTracking().FirstAsync(s => s.SwineId == update.SwineId);
 
         var lastSlaughter = await context.Slaughters
             .Where(s => s.UserId == swine.OwnerId)
