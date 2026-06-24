@@ -1,0 +1,103 @@
+[
+    {
+        "Type": "Weight",
+        "DescriptionFormat": "Набрать {0} {1}",
+        "DescriptionUnit": "Kg",
+        "Levels": [
+            { "Value": 100,  "Name": "Сотка" },
+            { "Value": 228,  "Name": "Да не торч я" },
+            { "Value": 420,  "Name": "Ладно я торч" },
+            { "Value": 690,  "Name": "Кевин" },
+            { "Value": 777,  "Name": "А потом поебалися" },
+            { "Value": 812,  "Name": "Беглов" },
+            { "Value": 999,  "Name": "Недобор" },
+            { "Value": 1000, "Name": "Речь идёт о четырёхзначных числах" },
+            { "Value": 1234, "Name": "Код от домофона" },
+            { "Value": 1337, "Name": "}{@k3p" },
+            { "Value": 1488, "Name": "Егор Просвинин" },
+            { "Value": 1580, "Name": "Вертикаль" },
+            { "Value": 1703, "Name": "Круче Петра" },
+            { "Value": 1917, "Name": "Октябрёнок" },
+            { "Value": 2000, "Name": "2K" },
+            { "Value": 2007, "Name": "Вернулся" },
+            { "Value": 2022, "Name": "Свой парень" },
+            { "Value": 5000, "Name": "А хули вы хотели?" }
+        ]
+    },
+    {
+        "Type": "WeightGain",
+        "DescriptionFormat": "Поесть на {0} {1}",
+        "DescriptionUnit": "Kg",
+        "IsArchived": true,
+        "Levels": [
+            { "Value": 1, "Name": "Заморил червячка" },
+            { "Value": 22, "Name": "От пуза" }
+        ]
+    },
+    {
+        "Type": "WeightLoss",
+        "DescriptionFormat": "Похудеть на {0} {1}",
+        "DescriptionUnit": "Kg",
+        "Levels": [
+            { "Value": -1, "Name": "И не заметил" },
+            { "Value": -20, "Name": "Серьёзный ущерб" },
+            { "Value": -40, "Name": "Жадность фраера сгубила" },
+            { "Value": -60, "Name": "he bought", "Effect": { "Type": "ThrowupScale", "Value": 0.95 } },
+            { "Value": -80, "Name": "После такого не встают", "Effect": { "Type": "ThrowupScale", "Value": 0.85 } },
+            { "Value": -100, "Name": "Булимия", "Effect": { "Type": "ThrowupScale", "Value": 0.70 } }
+        ]
+    },
+    {
+        "Type": "Overfeed",
+        "DescriptionFormat": "Успешный перекорм {0} {1} подряд",
+        "DescriptionUnit": "Time",
+        "Levels": [
+            { "Value": 3, "Name": "Завтрак, обед, ужин" },
+            { "Value": 5, "Name": "Плюс полдник и ланч" },
+            { "Value": 7, "Name": "Недельный рацион" },
+            { "Value": 14, "Name": "Двухнедельный рацион", "Effect": { "Type": "ThrowupIgnoreChance", "Value": 0.25 } },
+            { "Value": 21, "Name": "Трёхнедельный рацион", "Effect": { "Type": "ThrowupIgnoreChance", "Value": 0.50 } },
+            { "Value": 31, "Name": "Месячная порция", "Effect": { "Type": "ThrowupIgnoreChance", "Value": 0.75 } }
+        ]
+    },
+    {
+        "Type": "NoOverfeed",
+        "DescriptionFormat": "Без перекорма {0} {1} подряд",
+        "DescriptionUnit": "Time",
+        "Levels": [
+            { "Value": 3, "Name": "Пивная диета" },
+            { "Value": 5, "Name": "Йогуртовая диета" },
+            { "Value": 7, "Name": "Яблочная диета" },
+            { "Value": 14, "Name": "Водная диета" },
+            { "Value": 21, "Name": "Диета Типичной Анорексички" },
+            { "Value": 31, "Name": "Диета Ларисы Долиной", "Effect": { "Type": "LuckAmplify", "Value": 0.02 } },
+            { "Value": 365, "Name": "Диета педика-медведика", "Effect": { "Type": "NonClampedLuckAmplify", "Value": 0.02 } }
+        ]
+    },
+    {
+        "Type": "HighLuck",
+        "DescriptionFormat": "Сытно поел {0} {1} подряд",
+        "DescriptionUnit": "Time",
+        "Levels": [
+            { "Value": 3, "Name": "Везунчик" },
+            { "Value": 4, "Name": "Любимец фортуны" },
+            { "Value": 5, "Name": "Лакерок" },
+            { "Value": 6, "Name": "Хайроллер" },
+            { "Value": 7, "Name": "Подкрутчик" },
+            { "Value": 8, "Name": "Dream" }
+        ]
+    },
+    {
+        "Type": "LowLuck",
+        "DescriptionFormat": "Плохо поел {0} {1} подряд",
+        "DescriptionUnit": "Time",
+        "Levels": [
+            { "Value": 3, "Name": "Анлак" },
+            { "Value": 4, "Name": "Скрытый пул" },
+            { "Value": 5, "Name": "Подрезанные крылья" },
+            { "Value": 6, "Name": "Поссорился с админом" },
+            { "Value": 7, "Name": "Поссорился с Богом" },
+            { "Value": 8, "Name": "😈", "Effect": { "Type": "MinLuck", "Value": 0.33 } }
+        ]
+    }
+]

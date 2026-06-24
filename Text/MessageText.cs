@@ -199,8 +199,13 @@ public class MessageText
         return this;
     }
 
-    public MessageText Monospace(string text)
+    public MessageText Monospace(object o)
     {
+        var text = o?.ToString();
+
+        if (text is null)
+            return this;
+
         ApplyTabLevel(_tabLevel, _sb);
 
         if (_sb.Length > 0 && _sb[_sb.Length - 1] == '`')

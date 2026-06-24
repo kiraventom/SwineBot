@@ -8,7 +8,7 @@ public class UserContextFactory : DesignTimeContextFactory<UserContext>
     {
         var config = LoadConfig(args);
         var builder = new DbContextOptionsBuilder<UserContext>();
-        builder.UseSqlite(config.UserConnectionString);
+        builder.UseSqlite(config.ConnectionString);
 
         return new UserContext(builder.Options);
     }

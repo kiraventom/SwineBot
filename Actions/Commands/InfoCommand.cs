@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages;
@@ -25,8 +25,8 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
         var recentFeeds = await context.GetRecentFeeds(update.SwineId, utcNow);
         var recentThrowups = await context.GetRecentThrowups(update.SwineId, utcNow);
 
-        int consecutiveOverfeeds = await OverfeedAchievementChecker.CountConsecutiveOverfeeds(context, update.SwineId);
-        int consecutiveNoOverfeeds = await NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(context, update.SwineId);
+        int consecutiveOverfeeds = await OverfeedChecker.CountConsecutiveOverfeeds(context, update.SwineId);
+        int consecutiveNoOverfeeds = await NoOverfeedChecker.CountConsecutiveNoOverfeeds(context, update.SwineId);
 
         var owner = await context.Users.FirstAsync(u => u.UserId == swine.OwnerId);
 

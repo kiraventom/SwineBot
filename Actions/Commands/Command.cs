@@ -16,7 +16,7 @@ public abstract class Command<TMessage, TViewModel>(IMessageFactory messageFacto
     {
         var viewModel = await ExecuteInternal(update, parameter);
 
-        var achievMessages = await AchievController.GetAchievMessages(update.SwineId.Value, viewModel);
+        var achievMessages = await AchievController.GetAchievMessages(update.SwineId, viewModel);
         var mainMessage = messageFactory.Create<TMessage, TViewModel>(viewModel);
 
         return achievMessages.OfType<IBotMessage>().Append(mainMessage).ToList();

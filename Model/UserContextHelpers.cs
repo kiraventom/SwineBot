@@ -123,7 +123,7 @@ public class UserContextHelpers(ILogger<UserContextHelpers> logger, UserContext 
         var userSwinesCount = await userSwines.CountAsync();
         var privateSwineId = user.PrivateSwineId;
 
-        if (userSwines.All(s => s.SwineId != privateSwineId))
+        if (privateSwineId != null && userSwines.All(s => s.SwineId != privateSwineId))
         {
             user.PrivateSwineId = null;
 

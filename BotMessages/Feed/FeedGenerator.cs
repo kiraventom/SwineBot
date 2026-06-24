@@ -31,6 +31,7 @@ public class FeedGenerator : IFeedGenerator
 {
     public const int OVERFEED_COOLDOWN = 24;
     public const int THROWUP_COOLDOWN = 24;
+    public const int MAX_FEED_AMOUNT = 20;
 
     private ILogger<FeedGenerator> Logger { get; }
     private UserContext Context { get; }
@@ -72,6 +73,9 @@ public class FeedGenerator : IFeedGenerator
     {
         var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
         var recentFeeds = await Context.GetRecentFeeds(SwineId, UtcNow);
+
+        if (recentFeeds.Count > 0)
+            Logger.LogDebug("Recent feeds detected, IDs=[{ids}]", string.Join(", ", recentFeeds.Select(f => f.FeedId)));
 
         Result result = await RollResult(recentFeeds);
         if (result == Result.Full)
@@ -119,10 +123,9 @@ public class FeedGenerator : IFeedGenerator
 
     private async Task<int> RollAmount(double luck)
     {
-        const int MAX_AMOUNT = 20;
-        var baseAmount = MAX_AMOUNT * luck;
+        var baseAmount = MAX_FEED_AMOUNT * luck;
         var nonZeroBaseAmount = Math.Max(1, baseAmount);
-        Logger.LogInformation("Base amount rolled: {luck} * {maxAmount} = {baseAmount}", luck, MAX_AMOUNT, baseAmount);
+        Logger.LogInformation("Base amount rolled: {luck} * {maxAmount} = {baseAmount}", luck, MAX_FEED_AMOUNT, baseAmount);
 
         if (baseAmount != nonZeroBaseAmount)
             Logger.LogInformation("Base amount adjusted to not being zero from {baseAmount} to {nonZero}", baseAmount, nonZeroBaseAmount);
@@ -143,6 +146,9 @@ public class FeedGenerator : IFeedGenerator
             .Where(wl => wl.IsThrowUp)
             .OrderByDescending(wl => wl.DateTime)
             .FirstOrDefaultAsync();
+
+        if (lastThrowup is not null)
+            Logger.LogDebug("Last throwup detected ID={id}", lastThrowup.LossId);
 
         if (recentFeeds.Count != 0 || lastThrowup is { Amount: 0 } /*Ignored*/)
             return await ThrowupCalculator.IsThrowup(recentFeeds) ? Result.Throwup : Result.Overfeed;

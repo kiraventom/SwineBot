@@ -1,22 +1,24 @@
 ﻿using SwineBot.Achievements.Checkers;
+using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
 
 namespace SwineBot.Achievements.Effects;
 
-public class NoOverfeedsLuckAmplifierEffect : DynamicAchievementEffect<double>
+public class NoOverfeedsLuckAmplifierEffect(double luckAmplifyMod) : DynamicAchievementEffect<double>
 {
-    private const double LUCK_AMPLIFY_MODIFIER = 0.02;
-    public override string Description { get; } = $"Свин становится на {(int)Math.Round(LUCK_AMPLIFY_MODIFIER * 100)}% удачливее за каждый день без перекорма подряд";
+    // TODO GetDescription
+    public override string Description => $"Свин ест на {(int)Math.Round(LuckAmplifyModifier * 100)}% больше за каждый день без перекорма подряд (максимум {FeedGenerator.MAX_FEED_AMOUNT} кг)";
 
     public override AchievementEffectType Type => AchievementEffectType.LuckAmplify;
 
+    public double LuckAmplifyModifier { get; } = luckAmplifyMod;
+
     public override async Task<double> Apply(UserContext context, int swineId, double value)
     {
-        var consecutiveNoOverfeeds = await NoOverfeedAchievementChecker.CountConsecutiveNoOverfeeds(context, swineId);
-        var luckAmplify = LUCK_AMPLIFY_MODIFIER * consecutiveNoOverfeeds;
+        var consecutiveNoOverfeeds = await NoOverfeedChecker.CountConsecutiveNoOverfeeds(context, swineId);
+        var luckAmplify = LuckAmplifyModifier * consecutiveNoOverfeeds;
         value = value + value * luckAmplify;
 
         return Math.Clamp(value, 0.0, 1.0);
     }
 }
-

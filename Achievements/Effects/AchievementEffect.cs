@@ -7,8 +7,10 @@ public enum AchievementEffectType
     None = 0,
     OverfeedScale = 1,
     ThrowupScale = 2,
-    ThrowupChance = 3,
+    ThrowupIgnoreChance = 3,
     LuckAmplify = 4,
+    NonClampedLuckAmplify = 5,
+    MinLuck = 6,
 }
 
 public interface IAchievementEffect

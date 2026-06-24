@@ -23,16 +23,29 @@ public class AchievementsMessage : BotMessage<AchievsViewModel>
         }
     }
 
-    private void WriteAchievement(DatedAchievementLevel datedLevel, int index)
+    private void WriteAchievement(AchievementLevelViewModel levelViewModel, int index)
     {
-        Text.Verbatim(index + 1).Verbatim(". ").Bold(datedLevel.Level.Name).LineBreak();
+        Text.Verbatim(index + 1).Verbatim(". ").Bold(levelViewModel.Level.Name).LineBreak();
         Text.Tab(text =>
         {
-            Text.Italic(datedLevel.Level.Description).LineBreak();
-            Text.Verbatim("Получено ").Monospace(datedLevel.DT.ToString("d MMMM yyyy", Common.RuCulture)).LineBreak();
+            Text.Italic(levelViewModel.Level.Description).LineBreak();
+            Text.Verbatim("Получено ").Monospace(levelViewModel.DT.ToString("d MMMM yyyy", Common.RuCulture));
 
-            if (datedLevel.Level.Effect != null)
-                Text.Verbatim("Эффект: ").Italic(datedLevel.Level.Effect.Description).LineBreak();
+            if (levelViewModel.IsArchived)
+                Text.Verbatim(" (архивное)");
+
+            Text.LineBreak();
+
+            if (levelViewModel.LevelsCount > 1)
+            {
+                if (levelViewModel.LevelIndex == levelViewModel.LevelsCount - 1)
+                    Text.Verbatim("Уровень: ").Monospace("Максимальный!").LineBreak();
+                else 
+                    Text.Verbatim("Уровень: ").Monospace(levelViewModel.LevelIndex + 1).Monospace(" из ").Monospace(levelViewModel.LevelsCount).LineBreak();
+            }
+
+            if (levelViewModel.Level.Effect != null)
+                Text.Verbatim("Эффект: ").Italic(levelViewModel.Level.Effect.Description).LineBreak();
 
             Text.LineBreak();
         });

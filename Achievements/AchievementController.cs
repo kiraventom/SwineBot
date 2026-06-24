@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SwineBot.Achievements;
 
-public class AchievementController(ILogger<AchievementController> logger, IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory)
+public class AchievementController(ILogger<AchievementController> logger, IMessageFactory messageFactory, UserContext context, AchievementCheckerFactory checkerFactory, IReadOnlyDictionary<AchievementType, AchievementData> achievementDatas)
 {
     public AchievementLevel GetLevel(Achievement achievement)
     {
@@ -16,10 +16,11 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
         return level;
     }
 
-    public async Task<IReadOnlyCollection<AchievementMessage>> GetAchievMessages(int swineId, ViewModel viewModel)
+    public async Task<IReadOnlyCollection<AchievementMessage>> GetAchievMessages(int? swineId, ViewModel viewModel)
     {
         var swine = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == swineId);
-        if (swine is null) // If swine was slaughtered
+
+        if (swine is null)
             return [];
 
         var swineName = swine.Name;
@@ -32,7 +33,7 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
             AchievementLevel level;
             try
             {
-                level = await checker.TryApply(viewModel, infoId, swineId);
+                level = await checker.TryApply(viewModel, infoId, swineId.Value);
             }
             catch (Exception e)
             {
@@ -42,7 +43,11 @@ public class AchievementController(ILogger<AchievementController> logger, IMessa
 
             if (level is not null)
             {
-                var achievViewModel = new AchievementViewModel(swineName, level);
+                var data = achievementDatas[checker.Type];
+                var levelIndex = data.GetLevelIndex(level);
+                var levelsCount = data.Levels.Count;
+
+                var achievViewModel = new AchievementViewModel(swineName, level, levelIndex, levelsCount);
                 messages.Add(messageFactory.Create<AchievementMessage, AchievementViewModel>(achievViewModel));
             }
         }

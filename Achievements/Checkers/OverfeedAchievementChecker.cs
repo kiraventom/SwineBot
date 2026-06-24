@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages.Feed;
 using SwineBot.Model;
@@ -6,13 +6,13 @@ using SwineBot.ViewModels;
 
 namespace SwineBot.Achievements.Checkers;
 
-public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logger, UserContext context, IReadOnlyCollection<AchievementLevel> levels, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger,  dtnProvider, context, levels)
+public class OverfeedChecker(ILogger<OverfeedChecker> Logger, UserContext context, IDateTimeNowProvider dtnProvider) : AchievementChecker(Logger,  dtnProvider, context)
 {
     public override AchievementType Type => AchievementType.Overfeed;
 
-    public static async Task<int> CountConsecutiveOverfeeds(UserContext context, int? swineId)
+    public static async Task<int> CountConsecutiveOverfeeds(UserContext Context, int? swineId)
     {
-        var throwUps = context.WeightLosses
+        var throwUps = Context.WeightLosses
             .Where(wl => wl.SwineId == swineId)
             .Where(wl => wl.IsThrowUp);
 
@@ -27,11 +27,11 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
 
         var dateToCountFrom = lastActualThrowUp?.DateTime ?? DateTime.MinValue;
 
-        var feedsSinceThrowup = await context.Feeds
+        var feedsSinceThrowup = await Context.Feeds
             .Where(wl => wl.SwineId == swineId)
             .Where(f => f.DateTime > dateToCountFrom)
             .OrderByDescending(f => f.DateTime)
-            // TODO: JSONLEVELS: Add Take({maximum level for this achievement}) here
+            // TODO: Add Take({maximum level for this achievement}) here
             .ToListAsync();
 
         int overfeedCount = 0;
@@ -63,7 +63,7 @@ public class OverfeedAchievementChecker(ILogger<OverfeedAchievementChecker> Logg
         if (viewModel is not FeedViewModel feedViewModel)
             return null;
 
-        var overfeedCount = await CountConsecutiveOverfeeds(context, swineId);
+        var overfeedCount = await CountConsecutiveOverfeeds(Context, swineId);
         return overfeedCount;
     }
 
