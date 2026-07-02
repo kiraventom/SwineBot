@@ -70,8 +70,7 @@
             { "Value": 7, "Name": "Яблочная диета" },
             { "Value": 14, "Name": "Водная диета" },
             { "Value": 21, "Name": "Диета Типичной Анорексички" },
-            { "Value": 31, "Name": "Диета Ларисы Долиной", "Effect": { "Type": "LuckAmplify", "Value": 0.02 } },
-            { "Value": 365, "Name": "Диета педика-медведика", "Effect": { "Type": "NonClampedLuckAmplify", "Value": 0.02 } }
+            { "Value": 31, "Name": "Диета Ларисы Долиной", "Effect": { "Type": "LuckAmplify", "Value": 0.02 } }
         ]
     },
     {

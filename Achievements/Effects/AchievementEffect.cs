@@ -9,7 +9,7 @@ public enum AchievementEffectType
     ThrowupScale = 2,
     ThrowupIgnoreChance = 3,
     LuckAmplify = 4,
-    NonClampedLuckAmplify = 5,
+    // Legacy: NonClampedLuckAmplify = 5,
     MinLuck = 6,
 }
 

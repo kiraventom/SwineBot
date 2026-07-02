@@ -10,7 +10,6 @@ public class AchievementEffectFactory
             AchievementEffectType.ThrowupScale => new ThrowupScaleEffect(value),
             AchievementEffectType.ThrowupIgnoreChance => new ThrowupIgnoreChanceEffect(value),
             AchievementEffectType.LuckAmplify => new NoOverfeedsLuckAmplifierEffect(value),
-            AchievementEffectType.NonClampedLuckAmplify => new NonClampedNoOverfeedsLuckAmplifierEffect(value),
             AchievementEffectType.MinLuck => new MinLuckEffect(value),
             _ => throw new NotSupportedException($"Unknown effect type \"{type}\"")
         };

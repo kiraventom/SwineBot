@@ -118,14 +118,6 @@ public class FeedGenerator : IFeedGenerator
                 Logger.LogInformation("Applied effect {effect}, luck changed from {old} to {new}", effect.Type.ToString(), oldLuck, luck);
         }
 
-        foreach (var effect in Effects.OfType<NonClampedNoOverfeedsLuckAmplifierEffect>())
-        {
-            var oldLuck = luck;
-            luck = await effect.Apply(Context, SwineId, luck);
-            if (luck != oldLuck)
-                Logger.LogInformation("Applied effect {effect}, luck changed from {old} to {new}", effect.Type.ToString(), oldLuck, luck);
-        }
-
         return luck;
     }
 
