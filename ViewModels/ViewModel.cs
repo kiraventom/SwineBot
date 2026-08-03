@@ -46,3 +46,5 @@ public record StartViewModel(IEnumerable<CommandInfo> CommandInfos) : ViewModel;
 public record InvalidViewModel() : ViewModel;
 
 public record FeedViewModel(FeedResult Result, string SwineName, int ConsecutiveOverfeeds) : ViewModel;
+
+public record SelectDuelOpponentViewModel(string GroupId, bool IsPrivate) : ViewModel;

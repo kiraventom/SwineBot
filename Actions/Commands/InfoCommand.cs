@@ -3,6 +3,7 @@ using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
 using SwineBot.BotMessages;
 using SwineBot.Model;
+using SwineBot.Updates;
 using SwineBot.ViewModels;
 
 namespace SwineBot.Actions.Commands;

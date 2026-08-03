@@ -11,7 +11,7 @@ public class PiggeryMessage : BotMessage<PiggeryViewModel>
         if (viewModel.SwinesCount == 0)
         {
             Text.Verbatim("Ваш свинарник пуст :(").LineBreak();
-            Text.Verbatim($"Для того, чтобы завести свинку, добавьте бота в группу и отправьте {InfoCommand.COMMAND_NAME}").LineBreak();
+            Text.Verbatim($"Для того, чтобы завести свинку, добавьте бота в любую беседу и отправьте {InfoCommand.COMMAND_NAME}").LineBreak();
             return;
         }
 
@@ -29,7 +29,7 @@ public class PiggeryMessage : BotMessage<PiggeryViewModel>
                 Text.Verbatim($" из \"{viewModel.SelectedSwineGroupTitle}\"");
 
             Text.LineBreak();
-            Text.Verbatim("Для увеличения свинарника добавляйте бота в другие группы");
+            Text.Verbatim("Для увеличения свинарника добавляйте бота в другие беседы");
         }
 
         if (viewModel.SelectedSwine is null && viewModel.IsPrivate)

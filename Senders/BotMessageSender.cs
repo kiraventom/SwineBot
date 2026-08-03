@@ -3,8 +3,10 @@ using SwineBot.BotMessages;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
+using Update = SwineBot.Updates.Update;
 
-namespace SwineBot;
+namespace SwineBot.Senders;
 
 public interface IBotMessageSender
 {
@@ -28,7 +30,8 @@ public class BotMessageSender(ILogger<BotMessageSender> logger, ITelegramBotClie
         try
         {
             var text = botMessage.Text;
-            var message = await SendMessage(update.TelegramChatId, botMessage.PhotoBytes, text);
+            var replyMarkup = botMessage.Keyboard;
+            var message = await SendMessage(update.TelegramChatId, botMessage.PhotoBytes, text, replyMarkup);
 
             logger.LogInformation("Sent \"{text}\" to chat [{id}], messageId [{messageId}]", text, update.TelegramChatId, message.MessageId);
             return message;
@@ -61,16 +64,16 @@ public class BotMessageSender(ILogger<BotMessageSender> logger, ITelegramBotClie
         }
     }
 
-    private async Task<Message> SendMessage(ChatId chatId, byte[] photoBytes, string text)
+    private async Task<Message> SendMessage(ChatId chatId, byte[] photoBytes, string text, InlineKeyboardMarkup replyMarkup = null)
     {
         if (photoBytes is null)
-            return await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true });
+            return await client.SendMessage(chatId: chatId, text: text, parseMode: ParseMode.MarkdownV2, linkPreviewOptions: new LinkPreviewOptions() { IsDisabled = true }, replyMarkup: replyMarkup);
 
         Message message;
         using (var stream = new MemoryStream(photoBytes))
         {
             var photo = InputFile.FromStream(stream);
-            message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2);
+            message = await client.SendPhoto(chatId: chatId, photo: photo, caption: text, parseMode: ParseMode.MarkdownV2, replyMarkup: replyMarkup);
         }
 
         return message;

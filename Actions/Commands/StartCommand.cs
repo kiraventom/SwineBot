@@ -4,12 +4,13 @@ using SwineBot.BotMessages;
 using SwineBot.BotMessages.Start;
 using SwineBot.BotMessages.Start.Actions;
 using SwineBot.Model;
+using SwineBot.Updates;
 using SwineBot.ViewModels;
 
 namespace SwineBot.Actions.Commands;
 
 [CommandInfo("/start", "Вывести это сообщение \U0001F928")]
-public class StartCommand(ILogger<StartCommand> logger, UserContext context, IMessageFactory messageFactory, IStartLinkParser parser, ICommandInfos commandInfos) : ICommand
+public class StartCommand(ILogger<StartCommand> logger, UserContext context, IMessageFactory messageFactory, IStartLinkParser parser, ICommandInfos commandInfos) : ICommand, INoSwineCommand
 {
     public async Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter)
     {

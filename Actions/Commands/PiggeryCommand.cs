@@ -4,12 +4,13 @@ using SwineBot.BotMessages;
 using SwineBot.BotMessages.Start;
 using SwineBot.BotMessages.Start.Actions;
 using SwineBot.Model;
+using SwineBot.Updates;
 using SwineBot.ViewModels;
 
 namespace SwineBot.Actions.Commands;
 
 [CommandInfo("/piggery", "Осмотреть свинарник \U0001F6D6")]
-public class PiggeryCommand(UserContext context, IMessageFactory messageFactory, AchievementController achievController, StartLinkBuilder linkBuilder, Config config) : Command<PiggeryMessage, PiggeryViewModel>(messageFactory, achievController)
+public class PiggeryCommand(UserContext context, IMessageFactory messageFactory, AchievementController achievController, StartLinkBuilder linkBuilder, Config config) : Command<PiggeryMessage, PiggeryViewModel>(messageFactory, achievController), INoSwineCommand
 {
     protected override async Task<PiggeryViewModel> ExecuteInternal(Update update, string parameter)
     {
