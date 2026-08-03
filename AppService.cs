@@ -4,6 +4,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using Microsoft.Extensions.DependencyInjection;
+using IUpdateHandler = SwineBot.Updates.IUpdateHandler;
 
 namespace SwineBot;
 
@@ -13,7 +14,7 @@ public class AppService(ILogger<AppService> Logger, IServiceScopeFactory spf, IT
     {
         var receiverOptions = new ReceiverOptions()
         {
-            AllowedUpdates = [UpdateType.Message]
+            AllowedUpdates = [UpdateType.Message, UpdateType.InlineQuery]
         };
 
         Client.StartReceiving(OnUpdate, OnError, receiverOptions, cancellationToken: stoppingToken);
@@ -26,7 +27,11 @@ public class AppService(ILogger<AppService> Logger, IServiceScopeFactory spf, IT
     {
         using var scope = spf.CreateScope();
         var updateHandler = scope.ServiceProvider.GetRequiredService<IUpdateHandler>();
-        await updateHandler.Handle(update, ct);
+        var result = await updateHandler.Handle(update, ct);
+        if (result is not Updates.UpdateHandleResult.MessageOK and not Updates.UpdateHandleResult.InlineQueryOK)
+        {
+            Logger.LogWarning("Update handle result not OK: {result}", result.ToString());
+        }
     }
 
     private Task OnError(ITelegramBotClient client, Exception exception, CancellationToken ct)

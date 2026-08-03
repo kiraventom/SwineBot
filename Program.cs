@@ -15,6 +15,8 @@ using SwineBot.BotMessages.Start;
 using SwineBot.Actions.Commands;
 using SwineBot.Achievements.Effects;
 using SwineBot.Utils;
+using SwineBot.Updates;
+using SwineBot.Senders;
 
 namespace SwineBot;
 
@@ -46,6 +48,7 @@ public class Program
             .AddSingleton<IMessageFactory, MessageFactory>()
             .AddSingleton<ITelegramBotClient, TelegramBotClient>()
             .AddSingleton<IBotMessageSender, BotMessageSender>()
+            .AddSingleton<IQueryResultsSender, QueryResultsSender>()
             .AddSingleton<ICommandInfos, CommandInfos>()
             .AddSingleton<AchievementEffectFactory>()
             .AddSingleton<AchievementDataParser>()
@@ -65,6 +68,8 @@ public class Program
             .AddScoped<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
             .AddScoped<UserContextHelpers>()
             .AddScoped<ICommandFactory, CommandFactory>()
+            .AddScoped<MessageHandler>()
+            .AddScoped<InlineQueryHandler>()
             .AddScoped<IUpdateHandler, UpdateHandler>();
     }
 

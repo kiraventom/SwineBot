@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.BotMessages;
 using SwineBot.Model;
+using SwineBot.Updates;
 using SwineBot.Utils;
 using SwineBot.ViewModels;
 

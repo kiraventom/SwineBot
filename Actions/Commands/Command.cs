@@ -1,5 +1,6 @@
 using SwineBot.Achievements;
 using SwineBot.BotMessages;
+using SwineBot.Updates;
 using SwineBot.ViewModels;
 
 namespace SwineBot.Actions.Commands;
