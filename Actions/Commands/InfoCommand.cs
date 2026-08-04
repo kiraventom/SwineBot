@@ -44,6 +44,16 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
 
-        return new InfoViewModel(recentFeeds.Select(f => f.DateTime).ToList(), recentThrowups.Select(t => t.DateTime).ToList(), utcNow, owner, swine, consecutiveOverfeeds, consecutiveNoOverfeeds, 0, 0, slaughtersCount, (int)Math.Round((growthMod - 1) * 100));
+        Swine outcomingDuelTarget = null;
+        var outcomingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.AttackerId == swine.SwineId);
+        if (outcomingDuelRequest is not null)
+            outcomingDuelTarget = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == outcomingDuelRequest.DefenderId);
+
+        Swine incomingDuelSource = null;
+        var incomingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.DefenderId == swine.SwineId);
+        if (incomingDuelRequest is not null)
+            incomingDuelSource = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == incomingDuelRequest.AttackerId);
+
+        return new InfoViewModel(recentFeeds.Select(f => f.DateTime).ToList(), recentThrowups.Select(t => t.DateTime).ToList(), utcNow, owner, swine, consecutiveOverfeeds, consecutiveNoOverfeeds, 0, 0, slaughtersCount, (int)Math.Round((growthMod - 1) * 100), outcomingDuelTarget?.Name, incomingDuelSource?.Name);
     }
 }

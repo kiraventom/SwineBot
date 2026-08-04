@@ -103,7 +103,9 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         try
         {
             foreach (var message in updateReply.Messages)
+            {
                 await sender.Send(updateReply.Update, message);
+            }
 
             return true;
         }

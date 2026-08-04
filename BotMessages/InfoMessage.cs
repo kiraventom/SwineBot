@@ -10,8 +10,8 @@ public class InfoMessage : BotMessage<InfoViewModel>
 {
     public override void Init<T>(ILogger<T> logger, InfoViewModel viewModel)
     {
-        string lastFeedDTStr = GetLastDTStr(viewModel.RecentFeedDTs, viewModel.UtcNow);
-        string lastThrowUpDTStr = GetLastDTStr(viewModel.RecentThrowupDTs, viewModel.UtcNow);
+        string lastFeedDTStr = MessageTextUtils.GetLastDTStr(viewModel.RecentFeedDTs, viewModel.UtcNow);
+        string lastThrowUpDTStr = MessageTextUtils.GetLastDTStr(viewModel.RecentThrowupDTs, viewModel.UtcNow);
 
         Text.Bold("Информация о свине ").InlineMention(viewModel.Sender).Bold(":").LineBreak()
             .LineBreak()
@@ -64,31 +64,14 @@ public class InfoMessage : BotMessage<InfoViewModel>
             Text.LineBreak();
         }
 
-        // TODO active duel requests (incoming and outcoming)
-    }
-
-    private static string GetLastDTStr(IReadOnlyCollection<DateTime> recentDTs, DateTime current)
-    {
-        if (recentDTs.Count == 0)
-            return "так давно, что никогда...";
-
-        var lastDT = recentDTs.Max();
-        var diff = current - lastDT;
-        if (diff.TotalMinutes < 1)
+        if (viewModel.OutcomingDuelTargetName is not null)
         {
-            return "Только что";
+            Text.Italic("Отправлен вызов на дуэль ").Bold(viewModel.OutcomingDuelTargetName).LineBreak();
         }
-        else if (diff.TotalHours < 1)
+
+        if (viewModel.IncomingDuelSourceName is not null)
         {
-            var totalMin = (int)diff.TotalMinutes;
-            var minutesDecl = MessageTextUtils.GetDeclinatedNoun(totalMin, Unit.Minute);
-            return $"{totalMin} {minutesDecl} назад";
-        }
-        else
-        {
-            var totalHours = (int)diff.TotalHours;
-            var hoursDecl = MessageTextUtils.GetDeclinatedNoun(totalHours, Unit.Hour);
-            return $"{totalHours} {hoursDecl} назад";
+            Text.Italic("Получен вызов на дуэль от ").Bold(viewModel.IncomingDuelSourceName).LineBreak();
         }
     }
 }

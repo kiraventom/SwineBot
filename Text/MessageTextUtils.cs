@@ -38,5 +38,30 @@ public static class MessageTextUtils
             _ => accusativePlural,
         };
     }
+
+    public static string GetLastDTStr(IReadOnlyCollection<DateTime> recentDTs, DateTime current)
+    {
+        if (recentDTs.Count == 0)
+            return "так давно, что никогда...";
+
+        var lastDT = recentDTs.Max();
+        var diff = current - lastDT;
+        if (diff.TotalMinutes < 1)
+        {
+            return "Только что";
+        }
+        else if (diff.TotalHours < 1)
+        {
+            var totalMin = (int)diff.TotalMinutes;
+            var minutesDecl = MessageTextUtils.GetDeclinatedNoun(totalMin, Unit.Minute);
+            return $"{totalMin} {minutesDecl} назад";
+        }
+        else
+        {
+            var totalHours = (int)diff.TotalHours;
+            var hoursDecl = MessageTextUtils.GetDeclinatedNoun(totalHours, Unit.Hour);
+            return $"{totalHours} {hoursDecl} назад";
+        }
+    }
 }
 

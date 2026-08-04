@@ -4,6 +4,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Microsoft.EntityFrameworkCore;
 using SwineBot.Senders;
+using SwineBot.Actions.Commands.Duel;
 
 namespace SwineBot.Updates;
 
@@ -36,24 +37,14 @@ public class InlineQueryHandler(ILogger<InlineQueryHandler> logger, UserContext 
         if (swine is null)
             return UpdateHandleResult.InlineQuerySwineNotFound;
 
-        var update = new Update(query.Query, group.GroupId, user.UserId, swine.SwineId, group.TelegramId, isPrivate, query.Id);
-
         IEnumerable<IQueryResult> results;
 
         try
         {
-            var members = await context.Swines
-                .Where(s => s.GroupId == group.GroupId)
-                .Where(s => s.OwnerId != user.UserId)
-                .Where(s => s.Weight > 1)
-                .OrderByDescending(s => s.Weight)
-                .Join(context.Users, s => s.OwnerId, u => u.UserId, 
-                        (s, u) => new { Owner = u, Swine = s })
-                .Take(50)
-                .ToListAsync();
+            var opps = await context.GetOpponents(user.UserId, group.GroupId);
 
-            results = members
-                .Select(x => new DuelOpponent(x.Owner.TelegramId, x.Swine.Weight, $"{x.Swine.Name} ({x.Owner.FirstName})"))
+            results = opps
+                .Select(x => new DuelOpponent(x.Owner.TelegramId, x.Swine.Weight, x.Owner.FirstName, x.Swine.Name))
                 .Cast<IQueryResult>();
         }
         catch (Exception e)
@@ -64,7 +55,7 @@ public class InlineQueryHandler(ILogger<InlineQueryHandler> logger, UserContext 
 
         try
         {
-            await sender.Send(update, results);
+            await sender.Send(query.Id, results);
         }
         catch (Exception e)
         {

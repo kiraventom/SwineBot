@@ -31,7 +31,7 @@ public class FeedMessage : BotMessage<FeedViewModel>
     {
         Text.Verbatim("После недавнего инцидента с перееданием ")
             .Bold(viewModel.SwineName)
-            .Verbatim(" совсем не до еды...");
+            .Verbatim(" совсем не до еды...").LineBreak().LineBreak();
     }
 
     private void HandleThrowup(FeedViewModel viewModel)

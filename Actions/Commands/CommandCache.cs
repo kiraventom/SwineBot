@@ -49,6 +49,8 @@ public class CommandInfos : ICommandInfos
             list.Add(commandInfo);
         }
 
+        list.Sort((a, b) => a.Handle.CompareTo(b.Handle));
+
         Infos = list;
     }
 }
