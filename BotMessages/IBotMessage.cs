@@ -9,5 +9,3 @@ public interface IBotMessage
     byte[] PhotoBytes { get; }
     InlineKeyboardMarkup Keyboard { get; }
 }
-
-

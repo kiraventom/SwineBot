@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SwineBot.BotMessages;
+using SwineBot.Updates;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -17,51 +18,41 @@ public class BotMessageSender(ILogger<BotMessageSender> logger, ITelegramBotClie
 {
     public async Task<Message> Send(Update update, IBotMessage botMessage)
     {
-        var message = await SendMessage(update, botMessage);
+        var recepient = update.Recepient;
+
+        if (botMessage is ICustomRecepientMessage { CustomRecepient: {} customRecepient })
+            recepient = customRecepient;
+
+        var message = await SendMessage(recepient, botMessage);
 
         if (botMessage is IPinnableMessage { ShouldPin: true })
-            await PinMessage(update, message);
+            await PinMessage(recepient, message);
 
         return message;
     }
 
-    private async Task<Message> SendMessage(Update update, IBotMessage botMessage)
+    private async Task<Message> SendMessage(Recepient recepient, IBotMessage botMessage)
     {
-        try
-        {
-            var text = botMessage.Text;
-            var replyMarkup = botMessage.Keyboard;
-            var message = await SendMessage(update.TelegramChatId, botMessage.PhotoBytes, text, replyMarkup);
+        var text = botMessage.Text;
+        var replyMarkup = botMessage.Keyboard;
+        var message = await SendMessage(recepient.ChatId, botMessage.PhotoBytes, text, replyMarkup);
 
-            logger.LogInformation("Sent \"{text}\" to chat [{id}], messageId [{messageId}]", text, update.TelegramChatId, message.MessageId);
-            return message;
-        }
-        catch (Exception e)
-        {
-            logger.LogCritical(e, "Sending message failed");
-            return null;
-        }
+        logger.LogInformation("Sent \"{text}\" to chat [{id}], messageId [{messageId}]", text, recepient.ChatId, message.MessageId);
+        return message;
     }
 
-    private async Task PinMessage(Update update, Message message)
+    private async Task PinMessage(Recepient recepient, Message message)
     {
         if (message is null)
             return;
 
-        if (!update.IsPrivateChat)
+        if (!recepient.IsPrivateChat)
             return;
 
-        try
-        {
-            await client.UnpinAllChatMessages(update.TelegramChatId);
-            await client.PinChatMessage(update.TelegramChatId, message.MessageId);
+        await client.UnpinAllChatMessages(recepient.ChatId);
+        await client.PinChatMessage(recepient.ChatId, message.MessageId);
 
-            logger.LogInformation("Pinned [{messageId}] for user [{user}]", message.MessageId, update.UserId);
-        }
-        catch (Exception e)
-        {
-            logger.LogCritical(e, "Pinning message [{messageId}] for user [{user}] failed", message.MessageId, update.UserId);
-        }
+        logger.LogInformation("Pinned [{messageId}] for chat [{chat}]", message.MessageId, recepient.ChatId);
     }
 
     private async Task<Message> SendMessage(ChatId chatId, byte[] photoBytes, string text, InlineKeyboardMarkup replyMarkup = null)

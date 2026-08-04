@@ -14,7 +14,7 @@ public record SlaughterViewModel(Swine SenderSwine, bool IsTooEarlySlaughter, in
 
 public record SetNameViewModel(bool IsNameProvided, bool IsNameTheSame, string NewName) : ViewModel;
 
-public record InfoViewModel(IReadOnlyList<DateTime> RecentFeedDTs, IReadOnlyList<DateTime> RecentThrowupDTs, DateTime UtcNow, User Sender, Swine SenderSwine, int ConsecutiveOverfeeds, int ConsecutiveNoOverfeeds, int WonDuels, int LostDuels, int SlaughtersCount, int GrowthPercent) : ViewModel;
+public record InfoViewModel(IReadOnlyList<DateTime> RecentFeedDTs, IReadOnlyList<DateTime> RecentThrowupDTs, DateTime UtcNow, User Sender, Swine SenderSwine, int ConsecutiveOverfeeds, int ConsecutiveNoOverfeeds, int WonDuels, int LostDuels, int SlaughtersCount, int GrowthPercent, string OutcomingDuelTargetName, string IncomingDuelSourceName) : ViewModel;
 
 public record HistoryViewModel(byte[] PlotBytes) : ViewModel;
 
@@ -45,6 +45,15 @@ public record StartViewModel(IEnumerable<CommandInfo> CommandInfos) : ViewModel;
 
 public record InvalidViewModel() : ViewModel;
 
-public record FeedViewModel(FeedResult Result, string SwineName, int ConsecutiveOverfeeds) : ViewModel;
+public record FeedViewModel(FeedResult Result, string SwineName, int ConsecutiveOverfeeds) : ViewModel
+{
+    public int HoursLeftUntilCanEat { get; init; }
+}
 
-public record SelectDuelOpponentViewModel(string GroupId, bool IsPrivate) : ViewModel;
+public record SelectDuelOpponentViewModel(string GroupId, string GroupName, int OpponentsCount, string CurrentRequestOpponent) : ViewModel;
+
+public record DuelRequestViewModel(string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int DeclinePenalty) : ViewModel;
+
+public record DuelRequestSentViewModel(string UserName, string SwineName) : ViewModel;
+
+public record TooSoonToDuelViewModel(string SwineName, string LastOpponentName, int HoursLeft) : ViewModel;
