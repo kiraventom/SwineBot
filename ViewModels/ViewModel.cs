@@ -52,7 +52,7 @@ public record FeedViewModel(FeedResult Result, string SwineName, int Consecutive
 
 public record SelectDuelOpponentViewModel(string Query, string GroupName, int OpponentsCount, string CurrentRequestOpponent) : ViewModel;
 
-public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int DeclinePenalty) : ViewModel;
+public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int DeclinePenalty, bool ReminderMode) : ViewModel;
 
 public record DuelRequestSentViewModel(string UserName, string SwineName) : ViewModel;
 

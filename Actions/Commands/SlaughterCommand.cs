@@ -8,7 +8,7 @@ using SwineBot.ViewModels;
 namespace SwineBot.Actions.Commands;
 
 [CommandInfo(COMMAND_NAME, "Убить свинку \U0001f52a")]
-public class SlaughterCommand(UserContext context, IDateTimeNowProvider dtnProvider, IMessageFactory messageFactory, AchievementController achievController) : Command<SlaughterMessage, SlaughterViewModel>(messageFactory, achievController)
+public class SlaughterCommand(UserContext context, IDateTimeNowProvider dtnProvider, IMessageFactory messageFactory, AchievementController achievController) : Command<SlaughterMessage, SlaughterViewModel>(messageFactory, achievController), IActionCommand
 {
     public const string COMMAND_NAME = "/slaughter";
     public const string CONFIRMATION = "yes";

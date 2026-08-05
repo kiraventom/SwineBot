@@ -1,10 +1,12 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using SwineBot.Model;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using SwineBot.Actions.Commands;
 using SwineBot.BotMessages;
 using SwineBot.Senders;
+using SwineBot.Actions.Commands.Duel;
 
 namespace SwineBot.Updates;
 
@@ -129,14 +131,23 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
 
         var commandText = update.Text.Substring(botCommand.Offset, botCommand.Length);
 
-        var command = commandFactory.Create(commandText); ;
+        var command = commandFactory.Create(commandText);
 
         parameter = update.Text.Substring(botCommand.Offset + botCommand.Length).Trim();
 
         // SwineId is null -> command in private chat and no private swine is selected -> prompt user to select private swine via PiggeryCommand
         if (update.SwineId is null && command is not INoSwineCommand)
         {
+            logger.LogInformation("Received private command that requires selected swine, replacing command with {piggeryCommand}", nameof(PiggeryCommand));
             command = commandFactory.Create<PiggeryCommand>();
+            parameter = string.Empty;
+        }
+        else if (context.DuelRequests.FirstOrDefault(dr => dr.DefenderId == update.SwineId) is {} duelRequest && command is IActionCommand)
+        {
+            logger.LogInformation("Received command that performs action when duel request is not answered, replacing command with {duelCommand}", nameof(DuelCommand));
+            var duelCommand = commandFactory.Create<DuelCommand>();
+            duelCommand.DuelRequestId = duelRequest.RequestId;
+            command = duelCommand;
             parameter = string.Empty;
         }
 
