@@ -14,7 +14,7 @@ public record SlaughterViewModel(Swine SenderSwine, bool IsTooEarlySlaughter, in
 
 public record SetNameViewModel(bool IsNameProvided, bool IsNameTheSame, string NewName) : ViewModel;
 
-public record InfoViewModel(IReadOnlyList<DateTime> RecentFeedDTs, IReadOnlyList<DateTime> RecentThrowupDTs, DateTime UtcNow, User Sender, Swine SenderSwine, int ConsecutiveOverfeeds, int ConsecutiveNoOverfeeds, int WonDuels, int LostDuels, int SlaughtersCount, int GrowthPercent, string OutcomingDuelTargetName, string IncomingDuelSourceName) : ViewModel;
+public record InfoViewModel(IReadOnlyList<DateTime> RecentFeedDTs, IReadOnlyList<DateTime> RecentThrowupDTs, DateTime UtcNow, User Sender, Swine SenderSwine, int ConsecutiveOverfeeds, int ConsecutiveNoOverfeeds, int WonDuels, int LostDuels, int SlaughtersCount, int GrowthPercent, string OutcomingDuelTargetName, string IncomingDuelSourceName, string IncomingDuelRequestLink) : ViewModel;
 
 public record HistoryViewModel(byte[] PlotBytes) : ViewModel;
 

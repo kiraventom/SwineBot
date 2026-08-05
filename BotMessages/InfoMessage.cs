@@ -73,7 +73,12 @@ public class InfoMessage : BotMessage<InfoViewModel>
 
         if (viewModel.IncomingDuelSourceName is not null)
         {
-            Text.Italic("Получен вызов на дуэль от ").Bold(viewModel.IncomingDuelSourceName).LineBreak();
+            if (viewModel.IncomingDuelRequestLink is not null)
+                Text.Italic("Получен ").InlineUrl("вызов на дуэль", viewModel.IncomingDuelRequestLink).Verbatim(" от ").Bold(viewModel.IncomingDuelSourceName);
+            else
+                Text.Italic("Получен вызов на дуэль от ").Bold(viewModel.IncomingDuelSourceName);
+
+            Text.LineBreak();
         }
     }
 }

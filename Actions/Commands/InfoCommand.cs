@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Checkers;
+using SwineBot.Actions.Commands.Duel;
 using SwineBot.BotMessages;
 using SwineBot.Model;
 using SwineBot.Updates;
@@ -49,11 +50,15 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
         if (outcomingDuelRequest is not null)
             outcomingDuelTarget = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == outcomingDuelRequest.DefenderId);
 
+        string incomingDuelRequestLink = null;
         Swine incomingDuelSource = null;
         var incomingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.DefenderId == swine.SwineId);
         if (incomingDuelRequest is not null)
+        {
             incomingDuelSource = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == incomingDuelRequest.AttackerId);
+            incomingDuelRequestLink = await DuelReminderCommand.BuildLink(context, update);
+        }
 
-        return new InfoViewModel(recentFeeds.Select(f => f.DateTime).ToList(), recentThrowups.Select(t => t.DateTime).ToList(), utcNow, owner, swine, consecutiveOverfeeds, consecutiveNoOverfeeds, 0, 0, slaughtersCount, (int)Math.Round((growthMod - 1) * 100), outcomingDuelTarget?.Name, incomingDuelSource?.Name);
+        return new InfoViewModel(recentFeeds.Select(f => f.DateTime).ToList(), recentThrowups.Select(t => t.DateTime).ToList(), utcNow, owner, swine, consecutiveOverfeeds, consecutiveNoOverfeeds, 0, 0, slaughtersCount, (int)Math.Round((growthMod - 1) * 100), outcomingDuelTarget?.Name, incomingDuelSource?.Name, incomingDuelRequestLink);
     }
 }
