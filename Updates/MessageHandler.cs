@@ -4,18 +4,10 @@ using SwineBot.Model;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using SwineBot.Actions.Commands;
-using SwineBot.BotMessages;
 using SwineBot.Senders;
 using SwineBot.Actions.Commands.Duel;
 
 namespace SwineBot.Updates;
-
-public class UpdateHandleException(UpdateHandleResult result, Exception baseEx = null) : Exception
-{
-    public UpdateHandleResult Result { get; } = result;
-
-    public override Exception GetBaseException() => baseEx;
-}
 
 public class MessageHandler(ILogger<MessageHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, ICommandFactory commandFactory) : UpdateTypeHandler<Telegram.Bot.Types.Message>
 {
@@ -23,6 +15,21 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
     {
         if (message.ForwardOrigin is not null)
             return UpdateHandleResult.MessageForward;
+
+        // Group transformed into supergroup
+        if (message.MigrateFromChatId is {} migrateFromChatId)
+        {
+            var newChatId = message.Chat.Id;
+            var group = await context.Groups.AsTracking().FirstOrDefaultAsync(g => g.TelegramId == migrateFromChatId);
+            if (group is not null)
+            {
+                group.TelegramId = newChatId;
+                await context.SaveChangesAsync();
+
+                logger.LogInformation("Migrated group {groupId} from {oldChatId} to {newChatId}", group.GroupId, migrateFromChatId, newChatId);
+                return UpdateHandleResult.MessageSuccesfulMigration;
+            }
+        }
 
         var botCommand = GetBotCommand(message);
         if (botCommand is null)
@@ -144,10 +151,8 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         }
         else if (context.DuelRequests.FirstOrDefault(dr => dr.DefenderId == update.SwineId) is {} duelRequest && command is IActionCommand)
         {
-            logger.LogInformation("Received command that performs action when duel request is not answered, replacing command with {duelCommand}", nameof(DuelCommand));
-            var duelCommand = commandFactory.Create<DuelCommand>();
-            duelCommand.DuelRequestId = duelRequest.RequestId;
-            command = duelCommand;
+            logger.LogInformation("Received command that performs action when duel request is not answered, replacing command with {duelReminderCommand}", nameof(DuelReminderCommand));
+            command = commandFactory.Create<DuelReminderCommand>();
             parameter = string.Empty;
         }
 

@@ -10,9 +10,6 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
 
     public override void Init<TMessage>(ILogger<TMessage> logger, DuelRequestViewModel viewModel)
     {
-        if (viewModel.ReminderMode)
-            Text.Underline("Вас вызвали на дуэль!").LineBreak().LineBreak();
-
         if (string.IsNullOrEmpty(viewModel.Tag))
         {
             Text.InlineMention(viewModel.UserName, viewModel.Id);
