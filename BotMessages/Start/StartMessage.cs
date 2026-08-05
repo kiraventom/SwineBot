@@ -11,7 +11,7 @@ public class StartMessage : BotMessage<StartViewModel>
             .LineBreak()
             .Italic("Доступные команды:").LineBreak();
 
-        foreach (var info in viewModel.CommandInfos)
+        foreach (var info in viewModel.CommandInfos.Where(ci => ci.Hidden == false))
             Text.Verbatim(info.Title).Verbatim(" - ").Verbatim(info.Description).LineBreak();
     }
 }

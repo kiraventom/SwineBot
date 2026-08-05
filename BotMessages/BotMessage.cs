@@ -9,7 +9,7 @@ namespace SwineBot.BotMessages;
 public abstract class BotMessage<TViewModel> : IBotMessage where TViewModel : ViewModel
 {
     string IBotMessage.Text => Text.ToString();
-    InlineKeyboardMarkup IBotMessage.Keyboard => Keyboard.Markup;
+    InlineKeyboardMarkup IBotMessage.Keyboard => Keyboard.ToMarkup();
 
     public virtual bool Notify => true;
 

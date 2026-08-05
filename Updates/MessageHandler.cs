@@ -8,6 +8,13 @@ using SwineBot.Senders;
 
 namespace SwineBot.Updates;
 
+public class UpdateHandleException(UpdateHandleResult result, Exception baseEx = null) : Exception
+{
+    public UpdateHandleResult Result { get; } = result;
+
+    public override Exception GetBaseException() => baseEx;
+}
+
 public class MessageHandler(ILogger<MessageHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, ICommandFactory commandFactory) : UpdateTypeHandler<Telegram.Bot.Types.Message>
 {
     public override async Task<UpdateHandleResult> Handle(Message message, CancellationToken token)
@@ -18,21 +25,13 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         var botCommand = GetBotCommand(message);
         if (botCommand is null)
         {
-            if (message.Text is {} text)
+            if (message.Text is { } text)
                 logger.LogInformation("Not command: {text}", text);
 
             return UpdateHandleResult.MessageNotCommand;
         }
 
-        var updateReply = await GetUpdateReply(message, botCommand, token);
-        if (updateReply is null)
-            return UpdateHandleResult.DatabaseFail;
-
-        var didReply = await SendUpdateReply(updateReply);
-        if (!didReply)
-            return UpdateHandleResult.SendMessageFail;
-
-        return UpdateHandleResult.MessageOK;
+        return await HandleCommand(message, botCommand, token);
     }
 
     private void LogUpdate(Update update)
@@ -73,59 +72,56 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         return update;
     }
 
-    private async Task<UpdateReply> GetUpdateReply(Message message, MessageEntity botCommand, CancellationToken token)
+    private async Task<UpdateHandleResult> HandleCommand(Message tgMessage, MessageEntity botCommand, CancellationToken token)
     {
-        Update update;
-        IReadOnlyCollection<IBotMessage> messages;
-
-        var transaction = await context.Database.BeginTransactionAsync(token);
+        await using var transaction = await context.Database.BeginTransactionAsync(token);
 
         try
         {
-            update = await CreateUpdate(message);
-            messages = await GetMessages(update, botCommand);
+            var update = await TryRunAsync(
+                    () => CreateUpdate(tgMessage),
+                    "Failed to create update", UpdateHandleResult.MessageFailedToCreateUpdate);
 
-            await context.SaveChangesAsync(token);
-            await transaction.CommitAsync(token);
+            var (command, parameter) = TryRun(
+                    () =>
+                    {
+                        var cmd = GetCommand(update, botCommand, out var p);
+                        return (cmd, p);
+                    },
+                    "Failed to get command", UpdateHandleResult.MessageUnknownCommand);
+
+            var messages = await TryRunAsync(
+                    () => command.Execute(update, parameter),
+                    "Failed to execute command", UpdateHandleResult.CommandFailed);
+
+            await TryRunAsync(async () =>
+                    {
+                        foreach (var message in messages)
+                        {
+                            var sentMessage = await sender.Send(update, message);
+                            await command.AfterMessageSend(update, message, sentMessage);
+                        }
+                    }, "Sending message failed", UpdateHandleResult.SendMessageFail);
+
+            await TryRunAsync(async () =>
+                    {
+                        await context.SaveChangesAsync(token);
+                        await transaction.CommitAsync(token);
+                    }, "Failed to save database", UpdateHandleResult.DatabaseFail);
+
+            return UpdateHandleResult.MessageOK;
         }
         catch (Exception e)
         {
             await transaction.RollbackAsync(token);
-            logger.LogError(e, "Transaction failed, rolling back");
-            return null;
-        }
 
-        return new UpdateReply(update, messages);
-    }
-
-    private async Task<bool> SendUpdateReply(UpdateReply updateReply)
-    {
-        try
-        {
-            foreach (var message in updateReply.Messages)
-            {
-                await sender.Send(updateReply.Update, message);
-            }
-
-            return true;
-        }
-        catch (Exception e)
-        {
-            logger.LogError(e, "Sending message failed");
-            return false;
+            return e is UpdateHandleException updateEx
+                ? updateEx.Result
+                : UpdateHandleResult.UnknownError;
         }
     }
 
     private static MessageEntity GetBotCommand(Message message) => message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
-
-    private async Task<IReadOnlyCollection<IBotMessage>> GetMessages(Update update, MessageEntity botCommand)
-    {
-        var command = GetCommand(update, botCommand, out var parameter);
-        if (command is null)
-            return [];
-
-        return await command.Execute(update, parameter);
-    }
 
     private ICommand GetCommand(Update update, MessageEntity botCommand, out string parameter)
     {
@@ -133,9 +129,7 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
 
         var commandText = update.Text.Substring(botCommand.Offset, botCommand.Length);
 
-        var command = commandFactory.Create(commandText);;
-        if (command is null)
-            return null;
+        var command = commandFactory.Create(commandText); ;
 
         parameter = update.Text.Substring(botCommand.Offset + botCommand.Length).Trim();
 
@@ -147,6 +141,45 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         }
 
         return command;
+    }
+
+    private async Task<T> TryRunAsync<T>(Func<Task<T>> action, string log, UpdateHandleResult err)
+    {
+        try
+        {
+            return await action();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, log);
+            throw new UpdateHandleException(err, ex);
+        }
+    }
+
+    private async Task TryRunAsync(Func<Task> action, string log, UpdateHandleResult err)
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, log);
+            throw new UpdateHandleException(err, ex);
+        }
+    }
+
+    private T TryRun<T>(Func<T> action, string log, UpdateHandleResult err)
+    {
+        try
+        {
+            return action();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, log);
+            throw new UpdateHandleException(err, ex);
+        }
     }
 }
 

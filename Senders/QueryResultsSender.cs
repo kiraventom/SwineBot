@@ -19,7 +19,7 @@ public class QueryResultsSender(ILogger<QueryResultsSender> logger, ITelegramBot
     public async Task Send(string inlineQueryId, IEnumerable<IQueryResult> results)
     {
         var inlineQueryResults = results.Select(r => r.ToContact());
-        await client.AnswerInlineQuery(inlineQueryId, inlineQueryResults, isPersonal: true);
+        await client.AnswerInlineQuery(inlineQueryId, inlineQueryResults, isPersonal: true, cacheTime: 1);
     }
 }
 

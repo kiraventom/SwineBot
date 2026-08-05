@@ -1,10 +1,11 @@
 using SwineBot.BotMessages;
-using SwineBot.Updates;
+using Telegram.Bot.Types;
 
 namespace SwineBot.Actions.Commands;
 
 public interface ICommand
 {
-    Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter = null);
+    Task<IReadOnlyCollection<IBotMessage>> Execute(Updates.Update update, string parameter = null);
+    Task AfterMessageSend(Updates.Update update, IBotMessage message, Message sentMessage);
 }
 

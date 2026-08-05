@@ -1,6 +1,5 @@
 using SwineBot.Achievements;
 using SwineBot.BotMessages;
-using SwineBot.Model;
 using SwineBot.Updates;
 using SwineBot.ViewModels;
 
@@ -18,10 +17,13 @@ public abstract class Command<TMessage, TViewModel>(IMessageFactory messageFacto
     {
         var viewModel = await ExecuteInternal(update, parameter);
 
+        // TODO Remove AchievController dependency and move it somewhere else
         var achievMessages = await AchievController.GetAchievMessages(update.SwineId, viewModel);
         var mainMessage = messageFactory.Create<TMessage, TViewModel>(viewModel);
 
         return achievMessages.OfType<IBotMessage>().Append(mainMessage).ToList();
     }
+
+    public virtual Task AfterMessageSend(Update update, IBotMessage message, Telegram.Bot.Types.Message sentMessage) => Task.CompletedTask;
 }
 

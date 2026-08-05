@@ -8,7 +8,7 @@ public class DuelRequestSentMessage : BotMessage<DuelRequestSentViewModel>
 {
     public override void Init<TMessage>(ILogger<TMessage> logger, DuelRequestSentViewModel viewModel)
     {
-        Text.Verbatim("Вызов на дуэль отправлен ").Bold(viewModel.UserName).Verbatim(".");
+        Text.Verbatim("Вызов на дуэль отправлен ").Bold(viewModel.SwineName).Verbatim(".");
     }
 }
 
