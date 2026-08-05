@@ -11,7 +11,7 @@ using SwineBot.Text;
 
 namespace SwineBot.Actions.Commands.Duel;
 
-[CommandInfo(HANDLE, "Отменить вызов на дуэль", Hidden = true)]
+[CommandInfo(HANDLE, "Отменить вызов на дуэль", Type = CommandType.Hidden)]
 public class DuelCancelCommand(ILogger<DuelCancelCommand> logger, IMessageEditor messageEditor, UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<DuelCancelMessage, DuelCancelViewModel>(messageFactory, achievController)
 {
     public const string HANDLE = "/duelcancel";

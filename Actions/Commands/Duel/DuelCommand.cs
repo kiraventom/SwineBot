@@ -13,24 +13,8 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
 {
     private const int DUEL_COOLDOWN = 24;
 
-    // If true, no changes to database will occur
-    public bool ReminderMode => DuelRequestId is not null;
-    public int? DuelRequestId { get; set; }
-
     public async Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter = null)
     {
-        if (ReminderMode)
-        {
-            var duelRequest = await context.DuelRequests.FirstAsync(dr => dr.RequestId == DuelRequestId.Value);
-            var attacker = await context.Swines.FirstAsync(s => s.SwineId == duelRequest.AttackerId);
-            var defender = await context.Swines.FirstAsync(s => s.SwineId == duelRequest.DefenderId);
-            var defenderOwner = await context.Users.FirstAsync(u => u.UserId == defender.OwnerId);
-            
-            // Replace update as if it was sent by attacker
-            update = new Update(update.Text, update.GroupId, attacker.OwnerId, attacker.SwineId, update.TelegramChatId, update.IsPrivateChat);
-            return await SendDuelRequest(update, defenderOwner.TelegramId);
-        }
-
         var lastDuel = await context.DuelResults
             .Where(r => r.AttackerId == update.SwineId)
             .OrderByDescending(r => r.DateTime)
@@ -121,20 +105,24 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
         if (opponentSwine is null)
             throw new NotSupportedException($"User {opponent.UserId} does not have swines in the group {groupId}");
 
+        if (await context.DuelRequests.FirstOrDefaultAsync(dr => dr.DefenderId == opponentSwine.SwineId) is {} existingDuelRequest)
+            throw new NotSupportedException($"Swine {opponentSwine.SwineId} was selected as opponent despite already being a defender in duel request {existingDuelRequest.RequestId}");
+
         var duelRequestId = await GetDuelRequestId(update, swine, opponents, opponentSwine);
 
         var winChance = (int)Math.Round(((double)opponentSwine.Weight / (swine.Weight + opponentSwine.Weight)) * 100);
         var declinePenalty = (int)Math.Round((winChance - 50) * 0.75);
 
-        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, declinePenalty, ReminderMode);
+        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, declinePenalty);
 
         List<IBotMessage> messagesToSend = [];
 
         var duelRequestMessage = messageFactory.Create<DuelRequestMessage, DuelRequestViewModel>(viewModel);
         messagesToSend.Add(duelRequestMessage);
 
-        // If we're not in reminder mode, it means /duel command was sent as PM. We send the request message in the group and return with confirmation to PM
-        if (update.IsPrivateChat && !ReminderMode)
+        // /duel command was sent as PM. We send the request message in the group and return with confirmation to PM
+        // We do not send duel requests in private messages because not everyone has private chat with bot
+        if (update.IsPrivateChat)
         {
             duelRequestMessage.CustomRecepient = Recepient.Group(context, opponentSwine.GroupId.Value);
 
@@ -149,9 +137,6 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
 
     private async Task<int> GetDuelRequestId(Update update, Swine swine, IReadOnlyList<PotentialOpponent> opponents, Swine opponentSwine)
     {
-        if (ReminderMode)
-            return DuelRequestId.Value;
-
         // Invalid opponent (old message, manually entered parameter)
         if (opponents.All(o => o.Swine.SwineId != opponentSwine.SwineId))
             throw new NotSupportedException($"Swine {opponentSwine.SwineId} is not valid opponent for {swine.SwineId}");

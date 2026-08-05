@@ -24,5 +24,6 @@ public enum UpdateHandleResult
     UnknownError,
     MessageFailedToCreateUpdate,
     CommandFailed,
+    MessageSuccesfulMigration,
 }
 

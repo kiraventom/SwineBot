@@ -14,7 +14,7 @@ public class AppService(ILogger<AppService> Logger, IServiceScopeFactory spf, IT
     {
         var receiverOptions = new ReceiverOptions()
         {
-            AllowedUpdates = [UpdateType.Message, UpdateType.InlineQuery]
+            AllowedUpdates = [UpdateType.Message, UpdateType.InlineQuery, UpdateType.CallbackQuery]
         };
 
         Client.StartReceiving(OnUpdate, OnError, receiverOptions, cancellationToken: stoppingToken);
@@ -28,7 +28,7 @@ public class AppService(ILogger<AppService> Logger, IServiceScopeFactory spf, IT
         using var scope = spf.CreateScope();
         var updateHandler = scope.ServiceProvider.GetRequiredService<IUpdateHandler>();
         var result = await updateHandler.Handle(update, ct);
-        if (result is not Updates.UpdateHandleResult.MessageOK and not Updates.UpdateHandleResult.InlineQueryOK)
+        if (result is not Updates.UpdateHandleResult.MessageOK and not Updates.UpdateHandleResult.InlineQueryOK and not Updates.UpdateHandleResult.MessageSuccesfulMigration)
         {
             Logger.LogWarning("Update handle result not OK: {result}", result.ToString());
         }

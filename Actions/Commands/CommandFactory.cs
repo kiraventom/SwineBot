@@ -15,12 +15,13 @@ public class CommandFactory(ILogger<CommandFactory> logger, ICommandInfos infos,
 
     public ICommand Create(string fullCommandText)
     {
-        foreach (var info in infos.Infos)
+        var callableInfos = infos.Infos.Where(i => i.Callable);
+        foreach (var info in callableInfos)
         {
             if (CommandUtils.IsMatch(info.Handle, fullCommandText, config.Username))
                 return (ICommand)sp.GetRequiredService(info.CommandType);
         }
 
-        throw new NotSupportedException($"Failed to match command text \"{fullCommandText}\" against commands [ {string.Join(", ", infos.Infos.Select(h => h.Handle))} ]");
+        throw new NotSupportedException($"Failed to match command text \"{fullCommandText}\" against commands [ {string.Join(", ", callableInfos.Select(h => h.Handle))} ]");
     }
 }
