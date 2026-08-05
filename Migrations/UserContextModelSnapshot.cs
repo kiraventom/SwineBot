@@ -57,6 +57,9 @@ namespace SwineBot.Migrations
                     b.Property<int>("DefenderId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("MessageId")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("RequestId");
 
                     b.HasIndex("AttackerId");

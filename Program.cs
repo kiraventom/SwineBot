@@ -47,6 +47,7 @@ public class Program
             .AddSingleton<StartLinkBuilder>()
             .AddSingleton<IMessageFactory, MessageFactory>()
             .AddSingleton<ITelegramBotClient, TelegramBotClient>()
+            .AddSingleton<IMessageEditor, MessageEditor>()
             .AddSingleton<IBotMessageSender, BotMessageSender>()
             .AddSingleton<IQueryResultsSender, QueryResultsSender>()
             .AddSingleton<ICommandInfos, CommandInfos>()

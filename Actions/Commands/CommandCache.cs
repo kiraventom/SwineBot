@@ -45,7 +45,7 @@ public class CommandInfos : ICommandInfos
                 continue;
             }
 
-            var commandInfo = new CommandInfo(attribute.Handle, attribute.Title, attribute.Description, type);
+            var commandInfo = new CommandInfo(attribute.Handle, attribute.Title, attribute.Description, attribute.Hidden, type);
             list.Add(commandInfo);
         }
 

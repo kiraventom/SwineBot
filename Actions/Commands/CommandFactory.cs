@@ -21,7 +21,6 @@ public class CommandFactory(ILogger<CommandFactory> logger, ICommandInfos infos,
                 return (ICommand)sp.GetRequiredService(info.CommandType);
         }
 
-        logger.LogWarning($"Failed to match command text \"{fullCommandText}\" against commands [ {string.Join(", ", infos.Infos.Select(h => h.Handle))} ]");
-        return null;
+        throw new NotSupportedException($"Failed to match command text \"{fullCommandText}\" against commands [ {string.Join(", ", infos.Infos.Select(h => h.Handle))} ]");
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
+using SwineBot.Actions.Commands.Duel;
 using SwineBot.BotMessages.Feed;
 using SwineBot.Text;
 using SwineBot.ViewModels;
@@ -66,7 +67,8 @@ public class InfoMessage : BotMessage<InfoViewModel>
 
         if (viewModel.OutcomingDuelTargetName is not null)
         {
-            Text.Italic("Отправлен вызов на дуэль ").Bold(viewModel.OutcomingDuelTargetName).LineBreak();
+            Text.Italic("Отправлен вызов на дуэль ").Bold(viewModel.OutcomingDuelTargetName);
+            Text.Verbatim(" (отправьте ").Verbatim(DuelCancelCommand.HANDLE).Verbatim(" для отмены)").LineBreak();
         }
 
         if (viewModel.IncomingDuelSourceName is not null)

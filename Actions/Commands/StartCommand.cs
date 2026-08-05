@@ -54,4 +54,6 @@ public class StartCommand(ILogger<StartCommand> logger, UserContext context, IMe
         var setSwineMessage = messageFactory.Create<SetPrivateSwineMessage, SetPrivateSwineViewModel>(setSwineViewModel);
         return setSwineMessage;
     }
+
+    Task ICommand.AfterMessageSend(Update update, IBotMessage message, Telegram.Bot.Types.Message sentMessage) => Task.CompletedTask;
 }

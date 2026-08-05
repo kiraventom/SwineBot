@@ -50,10 +50,12 @@ public record FeedViewModel(FeedResult Result, string SwineName, int Consecutive
     public int HoursLeftUntilCanEat { get; init; }
 }
 
-public record SelectDuelOpponentViewModel(string GroupId, string GroupName, int OpponentsCount, string CurrentRequestOpponent) : ViewModel;
+public record SelectDuelOpponentViewModel(string Query, string GroupName, int OpponentsCount, string CurrentRequestOpponent) : ViewModel;
 
-public record DuelRequestViewModel(string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int DeclinePenalty) : ViewModel;
+public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int DeclinePenalty) : ViewModel;
 
 public record DuelRequestSentViewModel(string UserName, string SwineName) : ViewModel;
 
 public record TooSoonToDuelViewModel(string SwineName, string LastOpponentName, int HoursLeft) : ViewModel;
+
+public record DuelCancelViewModel(bool HadActiveDuel, string OpponentName) : ViewModel;

@@ -145,6 +145,8 @@ public class DuelRequest
     public int AttackerId { get; set; }
     public int DefenderId { get; set; }
 
+    public int? MessageId { get; set; }
+
     public DateTime DateTime { get; set; }
 }
 

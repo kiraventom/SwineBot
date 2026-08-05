@@ -47,5 +47,8 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
             Text.Verbatim(penaltyStr).Monospace(Math.Abs(viewModel.DeclinePenalty)).Monospace("%").LineBreak();
 
         Text.Italic("Принять вызов?");
+
+        Keyboard.AddButton("✅", $"accept_{viewModel.DuelRequestId}");
+        Keyboard.AddButton("❌", $"decline_{viewModel.DuelRequestId}");
     }
 }

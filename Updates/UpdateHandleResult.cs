@@ -19,5 +19,10 @@ public enum UpdateHandleResult
     InlineQueryGroupNotFound,
     InlineQueryUserNotFound,
     InlineQuerySwineNotFound,
+    InlineQueryInvalidFormat,
+    MessageUnknownCommand,
+    UnknownError,
+    MessageFailedToCreateUpdate,
+    CommandFailed,
 }
 

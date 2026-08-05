@@ -22,6 +22,6 @@ public class SelectDuelOpponentMessage : BotMessage<SelectDuelOpponentViewModel>
         }
 
         Text.Verbatim("Вы отправляете вызов на дуэль в группу ").Bold(viewModel.GroupName).Verbatim("!").LineBreak();
-        Keyboard.SetSwitchInlineQueryCurrentChat("Выбрать оппонента", viewModel.GroupId);
+        Keyboard.AddSwitchInlineQueryCurrentChat("Выбрать оппонента", viewModel.Query);
     }
 }

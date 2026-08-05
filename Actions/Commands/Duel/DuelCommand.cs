@@ -4,11 +4,12 @@ using SwineBot.Updates;
 using SwineBot.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using SwineBot.BotMessages.Duels;
+using Microsoft.Extensions.Logging;
 
 namespace SwineBot.Actions.Commands.Duel;
 
 [CommandInfo("/duel", "Вызвать на дуэль \u2694\uFE0F")]
-public class DuelCommand(UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider) : ICommand
+public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider) : ICommand
 {
     private const int DUEL_COOLDOWN = 24;
 
@@ -79,10 +80,6 @@ public class DuelCommand(UserContext context, IMessageFactory messageFactory, ID
         var user = await context.Users.FirstAsync(u => u.UserId == update.UserId);
         var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
 
-        var opponent = await context.Users.FirstOrDefaultAsync(u => u.TelegramId == opponentTgId);
-        if (opponent is null)
-            throw new NotSupportedException($"User with TelegramId={opponentTgId} not found");
-
         int groupId;
         if (update.IsPrivateChat)
         {
@@ -95,6 +92,12 @@ public class DuelCommand(UserContext context, IMessageFactory messageFactory, ID
             groupId = update.GroupId.Value;
         }
 
+        var opponents = await context.GetOpponents(user.UserId, groupId);
+
+        var opponent = await context.Users.FirstOrDefaultAsync(u => u.TelegramId == opponentTgId);
+        if (opponent is null)
+            throw new NotSupportedException($"User with TelegramId={opponentTgId} not found");
+
         var opponentSwine = await context.Swines
             .Where(s => s.OwnerId == opponent.UserId)
             .FirstOrDefaultAsync(s => s.GroupId == groupId);
@@ -102,8 +105,17 @@ public class DuelCommand(UserContext context, IMessageFactory messageFactory, ID
         if (opponentSwine is null)
             throw new NotSupportedException($"User {opponent.UserId} does not have swines in the group {groupId}");
 
-        var existingDuelRequests = await context.DuelRequests.Where(dr => dr.AttackerId == swine.SwineId).ToListAsync();
-        context.DuelRequests.RemoveRange(existingDuelRequests);
+        // Invalid opponent (old message, manually entered parameter)
+        if (opponents.All(o => o.Swine.SwineId != opponentSwine.SwineId))
+            throw new NotSupportedException($"Swine {opponentSwine.SwineId} is not valid opponent for {swine.SwineId}");
+
+        var existingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.AttackerId == swine.SwineId);
+        if (existingDuelRequest is not null)
+        {
+            // TODO Stupid code
+            var duelCancelCommand = commandFactory.Create<DuelCancelCommand>();
+            await duelCancelCommand.ExecuteSilent(update);
+        }
 
         var duelRequest = new DuelRequest()
         {
@@ -113,11 +125,12 @@ public class DuelCommand(UserContext context, IMessageFactory messageFactory, ID
         };
 
         context.DuelRequests.Add(duelRequest);
+        await context.SaveChangesAsync();
 
         var winChance = (int)Math.Round(((double)opponentSwine.Weight / (swine.Weight + opponentSwine.Weight)) * 100);
         var declinePenalty = (int)Math.Round((winChance - 50) * 0.75);
 
-        var viewModel = new DuelRequestViewModel(opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, declinePenalty);
+        var viewModel = new DuelRequestViewModel(duelRequest.RequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, declinePenalty);
 
         List<IBotMessage> messagesToSend = [];
 
@@ -135,6 +148,19 @@ public class DuelCommand(UserContext context, IMessageFactory messageFactory, ID
         }
 
         return messagesToSend;
+    }
+
+    async Task ICommand.AfterMessageSend(Update update, IBotMessage message, Telegram.Bot.Types.Message sentMessage)
+    {
+        if (message is DuelRequestMessage)
+        {
+            var duelRequest = await context.DuelRequests.AsTracking().FirstOrDefaultAsync(dr => dr.AttackerId == update.SwineId);
+
+            if (duelRequest is { MessageId: null })
+            {
+                duelRequest.MessageId = sentMessage.MessageId;
+            }
+        }
     }
 }
 
