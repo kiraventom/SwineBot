@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SwineBot.Updates;
 
-public class UpdateHandler(ILogger<UpdateHandler> logger, MessageHandler messageHandler, InlineQueryHandler inlineQueryHandler) : IUpdateHandler
+public class UpdateHandler(ILogger<UpdateHandler> logger, MessageHandler messageHandler, InlineQueryHandler inlineQueryHandler, CallbackQueryHandler callbackQueryHandler) : IUpdateHandler
 {
     public Task<UpdateHandleResult> Handle(Telegram.Bot.Types.Update tgUpdate, CancellationToken token)
     {
@@ -13,6 +13,9 @@ public class UpdateHandler(ILogger<UpdateHandler> logger, MessageHandler message
 
         if (tgUpdate.InlineQuery is {} inlineQuery)
             return inlineQueryHandler.Handle(inlineQuery, token);
+
+        if (tgUpdate.CallbackQuery is {} callbackQuery)
+            return callbackQueryHandler.Handle(callbackQuery, token);
 
         return Task.FromResult(UpdateHandleResult.OtherUpdate);
     }

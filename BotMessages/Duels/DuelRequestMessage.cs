@@ -8,6 +8,9 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
 {
     public Recepient CustomRecepient { get; set; }
 
+    public const string AcceptCallbackDataPrefix = "accept_";
+    public const string DeclineCallbackDataPrefix = "decline_";
+
     public override void Init<TMessage>(ILogger<TMessage> logger, DuelRequestViewModel viewModel)
     {
         if (string.IsNullOrEmpty(viewModel.Tag))
@@ -48,7 +51,7 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
 
         Text.Italic("Принять вызов?");
 
-        Keyboard.AddButton("✅", $"accept_{viewModel.DuelRequestId}");
-        Keyboard.AddButton("❌", $"decline_{viewModel.DuelRequestId}");
+        Keyboard.AddButton("✅", $"{AcceptCallbackDataPrefix}{viewModel.DuelRequestId}");
+        Keyboard.AddButton("❌", $"{DeclineCallbackDataPrefix}{viewModel.DuelRequestId}");
     }
 }

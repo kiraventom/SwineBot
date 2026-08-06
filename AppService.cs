@@ -28,7 +28,7 @@ public class AppService(ILogger<AppService> Logger, IServiceScopeFactory spf, IT
         using var scope = spf.CreateScope();
         var updateHandler = scope.ServiceProvider.GetRequiredService<IUpdateHandler>();
         var result = await updateHandler.Handle(update, ct);
-        if (result is not Updates.UpdateHandleResult.MessageOK and not Updates.UpdateHandleResult.InlineQueryOK and not Updates.UpdateHandleResult.MessageSuccesfulMigration)
+        if (result is not Updates.UpdateHandleResult.MessageOK and not Updates.UpdateHandleResult.InlineQueryOK and not Updates.UpdateHandleResult.MessageSuccesfulMigration and not Updates.UpdateHandleResult.CallbackQueryOK)
         {
             Logger.LogWarning("Update handle result not OK: {result}", result.ToString());
         }
