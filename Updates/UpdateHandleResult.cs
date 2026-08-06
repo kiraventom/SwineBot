@@ -6,24 +6,30 @@ public enum UpdateHandleResult
     MessageOK, 
     MessageForward, 
     MessageNotCommand, 
+    MessageUnknownCommand,
+    MessageFailedToCreateUpdate,
+    MessageSuccesfulMigration,
 
     // Inline query
     InlineQueryOK, 
     InlineQueryWrongChatType,
     InlineQueryGroupIdNotLong,
+    InlineQueryGroupNotFound,
+    InlineQueryUserNotFound,
+    InlineQuerySwineNotFound,
+    InlineQueryInvalidFormat,
+
+    // Callback query
+    CallbackQueryOK,
+    CallbackQueryUnknownData,
+    CallbackQueryInvalidDuelRequestId,
 
     // General
     SendMessageFail,
     DatabaseFail, 
     OtherUpdate,
-    InlineQueryGroupNotFound,
-    InlineQueryUserNotFound,
-    InlineQuerySwineNotFound,
-    InlineQueryInvalidFormat,
-    MessageUnknownCommand,
     UnknownError,
-    MessageFailedToCreateUpdate,
     CommandFailed,
-    MessageSuccesfulMigration,
+    CallbackQueryDuelRequestNotFound,
 }
 
