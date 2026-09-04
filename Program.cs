@@ -145,11 +145,10 @@ public class Program
 
     private static Paths BuildPaths(IServiceProvider provider)
     {
-        var appData = Environment.GetFolderPath(SpecialFolder.ApplicationData);
-        var localAppData = Environment.GetFolderPath(SpecialFolder.LocalApplicationData);
+        var curDir = Environment.CurrentDirectory;
 
-        var configDirPath = Path.Combine(appData, PROJECT_NAME);
-        var dataDirPath = Path.Combine(localAppData, PROJECT_NAME);
+        var configDirPath = Path.Combine(curDir, "config");
+        var dataDirPath = Path.Combine(curDir, "data");
 
         Directory.CreateDirectory(configDirPath);
         Directory.CreateDirectory(dataDirPath);

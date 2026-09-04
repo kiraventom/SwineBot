@@ -1,0 +1,8 @@
+services:
+  swine-bot:
+    build: .
+    container_name: swine-bot
+    restart: unless-stopped 
+    volumes:
+      - $CONFIG_DIR:/app/config
+      - $DATA_DIR:/app/data
