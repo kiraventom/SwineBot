@@ -27,5 +27,8 @@
         <None Include="Fonts/Roboto-Regular.ttf">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Include="Achievements/achiev_data.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 </Project>
