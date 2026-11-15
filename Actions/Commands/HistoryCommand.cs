@@ -10,7 +10,7 @@ using SwineBot.ViewModels;
 namespace SwineBot.Actions.Commands;
 
 [CommandInfo("/history", "История веса свинок \U0001f4c8")]
-public class HistoryCommand(ILogger<HistoryCommand> logger, GraphBuilder graphBuilder, UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<HistoryMessage, HistoryViewModel>(messageFactory, achievController)
+public class HistoryCommand(GraphBuilder graphBuilder, UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<HistoryMessage, HistoryViewModel>(messageFactory, achievController)
 {
     protected override async Task<HistoryViewModel> ExecuteInternal(Update update, string parameter)
     {

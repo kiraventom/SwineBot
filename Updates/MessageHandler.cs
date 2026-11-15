@@ -9,7 +9,7 @@ using SwineBot.Actions.Commands.Duel;
 
 namespace SwineBot.Updates;
 
-public class MessageHandler(ILogger<MessageHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, ICommandFactory commandFactory) : UpdateTypeHandler<Telegram.Bot.Types.Message>
+public class MessageHandler(ILogger<MessageHandler> logger, UserContext context, UserContextHelpers contextHelpers, Config config, IBotMessageSender sender, ICommandFactory commandFactory, IDateTimeNowProvider dtProvider) : UpdateTypeHandler<Telegram.Bot.Types.Message>
 {
     public override async Task<UpdateHandleResult> Handle(Message message, CancellationToken token)
     {
@@ -91,12 +91,8 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
                     () => CreateUpdate(tgMessage),
                     "Failed to create update", UpdateHandleResult.MessageFailedToCreateUpdate);
 
-            var (command, parameter) = TryRun(
-                    () =>
-                    {
-                        var cmd = GetCommand(update, botCommand, out var p);
-                        return (cmd, p);
-                    },
+            var (command, parameter) = await TryRunAsync(
+                    () => GetCommand(update, botCommand),
                     "Failed to get command", UpdateHandleResult.MessageUnknownCommand);
 
             var messages = await TryRunAsync(
@@ -132,31 +128,27 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
 
     private static MessageEntity GetBotCommand(Message message) => message.Entities?.FirstOrDefault(e => e.Type == MessageEntityType.BotCommand);
 
-    private ICommand GetCommand(Update update, MessageEntity botCommand, out string parameter)
+    private async Task<(ICommand Command, string Parameter)> GetCommand(Update update, MessageEntity botCommand)
     {
-        parameter = null;
-
         var commandText = update.Text.Substring(botCommand.Offset, botCommand.Length);
-
         var command = commandFactory.Create(commandText);
-
-        parameter = update.Text.Substring(botCommand.Offset + botCommand.Length).Trim();
+        var parameter = update.Text.Substring(botCommand.Offset + botCommand.Length).Trim();
 
         // SwineId is null -> command in private chat and no private swine is selected -> prompt user to select private swine via PiggeryCommand
         if (update.SwineId is null && command is not INoSwineCommand)
         {
             logger.LogInformation("Received private command that requires selected swine, replacing command with {piggeryCommand}", nameof(PiggeryCommand));
-            command = commandFactory.Create<PiggeryCommand>();
-            parameter = string.Empty;
-        }
-        else if (context.DuelRequests.FirstOrDefault(dr => dr.DefenderId == update.SwineId) is {} duelRequest && command is IActionCommand)
-        {
-            logger.LogInformation("Received command that performs action when duel request is not answered, replacing command with {duelReminderCommand}", nameof(DuelReminderCommand));
-            command = commandFactory.Create<DuelReminderCommand>();
-            parameter = string.Empty;
+            return (commandFactory.Create<PiggeryCommand>(), string.Empty);
         }
 
-        return command;
+        // The defender cannot act until the incoming duel request is answered or expires
+        if (command is IActionCommand && await context.GetActiveIncomingDuelRequest(update.SwineId, dtProvider.UtcNow) is not null)
+        {
+            logger.LogInformation("Received command that performs action when duel request is not answered, replacing command with {duelReminderCommand}", nameof(DuelReminderCommand));
+            return (commandFactory.Create<DuelReminderCommand>(), string.Empty);
+        }
+
+        return (command, parameter);
     }
 
     private async Task<T> TryRunAsync<T>(Func<Task<T>> action, string log, UpdateHandleResult err)
@@ -185,17 +177,5 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         }
     }
 
-    private T TryRun<T>(Func<T> action, string log, UpdateHandleResult err)
-    {
-        try
-        {
-            return action();
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, log);
-            throw new UpdateHandleException(err, ex);
-        }
-    }
 }
 

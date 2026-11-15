@@ -12,7 +12,7 @@ using SwineBot.Text;
 namespace SwineBot.Actions.Commands.Duel;
 
 [CommandInfo(HANDLE, "Отменить вызов на дуэль", Type = CommandType.Hidden)]
-public class DuelCancelCommand(ILogger<DuelCancelCommand> logger, IMessageEditor messageEditor, UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<DuelCancelMessage, DuelCancelViewModel>(messageFactory, achievController)
+public class DuelCancelCommand(ILogger<DuelCancelCommand> logger, IMessageEditor messageEditor, UserContext context, IMessageFactory messageFactory, AchievementController achievController, IDateTimeNowProvider dtProvider) : Command<DuelCancelMessage, DuelCancelViewModel>(messageFactory, achievController)
 {
     public const string HANDLE = "/duelcancel";
 
@@ -24,7 +24,7 @@ public class DuelCancelCommand(ILogger<DuelCancelCommand> logger, IMessageEditor
     protected override async Task<DuelCancelViewModel> ExecuteInternal(Update update, string parameter)
     {
         var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
-        var duelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.AttackerId == swine.SwineId);
+        var duelRequest = await context.GetActiveOutgoingDuelRequest(swine.SwineId, dtProvider.UtcNow);
         if (duelRequest is null)
             return new DuelCancelViewModel(HadActiveDuel: false, OpponentName: null);
 
@@ -58,6 +58,3 @@ public class DuelCancelCommand(ILogger<DuelCancelCommand> logger, IMessageEditor
         return new DuelCancelViewModel(HadActiveDuel: true, OpponentName: opponent.Name);
     }
 }
-
-
-

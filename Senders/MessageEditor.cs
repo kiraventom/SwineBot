@@ -13,7 +13,7 @@ public interface IMessageEditor
     Task EditMessage(long chatId, int messageId, IBotMessage message);
 }
 
-public class MessageEditor(ILogger<MessageEditor> logger, ITelegramBotClient client) : IMessageEditor
+public class MessageEditor(ITelegramBotClient client) : IMessageEditor
 {
     public async Task EditReplyMarkup(long chatId, int messageId, InlineKeyboardMarkup markup)
     {

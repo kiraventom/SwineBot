@@ -61,3 +61,12 @@ public record DuelRequestSentViewModel(string UserName, string SwineName) : View
 public record TooSoonToDuelViewModel(string SwineName, string LastOpponentName, int HoursLeft) : ViewModel;
 
 public record DuelCancelViewModel(bool HadActiveDuel, string OpponentName) : ViewModel;
+
+public enum DuelResponseStatus
+{
+    Accepted,
+    Declined,
+    Expired,
+}
+
+public record DuelResponseViewModel(DuelResponseStatus Status, string AttackerSwineName, string DefenderSwineName) : ViewModel;

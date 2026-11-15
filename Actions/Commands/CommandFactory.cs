@@ -9,7 +9,7 @@ public interface ICommandFactory
     ICommand Create(string handle);
 }
 
-public class CommandFactory(ILogger<CommandFactory> logger, ICommandInfos infos, Config config, IServiceProvider sp) : ICommandFactory
+public class CommandFactory(ICommandInfos infos, Config config, IServiceProvider sp) : ICommandFactory
 {
     public T Create<T>() where T : ICommand => sp.GetRequiredService<T>();
 

@@ -29,9 +29,10 @@ public static class UserContextExtensions
             .ToListAsync();
     }
 
-    public static async Task<IReadOnlyList<PotentialOpponent>> GetOpponents(this UserContext context, int userId, int groupId)
+    public static async Task<IReadOnlyList<PotentialOpponent>> GetOpponents(this UserContext context, int userId, int groupId, DateTime utcNow)
     {
-        var busySwinesIds = context.DuelRequests.Select(dr => dr.DefenderId);
+        var requestTtlStart = utcNow - DuelRequestExtensions.TTL;
+        var busySwinesIds = context.DuelRequests.Where(dr => dr.DateTime > requestTtlStart).Select(dr => dr.DefenderId);
 
         var members = await context.Swines
             .Where(s => s.GroupId == groupId)
@@ -49,6 +50,40 @@ public static class UserContextExtensions
             .ToList();
 
         return opps;
+    }
+
+    public static async Task<DuelRequest> GetActiveIncomingDuelRequest(this UserContext context, int? swineId, DateTime utcNow)
+    {
+        if (swineId is null)
+            return null;
+
+        var requests = await context.DuelRequests
+            .AsTracking()
+            .Where(dr => dr.DefenderId == swineId)
+            .ToListAsync();
+
+        return PickActiveRequest(context, requests, utcNow);
+    }
+
+    public static async Task<DuelRequest> GetActiveOutgoingDuelRequest(this UserContext context, int swineId, DateTime utcNow)
+    {
+        var requests = await context.DuelRequests
+            .AsTracking()
+            .Where(dr => dr.AttackerId == swineId)
+            .ToListAsync();
+
+        return PickActiveRequest(context, requests, utcNow);
+    }
+
+    private static DuelRequest PickActiveRequest(UserContext context, IReadOnlyCollection<DuelRequest> requests, DateTime utcNow)
+    {
+        foreach (var expired in requests.Where(r => r.IsExpired(utcNow)))
+            context.DuelRequests.Remove(expired);
+
+        return requests
+            .Where(r => !r.IsExpired(utcNow))
+            .OrderByDescending(r => r.DateTime)
+            .FirstOrDefault();
     }
 }
 

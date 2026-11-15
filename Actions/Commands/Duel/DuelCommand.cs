@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace SwineBot.Actions.Commands.Duel;
 
 [CommandInfo("/duel", "Вызвать на дуэль \u2694\uFE0F")]
-public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider) : ICommand, IActionCommand
+public class DuelCommand(ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider) : ICommand, IActionCommand
 {
     private const int DUEL_COOLDOWN = 24;
 
@@ -44,8 +44,10 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
     {
         var user = await context.Users.FirstAsync(u => u.UserId == update.UserId);
 
+        var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
+
         string existingDuelRequestOpponentName = null;
-        var existingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.AttackerId == update.SwineId);
+        var existingDuelRequest = await context.GetActiveOutgoingDuelRequest(swine.SwineId, dtProvider.UtcNow);
         if (existingDuelRequest is not null)
         {
             var existingDuelRequestOpponent = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == existingDuelRequest.DefenderId);
@@ -66,7 +68,7 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
             groupId = update.GroupId.Value;
         }
 
-        var opponents = await context.GetOpponents(user.UserId, groupId);
+        var opponents = await context.GetOpponents(user.UserId, groupId, dtProvider.UtcNow);
         var opponentsCount = opponents.Count();
 
         var group = await context.Groups.FirstAsync(g => g.GroupId == groupId);
@@ -92,7 +94,7 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
             groupId = update.GroupId.Value;
         }
 
-        var opponents = await context.GetOpponents(user.UserId, groupId);
+        var opponents = await context.GetOpponents(user.UserId, groupId, dtProvider.UtcNow);
 
         var opponent = await context.Users.FirstOrDefaultAsync(u => u.TelegramId == opponentTgId);
         if (opponent is null)
@@ -105,7 +107,7 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
         if (opponentSwine is null)
             throw new NotSupportedException($"User {opponent.UserId} does not have swines in the group {groupId}");
 
-        if (await context.DuelRequests.FirstOrDefaultAsync(dr => dr.DefenderId == opponentSwine.SwineId) is {} existingDuelRequest)
+        if (await context.GetActiveIncomingDuelRequest(opponentSwine.SwineId, dtProvider.UtcNow) is {} existingDuelRequest)
             throw new NotSupportedException($"Swine {opponentSwine.SwineId} was selected as opponent despite already being a defender in duel request {existingDuelRequest.RequestId}");
 
         var duelRequestId = await GetDuelRequestId(update, swine, opponents, opponentSwine);
@@ -141,7 +143,7 @@ public class DuelCommand(ILogger<DuelCommand> logger, ICommandFactory commandFac
         if (opponents.All(o => o.Swine.SwineId != opponentSwine.SwineId))
             throw new NotSupportedException($"Swine {opponentSwine.SwineId} is not valid opponent for {swine.SwineId}");
 
-        var existingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.AttackerId == swine.SwineId);
+        var existingDuelRequest = await context.GetActiveOutgoingDuelRequest(swine.SwineId, dtProvider.UtcNow);
         if (existingDuelRequest is not null)
         {
             // TODO Stupid code
