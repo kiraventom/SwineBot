@@ -118,11 +118,15 @@ public class DuelCommand(ICommandFactory commandFactory, UserContext context, IM
 
         var duelRequestId = await GetDuelRequestId(update, swine, opponents, opponentSwine);
 
-        var winChance = DuelResolution.GetDefenderWinChance(swine.Weight, opponentSwine.Weight);
-        var stakeKg = DuelResolution.GetStakeKg(opponentSwine.Weight);
-        var declineFeeKg = DuelResolution.GetDeclineFeeKg(swine.Weight, opponentSwine.Weight);
+        var attackerKills = await context.GetKillsAsync(swine.OwnerId, swine.GroupId);
+        var defenderKills = await context.GetKillsAsync(opponentSwine.OwnerId, opponentSwine.GroupId);
 
-        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, declineFeeKg);
+        var winChance = DuelResolution.GetDefenderWinChance(swine.Weight, opponentSwine.Weight, attackerKills, defenderKills);
+        var stakeKg = DuelResolution.GetStakeKg(opponentSwine.Weight);
+        var defenderSlaughterWeight = await context.GetSlaughterWeightAsync(opponentSwine.OwnerId, opponentSwine.GroupId);
+        var declineBonusKg = DuelResolution.GetDeclineSlaughterShareKg(defenderSlaughterWeight);
+
+        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, declineBonusKg, attackerKills, defenderKills);
 
         List<IBotMessage> messagesToSend = [];
 

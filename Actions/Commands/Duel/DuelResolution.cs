@@ -15,10 +15,20 @@ public record DuelOutcome(bool AttackerWon, int WinnerWeightBefore, int WinnerWe
 public static class DuelResolution
 {
     /// <summary>
-    /// Шанс победы защитника, %: вес решает, скрытых статов нет.
+    /// Шанс победы защитника, %: вес решает, но каждый забитый предшественник любой
+    /// из сторон режет её шанс на <see cref="DuelBalance.KillPenaltyPoints"/> п.п.
+    /// Серийного убийцу можно контрить, вызвав его на дуэль малышом.
     /// </summary>
-    public static int GetDefenderWinChance(int attackerWeight, int defenderWeight)
-        => (int)Math.Round((double)defenderWeight / (attackerWeight + defenderWeight) * 100);
+    public static int GetDefenderWinChance(int attackerWeight, int defenderWeight, int attackerKills = 0, int defenderKills = 0)
+    {
+        var weightShare = (double)defenderWeight / (attackerWeight + defenderWeight) * 100;
+
+        var chance = weightShare
+                     - DuelBalance.KillPenaltyPoints * defenderKills
+                     + DuelBalance.KillPenaltyPoints * attackerKills;
+
+        return (int)Math.Round(Math.Clamp(chance, DuelBalance.MinWinChance, DuelBalance.MaxWinChance));
+    }
 
     /// <summary>
     /// Ставка: доля веса проигравшего, но не меньше <see cref="DuelBalance.MinStakeKg"/>
@@ -31,45 +41,49 @@ public static class DuelResolution
     }
 
     /// <summary>
-    /// Штраф за отказ, кг: ожидаемая потеря защитника в бою, то есть
-    /// ставка (сколько он теряет при поражении) × шанс этого поражения.
-    /// Так отказ не выгоднее и не дороже боя, и никто не получает преимущества
-    /// от выбранной политики «драться всегда» или «отказываться всегда».
+    /// Матожидание изменения веса защитника за бой при текущем шансе. При нулевом
+    /// дебаффе за забои оно равно нулю — поэтому и весовой штраф за отказ нулевой.
     /// </summary>
-    public static int GetDeclineFeeKg(int attackerWeight, int defenderWeight)
+    public static double GetExpectedDelta(int attackerWeight, int defenderWeight, int attackerKills = 0, int defenderKills = 0)
     {
-        var defenderWinChance = GetDefenderWinChance(attackerWeight, defenderWeight);
-        var stake = GetStakeKg(defenderWeight);
-        var loseChance = (100 - defenderWinChance) / 100.0;
-
-        var fee = (int)Math.Round(stake * loseChance * DuelBalance.DeclineRiskFactor);
-
-        var maxFee = Math.Max(0, defenderWeight - DuelBalance.MinWeightKg);
-        return Math.Min(Math.Max(fee, DuelBalance.MinDeclineFeeKg), maxFee);
-    }
-
-    /// <summary>
-    /// Матожидание изменения веса защитника за бой: p_победы × ставка атакующего
-    /// минус p_поражения × своя ставка. При ставке «доля веса проигравшего» и шансе,
-    /// пропорциональном весу, это ровно ноль — поэтому и штраф за отказ символический.
-    /// </summary>
-    public static double GetExpectedDelta(int attackerWeight, int defenderWeight)
-    {
-        // Шанс берём точный, а не округлённый до процентов: иначе на больших весах
-        // округление даёт ложные «-2 кг» там, где по формуле ровно ноль
-        var defenderWinChance = (double)defenderWeight / (attackerWeight + defenderWeight);
+        var defenderWinChance = GetDefenderWinChance(attackerWeight, defenderWeight, attackerKills, defenderKills) / 100.0;
         var win = defenderWinChance * GetStakeKg(attackerWeight);
         var lose = (1 - defenderWinChance) * GetStakeKg(defenderWeight);
         return win - lose;
     }
 
     /// <summary>
+    /// Весовая часть штрафа за отказ, кг (обычно ноль: платят slaughter-бонусом).
+    /// </summary>
+    public static int GetDeclineFeeKg(int attackerWeight, int defenderWeight)
+    {
+        if (DuelBalance.DeclineRiskFactor <= 0)
+            return DuelBalance.MinDeclineFeeKg;
+
+        var defenderWinChance = GetDefenderWinChance(attackerWeight, defenderWeight);
+        var stake = GetStakeKg(defenderWeight);
+        var loseChance = (100 - defenderWinChance) / 100.0;
+
+        var fee = (int)Math.Round(stake * loseChance * DuelBalance.DeclineRiskFactor);
+        var maxFee = Math.Max(0, defenderWeight - DuelBalance.MinWeightKg);
+        return Math.Min(Math.Max(fee, DuelBalance.MinDeclineFeeKg), maxFee);
+    }
+
+    /// <summary>
+    /// Сколько slaughter-бонуса защитник отдаёт вызывающему за отказ/игнор/забой.
+    /// </summary>
+    public static int GetDeclineSlaughterShareKg(int defenderSlaughterWeight)
+        => defenderSlaughterWeight <= 0
+            ? 0
+            : (int)Math.Round(defenderSlaughterWeight * DuelBalance.DeclineSlaughterShare);
+
+    /// <summary>
     /// Бросок боя. <paramref name="roll"/> — равномерное [0, 1); защитник побеждает,
     /// если бросок попал в его шанс.
     /// </summary>
-    public static DuelOutcome Resolve(int attackerWeight, int defenderWeight, double roll)
+    public static DuelOutcome Resolve(int attackerWeight, int defenderWeight, double roll, int attackerKills = 0, int defenderKills = 0)
     {
-        var defenderWinChance = GetDefenderWinChance(attackerWeight, defenderWeight);
+        var defenderWinChance = GetDefenderWinChance(attackerWeight, defenderWeight, attackerKills, defenderKills);
         var attackerWon = roll * 100 >= defenderWinChance;
 
         var winnerWeight = attackerWon ? attackerWeight : defenderWeight;

@@ -20,16 +20,16 @@ public class DuelResponseMessage : BotMessage<DuelResponseViewModel>
                     .LineBreak()
                     .LineBreak();
 
-                if (viewModel.DeclineFeeKg > 0)
+                if (viewModel.DeclineBonusKg > 0)
                 {
-                    Text.Verbatim("Штраф: ").Monospace($"\u2212{viewModel.DeclineFeeKg} кг")
-                        .Verbatim(" в пользу ")
-                        .Bold(viewModel.AttackerSwineName)
-                        .Verbatim($". Вес: {viewModel.DefenderWeightBefore} \u2192 {viewModel.DefenderWeightAfter} кг");
+                    Text.Verbatim("Свиной бог не уважает трусов: ")
+                        .Monospace($"{viewModel.DeclineBonusKg}")
+                        .Verbatim(" бонуса забоев уходит ")
+                        .Bold(viewModel.AttackerSwineName);
                 }
                 else
                 {
-                    Text.Verbatim("Штрафа нет");
+                    Text.Verbatim("Бонуса забоев у свина нет, отдавать нечего");
                 }
                 break;
 
@@ -38,7 +38,16 @@ public class DuelResponseMessage : BotMessage<DuelResponseViewModel>
                     .Bold(viewModel.AttackerSwineName)
                     .Verbatim(" свину ")
                     .Bold(viewModel.DefenderSwineName)
-                    .Verbatim(" истёк");
+                    .Verbatim(" истёк — это засчитано как отказ");
+
+                if (viewModel.DeclineBonusKg > 0)
+                {
+                    Text.LineBreak()
+                        .Verbatim("Свиной бог не уважает трусов: ")
+                        .Monospace($"{viewModel.DeclineBonusKg}")
+                        .Verbatim(" бонуса забоев уходит ")
+                        .Bold(viewModel.AttackerSwineName);
+                }
                 break;
 
             default:

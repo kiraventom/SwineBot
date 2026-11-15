@@ -52,7 +52,7 @@ public record FeedViewModel(FeedResult Result, string SwineName, int Consecutive
 
 public record SelectDuelOpponentViewModel(string Query, string GroupName, int OpponentsCount, string CurrentRequestOpponent) : ViewModel;
 
-public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int StakePercent, int StakeKg, int DeclineFeeKg) : ViewModel;
+public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int StakePercent, int StakeKg, int DeclineBonusKg, int AttackerKills, int DefenderKills) : ViewModel;
 
 public record DuelReminderViewModel(string LinkToMessage, DateTime RequestDateTime, bool IsNotSupergroup = false) : ViewModel;
 
@@ -68,7 +68,7 @@ public enum DuelResponseStatus
     Expired,
 }
 
-public record DuelResponseViewModel(DuelResponseStatus Status, string AttackerSwineName, string DefenderSwineName, int DeclineFeeKg = 0, int DefenderWeightBefore = 0, int DefenderWeightAfter = 0) : ViewModel;
+public record DuelResponseViewModel(DuelResponseStatus Status, string AttackerSwineName, string DefenderSwineName, int DeclineBonusKg = 0) : ViewModel;
 
 public record DuelResultViewModel(string AttackerSwineName, string DefenderSwineName, bool AttackerWon, int WinnerWeightBefore, int WinnerWeightAfter, int LoserWeightBefore, int LoserWeightAfter) : ViewModel
 {

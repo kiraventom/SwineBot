@@ -77,13 +77,33 @@ public static class UserContextExtensions
 
     private static DuelRequest PickActiveRequest(UserContext context, IReadOnlyCollection<DuelRequest> requests, DateTime utcNow)
     {
-        foreach (var expired in requests.Where(r => r.IsExpired(utcNow)))
-            context.DuelRequests.Remove(expired);
-
+        // Просроченные не удаляем здесь: игнор вызова — это отказ, а штраф за отказ
+        // накладывает DuelExpiry, чтобы он применялся ровно один раз
         return requests
             .Where(r => !r.IsExpired(utcNow))
             .OrderByDescending(r => r.DateTime)
             .FirstOrDefault();
     }
+
+    /// <summary>
+    /// Вес забитых предшественников плюс поправки от дуэлей — из него считается
+    /// множитель кормления.
+    /// </summary>
+    public static async Task<int> GetSlaughterWeightAsync(this UserContext context, int userId, int? groupId)
+    {
+        var slaughtered = await context.Slaughters
+            .Where(s => s.UserId == userId && s.GroupId == groupId)
+            .SumAsync(s => (int?)s.SwineWeight) ?? 0;
+
+        var bonus = await context.SlaughterBonuses
+            .Where(b => b.UserId == userId && b.GroupId == groupId)
+            .SumAsync(b => (int?)b.Weight) ?? 0;
+
+        return Math.Max(0, slaughtered + bonus);
+    }
+
+    /// <summary>Сколько свинов владелец забил в этой группе — дебафф в дуэлях.</summary>
+    public static Task<int> GetKillsAsync(this UserContext context, int userId, int? groupId)
+        => context.Slaughters.CountAsync(s => s.UserId == userId && s.GroupId == groupId);
 }
 

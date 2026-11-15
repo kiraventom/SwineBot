@@ -87,6 +87,11 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
 
         try
         {
+            // Игнор вызова дольше TTL = отказ: применяем лениво, при первой активности в чате
+            await TryRunAsync(
+                    async () => await DuelExpiry.ApplyOverdueAsync(context, dtProvider.UtcNow),
+                    "Failed to apply overdue duel requests", UpdateHandleResult.DatabaseFail);
+
             var update = await TryRunAsync(
                     () => CreateUpdate(tgMessage),
                     "Failed to create update", UpdateHandleResult.MessageFailedToCreateUpdate);
@@ -141,10 +146,10 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
             return (commandFactory.Create<PiggeryCommand>(), string.Empty);
         }
 
-        // The defender cannot act until the incoming duel request is answered or expires
-        if (command is IActionCommand && await context.GetActiveIncomingDuelRequest(update.SwineId, dtProvider.UtcNow) is not null)
+        // Висящий вызов мешает только новым вызовам: кормить и забивать можно
+        if (command is DuelCommand && await context.GetActiveIncomingDuelRequest(update.SwineId, dtProvider.UtcNow) is not null)
         {
-            logger.LogInformation("Received command that performs action when duel request is not answered, replacing command with {duelReminderCommand}", nameof(DuelReminderCommand));
+            logger.LogInformation("Received duel command while a duel request is not answered, replacing command with {duelReminderCommand}", nameof(DuelReminderCommand));
             return (commandFactory.Create<DuelReminderCommand>(), string.Empty);
         }
 

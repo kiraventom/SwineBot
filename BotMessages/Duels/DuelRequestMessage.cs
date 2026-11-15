@@ -45,10 +45,20 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
             .Monospace($"{viewModel.StakeKg} кг")
             .LineBreak();
 
-        Text.Verbatim("Отказ: ").Monospace($"\u2212{viewModel.DeclineFeeKg} кг")
-            .Verbatim(" в пользу вызывающего")
-            .LineBreak()
+        Text.Verbatim("Отказ: ").Monospace($"\u2212{viewModel.DeclineBonusKg}")
+            .Verbatim(" бонуса забоев в пользу вызывающего")
             .LineBreak();
+
+        if (viewModel.DefenderKills > 0 || viewModel.AttackerKills > 0)
+        {
+            Text.Italic("Забитых предшественников: ")
+                .Verbatim($"{viewModel.DefenderKills} у вас, {viewModel.AttackerKills} у вызывающего")
+                .Verbatim(" — каждый режет шанс на ")
+                .Monospace("2%")
+                .LineBreak();
+        }
+
+        Text.LineBreak();
 
         Text.Italic("Принять вызов?");
 

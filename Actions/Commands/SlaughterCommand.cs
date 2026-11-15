@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SwineBot.Actions.Commands.Duel;
 using SwineBot.Achievements;
 using SwineBot.BotMessages;
 using SwineBot.Model;
@@ -8,7 +10,7 @@ using SwineBot.ViewModels;
 namespace SwineBot.Actions.Commands;
 
 [CommandInfo(COMMAND_NAME, "Убить свинку \U0001f52a")]
-public class SlaughterCommand(UserContext context, IDateTimeNowProvider dtnProvider, IMessageFactory messageFactory, AchievementController achievController) : Command<SlaughterMessage, SlaughterViewModel>(messageFactory, achievController), IActionCommand
+public class SlaughterCommand(ILogger<SlaughterCommand> logger, UserContext context, IDateTimeNowProvider dtnProvider, IMessageFactory messageFactory, AchievementController achievController) : Command<SlaughterMessage, SlaughterViewModel>(messageFactory, achievController), IActionCommand
 {
     public const string COMMAND_NAME = "/slaughter";
     public const string CONFIRMATION = "yes";
@@ -37,6 +39,14 @@ public class SlaughterCommand(UserContext context, IDateTimeNowProvider dtnProvi
 
         if (!receivedConfirmation)
             return new SlaughterViewModel(swine, false, achievsCount, false, null);
+
+        // Забой свина под висящим вызовом считается отказом: свиной бог не уважает
+        // тех, кто прячется за жертвенным ножом
+        if (await context.GetActiveIncomingDuelRequest(swine.SwineId, dtnProvider.UtcNow) is { } pendingDuel)
+        {
+            await DuelDecline.ApplyAsync(context, pendingDuel, dtnProvider.UtcNow, "duel dodged by slaughter");
+            logger.LogInformation("Duel request [{requestId}] closed as decline because swine [{swine}] was slaughtered", pendingDuel.RequestId, swine.SwineId);
+        }
 
         var slaughteredWeight = swine.Weight - 1;
         context.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });

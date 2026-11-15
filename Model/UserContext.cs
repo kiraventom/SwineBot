@@ -16,6 +16,7 @@ public class UserContext : DbContext
     public DbSet<DuelResult> DuelResults { get; set; }
     public DbSet<Achievement> Achievements { get; set; }
     public DbSet<Slaughter> Slaughters { get; set; }
+    public DbSet<SlaughterBonus> SlaughterBonuses { get; set; }
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
@@ -67,6 +68,12 @@ public class UserContext : DbContext
         {
             s.HasOne<SwineInfo>().WithMany().HasForeignKey(i => i.SwineInfoId).OnDelete(DeleteBehavior.Cascade);
             s.Property(e => e.Type).HasConversion<int>();
+        });
+
+        modelBuilder.Entity<SlaughterBonus>(s =>
+        {
+            s.HasOne<User>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Cascade);
+            s.HasOne<Group>().WithMany().HasForeignKey(i => i.GroupId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Slaughter>(s =>
@@ -194,6 +201,25 @@ public class Achievement
 
     public AchievementType Type { get; set; }
     public int Value { get; set; }
+}
+
+/// <summary>
+/// Поправка к slaughter-бонусу: дуэль может передать часть бонуса от одного свина другому.
+/// Сумма Slaughters.SwineWeight и этих поправок даёт вес, из которого считается
+/// множитель кормления (см. User.GetGrowthModifier).
+/// </summary>
+public class SlaughterBonus
+{
+    [Key] public int SlaughterBonusId { get; set; }
+
+    public int UserId { get; set; }
+    public int GroupId { get; set; }
+
+    /// <summary>Может быть отрицательным: столько бонуса свин отдал.</summary>
+    public int Weight { get; set; }
+
+    public DateTime DateTime { get; set; }
+    public string Reason { get; set; }
 }
 
 public class Slaughter

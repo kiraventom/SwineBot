@@ -160,12 +160,9 @@ public class FeedGenerator : IFeedGenerator
     {
         var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
 
-        var slaughters = Context.Slaughters
-            .Where(s => s.UserId == swine.OwnerId)
-            .Where(s => s.GroupId == swine.GroupId)
-            .Where(s => s.SwineWeight >= SlaughterCommand.MIN_SWINE_WEIGHT);
-
-        var totalSlaughteredWeight = await slaughters.CountAsync() > 0 ? await slaughters.SumAsync(s => s.SwineWeight) : 0;
+        // Множитель считается от «чистого» slaughter-веса: часть бонуса могла уйти
+        // вызывавшим на дуэлях, а часть — достаться от чужих отказов
+        var totalSlaughteredWeight = await Context.GetSlaughterWeightAsync(swine.OwnerId, swine.GroupId);
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
 
