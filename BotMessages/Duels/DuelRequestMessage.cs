@@ -46,7 +46,7 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
             .LineBreak();
 
         Text.Verbatim("Отказ: ").Monospace($"\u2212{viewModel.DeclineFeeKg} кг")
-            .Verbatim($" ({viewModel.DeclineFeePercent}% вашего веса) в пользу вызывающего")
+            .Verbatim(" в пользу вызывающего")
             .LineBreak()
             .LineBreak();
 

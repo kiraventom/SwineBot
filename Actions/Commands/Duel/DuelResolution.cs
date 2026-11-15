@@ -31,24 +31,36 @@ public static class DuelResolution
     }
 
     /// <summary>
-    /// Штраф за отказ, % от веса защитника: базовая ставка плюс надбавка фавориту.
-    /// Уклониться андердогу дешевле, фавориту — дорого, но бесплатно не бывает никому.
+    /// Штраф за отказ, кг: ожидаемая потеря защитника в бою, то есть
+    /// ставка (сколько он теряет при поражении) × шанс этого поражения.
+    /// Так отказ не выгоднее и не дороже боя, и никто не получает преимущества
+    /// от выбранной политики «драться всегда» или «отказываться всегда».
     /// </summary>
-    public static int GetDeclineFeePercent(int defenderWinChance)
+    public static int GetDeclineFeeKg(int attackerWeight, int defenderWeight)
     {
-        var favoritePremium = Math.Max(0, defenderWinChance - 50) * DuelBalance.DeclineFavoriteRate;
-        var percent = DuelBalance.DeclineBasePercent + favoritePremium;
-        return (int)Math.Round(Math.Min(percent, DuelBalance.MaxDeclinePercent));
-    }
+        var defenderWinChance = GetDefenderWinChance(attackerWeight, defenderWeight);
+        var stake = GetStakeKg(defenderWeight);
+        var loseChance = (100 - defenderWinChance) / 100.0;
 
-    /// <summary>Тот же штраф, но в килограммах, с учётом минимального веса.</summary>
-    public static int GetDeclineFeeKg(int defenderWeight, int defenderWinChance)
-    {
-        var percent = GetDeclineFeePercent(defenderWinChance);
-        var fee = (int)Math.Round(defenderWeight * percent / 100.0);
+        var fee = (int)Math.Round(stake * loseChance * DuelBalance.DeclineRiskFactor);
 
         var maxFee = Math.Max(0, defenderWeight - DuelBalance.MinWeightKg);
-        return Math.Min(Math.Max(fee, 1), maxFee);
+        return Math.Min(Math.Max(fee, DuelBalance.MinDeclineFeeKg), maxFee);
+    }
+
+    /// <summary>
+    /// Матожидание изменения веса защитника за бой: p_победы × ставка атакующего
+    /// минус p_поражения × своя ставка. При ставке «доля веса проигравшего» и шансе,
+    /// пропорциональном весу, это ровно ноль — поэтому и штраф за отказ символический.
+    /// </summary>
+    public static double GetExpectedDelta(int attackerWeight, int defenderWeight)
+    {
+        // Шанс берём точный, а не округлённый до процентов: иначе на больших весах
+        // округление даёт ложные «-2 кг» там, где по формуле ровно ноль
+        var defenderWinChance = (double)defenderWeight / (attackerWeight + defenderWeight);
+        var win = defenderWinChance * GetStakeKg(attackerWeight);
+        var lose = (1 - defenderWinChance) * GetStakeKg(defenderWeight);
+        return win - lose;
     }
 
     /// <summary>

@@ -120,10 +120,9 @@ public class DuelCommand(ICommandFactory commandFactory, UserContext context, IM
 
         var winChance = DuelResolution.GetDefenderWinChance(swine.Weight, opponentSwine.Weight);
         var stakeKg = DuelResolution.GetStakeKg(opponentSwine.Weight);
-        var declineFeePercent = DuelResolution.GetDeclineFeePercent(winChance);
-        var declineFeeKg = DuelResolution.GetDeclineFeeKg(opponentSwine.Weight, winChance);
+        var declineFeeKg = DuelResolution.GetDeclineFeeKg(swine.Weight, opponentSwine.Weight);
 
-        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, declineFeePercent, declineFeeKg);
+        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, declineFeeKg);
 
         List<IBotMessage> messagesToSend = [];
 

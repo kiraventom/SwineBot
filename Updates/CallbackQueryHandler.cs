@@ -119,8 +119,7 @@ public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserCont
 
     private async Task<UpdateHandleResult> Decline(string callbackQueryId, DuelRequest duelRequest, Swine attackerSwine, Swine defenderSwine, DateTime utcNow, CancellationToken token)
     {
-        var winChance = DuelResolution.GetDefenderWinChance(attackerSwine.Weight, defenderSwine.Weight);
-        var fee = DuelResolution.GetDeclineFeeKg(defenderSwine.Weight, winChance);
+        var fee = DuelResolution.GetDeclineFeeKg(attackerSwine.Weight, defenderSwine.Weight);
 
         var defenderWeightBefore = defenderSwine.Weight;
         var attackerWeightBefore = attackerSwine.Weight;
