@@ -9,8 +9,15 @@ public class TooSoonToDuelMessage : BotMessage<TooSoonToDuelViewModel>
 {
     public override void Init<TMessage>(ILogger<TMessage> logger, TooSoonToDuelViewModel viewModel)
     {
-        Text.Verbatim("В памяти ").Bold(viewModel.SwineName).Verbatim(" ещё слишком свежи воспоминания о битве с ").Bold(viewModel.LastOpponentName).LineBreak().LineBreak();
-        
+        if (viewModel.WasDecline)
+        {
+            Text.Verbatim("Свин ").Bold(viewModel.SwineName).Verbatim(" ещё не отошёл от того, что уклонился от вызова ").Bold(viewModel.LastOpponentName).LineBreak().LineBreak();
+        }
+        else
+        {
+            Text.Verbatim("В памяти ").Bold(viewModel.SwineName).Verbatim(" ещё слишком свежи воспоминания о битве с ").Bold(viewModel.LastOpponentName).LineBreak().LineBreak();
+        }
+
         var noun = MessageTextUtils.GetDeclinatedNoun(viewModel.HoursLeft, Unit.Hour);
         Text.Verbatim($"Судя по выражению морды свина, он будет готов к новой дуэли через {viewModel.HoursLeft} {noun}");
     }

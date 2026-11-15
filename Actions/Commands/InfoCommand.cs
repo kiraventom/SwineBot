@@ -18,7 +18,8 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
     {
         var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
 
-        var duels = context.DuelResults;
+        // Declines give a cooldown but are not fights, so they stay out of the win/loss stats
+        var duels = context.DuelResults.Where(d => !d.IsDecline);
         var wonDuels = await duels.CountAsync(d => (d.AttackerWon && d.AttackerId == update.SwineId || !d.AttackerWon && d.DefenderId == update.SwineId));
         var lostDuels = await duels.CountAsync(d => (d.AttackerWon && d.DefenderId == update.SwineId || !d.AttackerWon && d.AttackerId == update.SwineId));
 

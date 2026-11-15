@@ -4,8 +4,7 @@ using SwineBot.ViewModels;
 namespace SwineBot.BotMessages.Duels;
 
 /// <summary>
-/// Replaces the duel request message after the defender pressed accept/decline
-/// (or after the request expired).
+/// Заменяет сообщение вызова, когда защитник отказался или вызов истёк.
 /// </summary>
 public class DuelResponseMessage : BotMessage<DuelResponseViewModel>
 {
@@ -13,18 +12,25 @@ public class DuelResponseMessage : BotMessage<DuelResponseViewModel>
     {
         switch (viewModel.Status)
         {
-            case DuelResponseStatus.Accepted:
-                Text.Verbatim("\u2694\ufe0f ")
-                    .Bold(viewModel.DefenderSwineName)
-                    .Verbatim(" принимает вызов от ")
-                    .Bold(viewModel.AttackerSwineName);
-                break;
-
             case DuelResponseStatus.Declined:
                 Text.Verbatim("\U0001F3F3\ufe0f ")
                     .Bold(viewModel.DefenderSwineName)
-                    .Verbatim(" отклоняет вызов от ")
-                    .Bold(viewModel.AttackerSwineName);
+                    .Verbatim(" отказывается от вызова ")
+                    .Bold(viewModel.AttackerSwineName)
+                    .LineBreak()
+                    .LineBreak();
+
+                if (viewModel.DeclineFeeKg > 0)
+                {
+                    Text.Verbatim("Штраф: ").Monospace($"\u2212{viewModel.DeclineFeeKg} кг")
+                        .Verbatim(" в пользу ")
+                        .Bold(viewModel.AttackerSwineName)
+                        .Verbatim($". Вес: {viewModel.DefenderWeightBefore} \u2192 {viewModel.DefenderWeightAfter} кг");
+                }
+                else
+                {
+                    Text.Verbatim("Штрафа нет");
+                }
                 break;
 
             case DuelResponseStatus.Expired:

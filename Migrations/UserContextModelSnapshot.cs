@@ -87,6 +87,9 @@ namespace SwineBot.Migrations
                     b.Property<int?>("DefenderId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsDecline")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("LoserWeightAfter")
                         .HasColumnType("INTEGER");
 

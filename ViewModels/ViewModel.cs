@@ -52,21 +52,27 @@ public record FeedViewModel(FeedResult Result, string SwineName, int Consecutive
 
 public record SelectDuelOpponentViewModel(string Query, string GroupName, int OpponentsCount, string CurrentRequestOpponent) : ViewModel;
 
-public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int DeclinePenalty) : ViewModel;
+public record DuelRequestViewModel(int DuelRequestId, string UserName, string SwineName, int SwineWeight, string Tag, long Id, string CallerUserName, string CallerSwineName, int CallerSwineWeight, int WinChance, int StakePercent, int StakeKg, int DeclineFeePercent, int DeclineFeeKg) : ViewModel;
 
 public record DuelReminderViewModel(string LinkToMessage, DateTime RequestDateTime, bool IsNotSupergroup = false) : ViewModel;
 
 public record DuelRequestSentViewModel(string UserName, string SwineName) : ViewModel;
 
-public record TooSoonToDuelViewModel(string SwineName, string LastOpponentName, int HoursLeft) : ViewModel;
+public record TooSoonToDuelViewModel(string SwineName, string LastOpponentName, int HoursLeft, bool WasDecline = false) : ViewModel;
 
 public record DuelCancelViewModel(bool HadActiveDuel, string OpponentName) : ViewModel;
 
 public enum DuelResponseStatus
 {
-    Accepted,
     Declined,
     Expired,
 }
 
-public record DuelResponseViewModel(DuelResponseStatus Status, string AttackerSwineName, string DefenderSwineName) : ViewModel;
+public record DuelResponseViewModel(DuelResponseStatus Status, string AttackerSwineName, string DefenderSwineName, int DeclineFeeKg = 0, int DefenderWeightBefore = 0, int DefenderWeightAfter = 0) : ViewModel;
+
+public record DuelResultViewModel(string AttackerSwineName, string DefenderSwineName, bool AttackerWon, int WinnerWeightBefore, int WinnerWeightAfter, int LoserWeightBefore, int LoserWeightAfter) : ViewModel
+{
+    public string WinnerSwineName => AttackerWon ? AttackerSwineName : DefenderSwineName;
+    public string LoserSwineName => AttackerWon ? DefenderSwineName : AttackerSwineName;
+    public int StakeKg => WinnerWeightAfter - WinnerWeightBefore;
+}

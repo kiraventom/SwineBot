@@ -158,6 +158,12 @@ public class DuelResult
     public int? DefenderId { get; set; }
     public bool AttackerWon { get; set; }
 
+    /// <summary>
+    /// Дуэль не состоялась: защитник отказался и заплатил штраф. Такая запись
+    /// даёт кулдаун обеим сторонам, но не считается победой/поражением в статистике.
+    /// </summary>
+    public bool IsDecline { get; set; }
+
     public DateTime DateTime { get; set; }
 
     public int WinnerWeightBefore { get; set; }

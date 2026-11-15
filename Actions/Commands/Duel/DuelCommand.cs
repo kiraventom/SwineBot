@@ -9,14 +9,15 @@ using Microsoft.Extensions.Logging;
 namespace SwineBot.Actions.Commands.Duel;
 
 [CommandInfo("/duel", "Вызвать на дуэль \u2694\uFE0F")]
-public class DuelCommand(ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider) : ICommand, IActionCommand
+public class DuelCommand(ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider, Config config) : ICommand, IActionCommand
 {
-    private const int DUEL_COOLDOWN = 24;
+    private int CooldownHours => config.DuelCooldownHours ?? DuelBalance.CooldownHours;
 
     public async Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter = null)
     {
+        // Cooldown applies to both sides: a swine cannot challenge right after being challenged either
         var lastDuel = await context.DuelResults
-            .Where(r => r.AttackerId == update.SwineId)
+            .Where(r => r.AttackerId == update.SwineId || r.DefenderId == update.SwineId)
             .OrderByDescending(r => r.DateTime)
             .FirstOrDefaultAsync();
 
@@ -24,12 +25,17 @@ public class DuelCommand(ICommandFactory commandFactory, UserContext context, IM
         {
             var now = dtProvider.UtcNow;
             var hoursPassed = (now - lastDuel.DateTime).TotalHours;
-            if (hoursPassed < DUEL_COOLDOWN)
+            if (hoursPassed < CooldownHours)
             {
                 var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
-                var lastOpponent = await context.Swines.FirstAsync(s => s.SwineId == lastDuel.DefenderId);
 
-                var viewModel = new TooSoonToDuelViewModel(swine.Name, lastOpponent.Name, DUEL_COOLDOWN - (int)hoursPassed);
+                var lastOpponentId = lastDuel.AttackerId == update.SwineId ? lastDuel.DefenderId : lastDuel.AttackerId;
+                var lastOpponent = lastOpponentId is {} opponentId
+                    ? await context.Swines.FirstAsync(s => s.SwineId == opponentId)
+                    : swine;
+
+                var hoursLeft = (int)Math.Ceiling(CooldownHours - hoursPassed);
+                var viewModel = new TooSoonToDuelViewModel(swine.Name, lastOpponent.Name, hoursLeft, lastDuel.IsDecline);
                 return [ messageFactory.Create<TooSoonToDuelMessage, TooSoonToDuelViewModel>(viewModel) ];
             }
         }
@@ -112,10 +118,12 @@ public class DuelCommand(ICommandFactory commandFactory, UserContext context, IM
 
         var duelRequestId = await GetDuelRequestId(update, swine, opponents, opponentSwine);
 
-        var winChance = (int)Math.Round(((double)opponentSwine.Weight / (swine.Weight + opponentSwine.Weight)) * 100);
-        var declinePenalty = (int)Math.Round((winChance - 50) * 0.75);
+        var winChance = DuelResolution.GetDefenderWinChance(swine.Weight, opponentSwine.Weight);
+        var stakeKg = DuelResolution.GetStakeKg(opponentSwine.Weight);
+        var declineFeePercent = DuelResolution.GetDeclineFeePercent(winChance);
+        var declineFeeKg = DuelResolution.GetDeclineFeeKg(opponentSwine.Weight, winChance);
 
-        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, declinePenalty);
+        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, declineFeePercent, declineFeeKg);
 
         List<IBotMessage> messagesToSend = [];
 
