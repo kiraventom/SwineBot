@@ -161,11 +161,9 @@ public class FeedGenerator : IFeedGenerator
     {
         var swine = await Context.Swines.FirstAsync(s => s.SwineId == SwineId);
 
-        // Множитель считается от «чистого» slaughter-веса: часть бонуса могла уйти
-        // вызывавшим на дуэлях, а часть — достаться от чужих отказов
-        var totalSlaughteredWeight = await Context.GetSlaughterWeightAsync(swine.OwnerId, swine.GroupId);
-
-        var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
+        // Множитель считается из запаса свина, а не из всей карьеры: запас тратится,
+        // когда свин забрался выше порога веса (см. GrowthBalance)
+        var growthMod = await Context.GetGrowthModifierAsync(swine);
 
         // Слава даёт небольшой прирост к порции: смелый свин ест лучше.
         // Это пряник за дуэли — единственный эффект славы, который влияет на массу.

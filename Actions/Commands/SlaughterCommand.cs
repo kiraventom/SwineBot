@@ -53,6 +53,10 @@ public class SlaughterCommand(ILogger<SlaughterCommand> logger, UserContext cont
         var feedStealUntil = swine.FeedStealUntil;
         var feedStealSwineId = swine.FeedStealSwineId;
 
+        // Наследник получает весь запас множителя: забой — это перезапуск с полным баком,
+        // с него убийца разгоняется заново
+        var fuel = await context.GetMultiplierFuelAsync(swine);
+
         // Дуэли больше не трогают цену забоя: убийца и без того обнуляет свою массу
         var slaughteredWeight = Math.Max(0, swine.Weight - 1);
         context.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
@@ -68,6 +72,7 @@ public class SlaughterCommand(ILogger<SlaughterCommand> logger, UserContext cont
 
             // Долги предшественника переходят наследнику
             Declines = declines,
+            MultiplierFuel = fuel + slaughteredWeight,
             FeedStealUntil = feedStealUntil,
             FeedStealSwineId = feedStealSwineId,
         };
