@@ -105,5 +105,44 @@ public static class UserContextExtensions
     /// <summary>Сколько свинов владелец забил в этой группе — дебафф в дуэлях.</summary>
     public static Task<int> GetKillsAsync(this UserContext context, int userId, int? groupId)
         => context.Slaughters.CountAsync(s => s.UserId == userId && s.GroupId == groupId);
+
+    /// <summary>
+    /// Запас множителя роста: у старых свинов колонки ещё нет, тогда считаем, что
+    /// запас равен всей карьере (как было до введения траты).
+    /// </summary>
+    public static async Task<double> GetMultiplierFuelAsync(this UserContext context, Swine swine)
+        => swine.MultiplierFuel ?? await context.GetSlaughterWeightAsync(swine.OwnerId, swine.GroupId);
+
+    /// <summary>Множитель роста, который сейчас действует на порцию свина.</summary>
+    public static async Task<double> GetGrowthModifierAsync(this UserContext context, Swine swine)
+        => GrowthBalance.ModifierFor(await context.GetMultiplierFuelAsync(swine));
+
+    /// <summary>
+    /// Трата запаса за кормёжку: пока свин ниже порога веса, множитель не трогаем —
+    /// это его разгон. Забрался выше порога — каждая кормёжка со съеденной бонусной
+    /// массой сжигает запас. Возвращает множитель, который действовал на порцию.
+    /// </summary>
+    public static async Task<double> ApplyFeedMultiplierDecayAsync(this UserContext context, Swine swine,
+        int baseAmount, int actualAmount)
+    {
+        var fuel = await context.GetMultiplierFuelAsync(swine);
+        var modifier = GrowthBalance.ModifierFor(fuel);
+
+        if (modifier <= GrowthBalance.MinMultiplier)
+            return modifier;
+
+        var leaderWeight = await context.Swines
+            .Where(s => s.GroupId == swine.GroupId)
+            .MaxAsync(s => (int?)s.Weight) ?? swine.Weight;
+
+        var threshold = leaderWeight * GrowthBalance.EliteThresholdShare;
+        if (swine.Weight < threshold)
+            return modifier;
+
+        // Бонусная часть порции — та, что дал именно множитель (или слава)
+        var bonusKg = Math.Max(0, actualAmount - baseAmount);
+        swine.MultiplierFuel = Math.Max(0, fuel - GrowthBalance.FuelSpentForBonus(bonusKg));
+        return modifier;
+    }
 }
 

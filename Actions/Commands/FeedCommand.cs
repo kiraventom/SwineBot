@@ -125,6 +125,12 @@ public class FeedCommand(ILogger<FeedCommand> logger, IMessageFactory messageFac
 
         swine.Weight = result.NewWeight;
 
+        // Множитель разгоняет свина, пока он лёгкий, и тратится за кормёжки, когда
+        // он уже забрался выше порога веса — иначе он становится вечным двигателем
+        var modifierUsed = await context.ApplyFeedMultiplierDecayAsync(swine, result.BaseAmount, result.Amount);
+        logger.LogInformation("Feed multiplier {modifier} for swine [{swine}] at {weight} kg, fuel now {fuel}",
+            modifierUsed, swine.SwineId, swine.Weight, swine.MultiplierFuel);
+
         context.Feeds.Add(new Model.Feed()
         {
             SwineId = swine.SwineId,

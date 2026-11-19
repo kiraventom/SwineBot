@@ -103,14 +103,6 @@ public class User
 
     public int? PrivateSwineId { get; set; }
 
-    public static double GetGrowthModifier(double totalWeightSlaughtered)
-    {
-        var bonus = GrowthBalance.SubLinear
-            ? GrowthBalance.PerSqrtKg * Math.Sqrt(Math.Max(0, totalWeightSlaughtered))
-            : GrowthBalance.PerKg * totalWeightSlaughtered;
-
-        return Math.Round(1 + bonus, 2);
-    }
 }
 
 public class Swine
@@ -127,6 +119,13 @@ public class Swine
 
     /// <summary>Очки славы: начисляются за принятые вызовы, тратятся на отказ.</summary>
     public int Glory { get; set; }
+
+    /// <summary>
+    /// Запас множителя роста в «килограммах забитого»: копится при забое, тратится
+    /// по шагу за кормёжку, когда свин выше порога веса. null — старый свин без запаса,
+    /// тогда берётся вся карьера (<see cref="UserContextExtensions.GetSlaughterWeightAsync"/>).
+    /// </summary>
+    public double? MultiplierFuel { get; set; }
 
     /// <summary>Когда отвага последний раз затухала на единицу.</summary>
     public DateTime? GloryDecayedAt { get; set; }
@@ -230,7 +229,7 @@ public class Achievement
 /// <summary>
 /// Поправка к slaughter-бонусу: дуэль может передать часть бонуса от одного свина другому.
 /// Сумма Slaughters.SwineWeight и этих поправок даёт вес, из которого считается
-/// множитель кормления (см. User.GetGrowthModifier).
+/// множитель кормления (см. GrowthBalance и Swine.MultiplierFuel).
 /// </summary>
 public class SlaughterBonus
 {

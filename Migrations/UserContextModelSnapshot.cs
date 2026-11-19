@@ -243,6 +243,9 @@ namespace SwineBot.Migrations
                     b.Property<int?>("GroupId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<double?>("MultiplierFuel")
+                        .HasColumnType("REAL");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");

@@ -44,8 +44,7 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
 
         var slaughtersCount = await slaughters.CountAsync();
 
-        var effectiveSlaughterWeight = await context.GetSlaughterWeightAsync(swine.OwnerId, swine.GroupId);
-        var growthMod = User.GetGrowthModifier(effectiveSlaughterWeight);
+        var growthMod = await context.GetGrowthModifierAsync(swine);
 
         Swine outcomingDuelTarget = null;
         var outcomingDuelRequest = await context.GetActiveOutgoingDuelRequest(swine.SwineId, utcNow);
