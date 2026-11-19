@@ -9,41 +9,57 @@ using Microsoft.Extensions.Logging;
 namespace SwineBot.Actions.Commands.Duel;
 
 [CommandInfo("/duel", "Вызвать на дуэль \u2694\uFE0F")]
-public class DuelCommand(ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider, Config config) : ICommand, IActionCommand
+public class DuelCommand(ICommandFactory commandFactory, UserContext context, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider, DuelStatsProvider statsProvider) : ICommand, IActionCommand
 {
-    private int CooldownHours => config.DuelCooldownHours ?? DuelBalance.CooldownHours;
-
     public async Task<IReadOnlyCollection<IBotMessage>> Execute(Update update, string parameter = null)
     {
-        // Cooldown applies to both sides: a swine cannot challenge right after being challenged either
-        var lastDuel = await context.DuelResults
-            .Where(r => r.AttackerId == update.SwineId || r.DefenderId == update.SwineId)
-            .OrderByDescending(r => r.DateTime)
-            .FirstOrDefaultAsync();
+        // Вызов можно отправлять не чаще раза в сутки (на свина)
+        var sendSince = dtProvider.UtcNow.AddHours(-DuelBalance.SendCooldownHours);
+        var sentRecently = await context.DuelResults
+            .AnyAsync(r => r.DateTime > sendSince && r.AttackerId == update.SwineId);
 
-        if (lastDuel is not null)
+        if (sentRecently)
         {
-            var now = dtProvider.UtcNow;
-            var hoursPassed = (now - lastDuel.DateTime).TotalHours;
-            if (hoursPassed < CooldownHours)
-            {
-                var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
+            var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
+            var cooldownVm = new TooSoonToDuelViewModel(swine.Name, swine.Name, DuelBalance.SendCooldownHours, false);
+            return [ messageFactory.Create<TooSoonToDuelMessage, TooSoonToDuelViewModel>(cooldownVm) ];
+        }
 
-                var lastOpponentId = lastDuel.AttackerId == update.SwineId ? lastDuel.DefenderId : lastDuel.AttackerId;
-                var lastOpponent = lastOpponentId is {} opponentId
-                    ? await context.Swines.FirstAsync(s => s.SwineId == opponentId)
-                    : swine;
-
-                var hoursLeft = (int)Math.Ceiling(CooldownHours - hoursPassed);
-                var viewModel = new TooSoonToDuelViewModel(swine.Name, lastOpponent.Name, hoursLeft, lastDuel.IsDecline);
-                return [ messageFactory.Create<TooSoonToDuelMessage, TooSoonToDuelViewModel>(viewModel) ];
-            }
+        // Дуэль — событие для беседы, а не поток: один вызов на беседу в сутки
+        if (await HasRecentCallInGroup(update.SwineId))
+        {
+            var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
+            var groupVm = new TooSoonToDuelViewModel(swine.Name, swine.Name, DuelBalance.CallCooldownHours, false);
+            return [ messageFactory.Create<TooSoonToDuelMessage, TooSoonToDuelViewModel>(groupVm) ];
         }
 
         if (!string.IsNullOrEmpty(parameter) && long.TryParse(parameter, out var opponentTgId))
             return await SendDuelRequest(update, opponentTgId);
         else
             return await SendSelectOpponent(update);
+    }
+
+    /// <summary>
+    /// Был ли в беседе вызов за последние <see cref="DuelBalance.CallCooldownHours"/> часов:
+    /// свежий результат дуэли или висящий запрос. Дуэль — событие, а не поток.
+    /// </summary>
+    private async Task<bool> HasRecentCallInGroup(int? swineId)
+    {
+        if (swineId is not { } id)
+            return false;
+
+        var swine = await context.Swines.FirstAsync(s => s.SwineId == id);
+        if (swine.GroupId is not { } groupId)
+            return false;
+
+        var since = dtProvider.UtcNow.AddHours(-DuelBalance.CallCooldownHours);
+        if (await context.DuelResults.AnyAsync(r => r.GroupId == groupId && r.DateTime > since))
+            return true;
+
+        var requestTtlStart = dtProvider.UtcNow - DuelRequestExtensions.TTL;
+        return await context.DuelRequests
+            .Join(context.Swines, dr => dr.DefenderId, s => s.SwineId, (dr, s) => new { dr.DateTime, s.GroupId })
+            .AnyAsync(x => x.GroupId == groupId && x.DateTime > requestTtlStart);
     }
 
     private async Task<IReadOnlyCollection<IBotMessage>> SendSelectOpponent(Update update)
@@ -113,20 +129,43 @@ public class DuelCommand(ICommandFactory commandFactory, UserContext context, IM
         if (opponentSwine is null)
             throw new NotSupportedException($"User {opponent.UserId} does not have swines in the group {groupId}");
 
+        // Свина можно вызывать не чаще раза в двое суток — но на труса (слава в минусе)
+        // можно напасть без очереди: у отказа есть цена не только в очках славы
+        var defendSince = dtProvider.UtcNow.AddHours(-DuelBalance.DefendCooldownHours);
+        var defendedRecently = opponentSwine.Glory >= 0 && await context.DuelResults
+            .AnyAsync(r => r.DateTime > defendSince && r.DefenderId == opponentSwine.SwineId);
+
+        if (defendedRecently)
+        {
+            var defendVm = new TooSoonToDuelViewModel(swine.Name, opponentSwine.Name, DuelBalance.DefendCooldownHours, false);
+            return [ messageFactory.Create<TooSoonToDuelMessage, TooSoonToDuelViewModel>(defendVm) ];
+        }
+
+        // Ту же пару нельзя дёргать чаще, чем раз в 72 часа
+        var pairSince = dtProvider.UtcNow.AddHours(-DuelBalance.PairCooldownHours);
+        var pairRecently = await context.DuelResults
+            .AnyAsync(r => r.DateTime > pairSince && r.AttackerId == swine.SwineId && r.DefenderId == opponentSwine.SwineId);
+
+        if (pairRecently)
+        {
+            var pairVm = new TooSoonToDuelViewModel(swine.Name, opponentSwine.Name, DuelBalance.PairCooldownHours, false);
+            return [ messageFactory.Create<TooSoonToDuelMessage, TooSoonToDuelViewModel>(pairVm) ];
+        }
+
         if (await context.GetActiveIncomingDuelRequest(opponentSwine.SwineId, dtProvider.UtcNow) is {} existingDuelRequest)
             throw new NotSupportedException($"Swine {opponentSwine.SwineId} was selected as opponent despite already being a defender in duel request {existingDuelRequest.RequestId}");
 
         var duelRequestId = await GetDuelRequestId(update, swine, opponents, opponentSwine);
 
-        var attackerKills = await context.GetKillsAsync(swine.OwnerId, swine.GroupId);
-        var defenderKills = await context.GetKillsAsync(opponentSwine.OwnerId, opponentSwine.GroupId);
+        var attackerStats = await statsProvider.GetAsync(swine, dtProvider.UtcNow);
+        var defenderStats = await statsProvider.GetAsync(opponentSwine, dtProvider.UtcNow);
 
-        var winChance = DuelResolution.GetDefenderWinChance(swine.Weight, opponentSwine.Weight, attackerKills, defenderKills);
-        var stakeKg = DuelResolution.GetStakeKg(opponentSwine.Weight);
-        var defenderSlaughterWeight = await context.GetSlaughterWeightAsync(opponentSwine.OwnerId, opponentSwine.GroupId);
-        var declineBonusKg = DuelResolution.GetDeclineSlaughterShareKg(defenderSlaughterWeight);
+        var winChance = DuelResolution.GetDefenderWinChance(swine.Weight, opponentSwine.Weight, attackerStats, defenderStats);
+        var stakeKg = DuelResolution.GetStakeKg(swine.Weight, opponentSwine.Weight);
+        var attackerBonus = DuelResolution.GetCombatBonus(attackerStats);
+        var defenderBonus = DuelResolution.GetCombatBonus(defenderStats);
 
-        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, declineBonusKg, attackerKills, defenderKills);
+        var viewModel = new DuelRequestViewModel(duelRequestId, opponent.FirstName, opponentSwine.Name, opponentSwine.Weight, opponent.Tag, opponent.TelegramId, user.FirstName, swine.Name, swine.Weight, winChance, (int)Math.Round(DuelBalance.StakeShare * 100), stakeKg, 0, attackerBonus, defenderBonus);
 
         List<IBotMessage> messagesToSend = [];
 

@@ -87,6 +87,9 @@ namespace SwineBot.Migrations
                     b.Property<int?>("DefenderId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsDecline")
                         .HasColumnType("INTEGER");
 
@@ -221,6 +224,21 @@ namespace SwineBot.Migrations
                     b.Property<int>("SwineId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("Declines")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FeedStealSwineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FeedStealUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Glory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("GloryDecayedAt")
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("GroupId")
                         .HasColumnType("INTEGER");

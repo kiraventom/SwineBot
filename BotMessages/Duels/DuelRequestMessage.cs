@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SwineBot.Actions.Commands.Duel;
 using SwineBot.Updates;
 using SwineBot.ViewModels;
 
@@ -45,20 +46,15 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
             .Monospace($"{viewModel.StakeKg} кг")
             .LineBreak();
 
-        Text.Verbatim("Отказ: ").Monospace($"\u2212{viewModel.DeclineBonusKg}")
-            .Verbatim(" бонуса забоев в пользу вызывающего")
-            .LineBreak();
-
-        if (viewModel.DefenderKills > 0 || viewModel.AttackerKills > 0)
+        if (viewModel.DefenderBonus != 0 || viewModel.AttackerBonus != 0)
         {
-            Text.Italic("Забитых предшественников: ")
-                .Verbatim($"{viewModel.DefenderKills} у вас, {viewModel.AttackerKills} у вызывающего")
-                .Verbatim(" — каждый режет шанс на ")
-                .Monospace("2%")
+            Text.Italic("Опыт: ").Monospace($"{viewModel.DefenderBonus:+0;-0}")
+                .Verbatim(" у вас, ").Monospace($"{viewModel.AttackerBonus:+0;-0}")
+                .Verbatim(" у вызывающего")
                 .LineBreak();
         }
 
-        Text.LineBreak();
+        Text.Italic(DuelDeclineText.Describe(DuelBalance.Debuff)).LineBreak().LineBreak();
 
         Text.Italic("Принять вызов?");
 

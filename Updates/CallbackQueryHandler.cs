@@ -10,7 +10,7 @@ using Telegram.Bot.Types;
 
 namespace SwineBot.Updates;
 
-public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserContext context, IMessageEditor messageEditor, ICallbackQueryAnswerer answerer, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider) : UpdateTypeHandler<CallbackQuery>
+public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserContext context, IMessageEditor messageEditor, ICallbackQueryAnswerer answerer, IMessageFactory messageFactory, IDateTimeNowProvider dtProvider, DuelStatsProvider statsProvider) : UpdateTypeHandler<CallbackQuery>
 {
     public override async Task<UpdateHandleResult> Handle(CallbackQuery query, CancellationToken token)
     {
@@ -59,17 +59,17 @@ public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserCont
 
         var utcNow = dtProvider.UtcNow;
 
-        // Игнор вызова дольше TTL — это отказ: защитник отдаёт часть slaughter-бонуса
+        // Игнор вызова дольше TTL — это отказ: срабатывает дебафф за отказ
         if (duelRequest.IsExpired(utcNow))
         {
-            var share = await DuelDecline.ApplyAsync(context, duelRequest, utcNow, "ignored duel request");
+            var payment = await DuelDecline.ApplyAsync(context, duelRequest, utcNow, "ignored duel request");
             await context.SaveChangesAsync(token);
 
             await answerer.Answer(query.Id, "Вызов устарел, это засчитано как отказ");
             await EditRequestMessage<DuelResponseMessage, DuelResponseViewModel>(duelRequest, defenderSwine.GroupId,
-                new DuelResponseViewModel(DuelResponseStatus.Expired, attackerSwine.Name, defenderSwine.Name, share), token);
+                new DuelResponseViewModel(DuelResponseStatus.Expired, attackerSwine.Name, defenderSwine.Name, 0, payment), token);
 
-            logger.LogInformation("Duel request [{requestId}] expired, {share} slaughter bonus moved to the challenger", duelRequest.RequestId, share);
+            logger.LogInformation("Duel request [{requestId}] expired: {payment}", duelRequest.RequestId, payment);
             return UpdateHandleResult.CallbackQueryDuelRequestExpired;
         }
 
@@ -80,11 +80,18 @@ public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserCont
 
     private async Task<UpdateHandleResult> Accept(string callbackQueryId, DuelRequest duelRequest, Swine attackerSwine, Swine defenderSwine, DateTime utcNow, CancellationToken token)
     {
-        var attackerKills = await context.GetKillsAsync(attackerSwine.OwnerId, attackerSwine.GroupId);
-        var defenderKills = await context.GetKillsAsync(defenderSwine.OwnerId, defenderSwine.GroupId);
+        var attackerStats = await statsProvider.GetAsync(attackerSwine, utcNow);
+        var defenderStats = await statsProvider.GetAsync(defenderSwine, utcNow);
 
         var outcome = DuelResolution.Resolve(attackerSwine.Weight, defenderSwine.Weight, Random.Shared.NextDouble(),
-            attackerKills, defenderKills);
+            attackerStats, defenderStats);
+
+        // Слава начисляется за победу, а не за согласие: апсет (побил вдвое более тяжёлого)
+        // приносит дополнительное очко
+        var winnerSwine = outcome.AttackerWon ? attackerSwine : defenderSwine;
+        var gloryReward = DuelResolution.GetGloryReward(outcome.AttackerWon,
+            outcome.WinnerWeightBefore, outcome.LoserWeightBefore);
+        winnerSwine.Glory = Math.Clamp(winnerSwine.Glory + gloryReward, DuelBalance.MinGlory, DuelBalance.MaxGlory);
 
         attackerSwine.Weight = outcome.AttackerWon ? outcome.WinnerWeightAfter : outcome.LoserWeightAfter;
         defenderSwine.Weight = outcome.AttackerWon ? outcome.LoserWeightAfter : outcome.WinnerWeightAfter;
@@ -94,6 +101,7 @@ public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserCont
         {
             AttackerId = attackerSwine.SwineId,
             DefenderId = defenderSwine.SwineId,
+            GroupId = defenderSwine.GroupId,
             AttackerWon = outcome.AttackerWon,
             DateTime = utcNow,
             WinnerWeightBefore = outcome.WinnerWeightBefore,
@@ -115,28 +123,25 @@ public class CallbackQueryHandler(ILogger<CallbackQueryHandler> logger, UserCont
 
         await answerer.Answer(callbackQueryId, outcome.AttackerWon ? "Ваш свин проиграл" : "Ваш свин победил!");
 
-        logger.LogInformation("Duel request [{requestId}] accepted: attacker won={attackerWon}, stake={stake} kg, kills {attackerKills}/{defenderKills}",
-            duelRequest.RequestId, outcome.AttackerWon, outcome.StakeKg, attackerKills, defenderKills);
+        logger.LogInformation("Duel request [{requestId}] accepted: attacker won={attackerWon}, stake={stake} kg, bonus {attackerBonus}/{defenderBonus}",
+            duelRequest.RequestId, outcome.AttackerWon, outcome.StakeKg,
+            DuelResolution.GetCombatBonus(attackerStats), DuelResolution.GetCombatBonus(defenderStats));
 
         return UpdateHandleResult.CallbackQueryOK;
     }
 
     private async Task<UpdateHandleResult> Decline(string callbackQueryId, DuelRequest duelRequest, Swine attackerSwine, Swine defenderSwine, DateTime utcNow, CancellationToken token)
     {
-        var defenderWeightBefore = defenderSwine.Weight;
-        var share = await DuelDecline.ApplyAsync(context, duelRequest, utcNow, "duel declined");
+        var payment = await DuelDecline.ApplyAsync(context, duelRequest, utcNow, "duel declined");
 
         await context.SaveChangesAsync(token);
 
         await EditRequestMessage<DuelResponseMessage, DuelResponseViewModel>(duelRequest, defenderSwine.GroupId,
-            new DuelResponseViewModel(DuelResponseStatus.Declined, attackerSwine.Name, defenderSwine.Name, share), token);
+            new DuelResponseViewModel(DuelResponseStatus.Declined, attackerSwine.Name, defenderSwine.Name, 0, payment), token);
 
-        await answerer.Answer(callbackQueryId, share > 0
-            ? $"Вызов отклонён: \u2212{share} бонуса забоев"
-            : "Вызов отклонён");
+        await answerer.Answer(callbackQueryId, "Вызов отклонён");
 
-        logger.LogInformation("Duel request [{requestId}] declined: {share} slaughter bonus moved to the challenger",
-            duelRequest.RequestId, share);
+        logger.LogInformation("Duel request [{requestId}] declined: {payment}", duelRequest.RequestId, payment);
 
         return UpdateHandleResult.CallbackQueryOK;
     }

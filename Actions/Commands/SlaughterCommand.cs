@@ -48,7 +48,13 @@ public class SlaughterCommand(ILogger<SlaughterCommand> logger, UserContext cont
             logger.LogInformation("Duel request [{requestId}] closed as decline because swine [{swine}] was slaughtered", pendingDuel.RequestId, swine.SwineId);
         }
 
-        var slaughteredWeight = swine.Weight - 1;
+        // Дебафф записан на забиваемом свине, а он сейчас исчезнет: переносим на наследника
+        var declines = swine.Declines;
+        var feedStealUntil = swine.FeedStealUntil;
+        var feedStealSwineId = swine.FeedStealSwineId;
+
+        // Дуэли больше не трогают цену забоя: убийца и без того обнуляет свою массу
+        var slaughteredWeight = Math.Max(0, swine.Weight - 1);
         context.Slaughters.Add(new Slaughter() { UserId = swine.OwnerId, GroupId = swine.GroupId, DateTime = dtnProvider.UtcNow, SwineWeight = slaughteredWeight, SwineName = swine.Name });
 
         context.Swines.Remove(swine);
@@ -58,7 +64,12 @@ public class SlaughterCommand(ILogger<SlaughterCommand> logger, UserContext cont
             Name = (await context.Users.FirstAsync(u => u.UserId == swine.OwnerId)).FirstName,
             Weight = 1,
             GroupId = swine.GroupId,
-            OwnerId = swine.OwnerId
+            OwnerId = swine.OwnerId,
+
+            // Долги предшественника переходят наследнику
+            Declines = declines,
+            FeedStealUntil = feedStealUntil,
+            FeedStealSwineId = feedStealSwineId,
         };
 
         context.Swines.Add(newSwine);

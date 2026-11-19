@@ -95,8 +95,6 @@ public class Group
 
 public class User
 {
-    private const double GROWTH_MOD_MULT = 0.0002;
-
     [Key] public int UserId { get; set; }
 
     public long TelegramId { get; set; }
@@ -105,7 +103,14 @@ public class User
 
     public int? PrivateSwineId { get; set; }
 
-    public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 2);
+    public static double GetGrowthModifier(double totalWeightSlaughtered)
+    {
+        var bonus = GrowthBalance.SubLinear
+            ? GrowthBalance.PerSqrtKg * Math.Sqrt(Math.Max(0, totalWeightSlaughtered))
+            : GrowthBalance.PerKg * totalWeightSlaughtered;
+
+        return Math.Round(1 + bonus, 2);
+    }
 }
 
 public class Swine
@@ -116,6 +121,21 @@ public class Swine
 
     [Required] public string Name { get; set; }
     public int Weight { get; set; } // kg
+
+    /// <summary>Сколько раз свин отказался от дуэли: ценность для забоя падает вдвое за отказ.</summary>
+    public int Declines { get; set; }
+
+    /// <summary>Очки славы: начисляются за принятые вызовы, тратятся на отказ.</summary>
+    public int Glory { get; set; }
+
+    /// <summary>Когда отвага последний раз затухала на единицу.</summary>
+    public DateTime? GloryDecayedAt { get; set; }
+
+    /// <summary>До какого времени корм этого свина может съесть вызывавший.</summary>
+    public DateTime? FeedStealUntil { get; set; }
+
+    /// <summary>Кому именно достаётся корм (свин, которого этот свин вызвал или который его вызвал).</summary>
+    public int? FeedStealSwineId { get; set; }
 }
 
 public class SwineInfo
@@ -163,6 +183,10 @@ public class DuelResult
 
     public int? AttackerId { get; set; }
     public int? DefenderId { get; set; }
+
+    /// <summary>Беседа, в которой была дуэль: по ней считается лимит «вызов на беседу».</summary>
+    public int? GroupId { get; set; }
+
     public bool AttackerWon { get; set; }
 
     /// <summary>

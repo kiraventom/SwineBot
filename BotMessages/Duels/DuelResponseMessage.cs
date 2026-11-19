@@ -20,17 +20,7 @@ public class DuelResponseMessage : BotMessage<DuelResponseViewModel>
                     .LineBreak()
                     .LineBreak();
 
-                if (viewModel.DeclineBonusKg > 0)
-                {
-                    Text.Verbatim("Свиной бог не уважает трусов: ")
-                        .Monospace($"{viewModel.DeclineBonusKg}")
-                        .Verbatim(" бонуса забоев уходит ")
-                        .Bold(viewModel.AttackerSwineName);
-                }
-                else
-                {
-                    Text.Verbatim("Бонуса забоев у свина нет, отдавать нечего");
-                }
+                Text.Verbatim(viewModel.DebuffText ?? "Свиной бог промолчал");
                 break;
 
             case DuelResponseStatus.Expired:
@@ -40,14 +30,7 @@ public class DuelResponseMessage : BotMessage<DuelResponseViewModel>
                     .Bold(viewModel.DefenderSwineName)
                     .Verbatim(" истёк — это засчитано как отказ");
 
-                if (viewModel.DeclineBonusKg > 0)
-                {
-                    Text.LineBreak()
-                        .Verbatim("Свиной бог не уважает трусов: ")
-                        .Monospace($"{viewModel.DeclineBonusKg}")
-                        .Verbatim(" бонуса забоев уходит ")
-                        .Bold(viewModel.AttackerSwineName);
-                }
+                Text.LineBreak().Verbatim(viewModel.DebuffText ?? "Свиной бог промолчал");
                 break;
 
             default:

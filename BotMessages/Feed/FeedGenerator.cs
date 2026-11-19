@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 using SwineBot.Achievements.Effects;
 using SwineBot.Actions.Commands;
+using SwineBot.Actions.Commands.Duel;
 using SwineBot.Model;
 
 namespace SwineBot.BotMessages.Feed;
@@ -166,7 +167,14 @@ public class FeedGenerator : IFeedGenerator
 
         var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
 
-        var amountEff = amount * growthMod;
+        // Слава даёт небольшой прирост к порции: смелый свин ест лучше.
+        // Это пряник за дуэли — единственный эффект славы, который влияет на массу.
+        var glory = swine.Glory;
+        var gloryBonus = glory > 0
+            ? 1 + Math.Min(DuelBalance.GloryLuckBonusCap, glory * DuelBalance.GloryLuckBonusPerPoint)
+            : 1.0;
+
+        var amountEff = amount * growthMod * gloryBonus;
         var rounded = (int)Math.Round(amountEff);
         Logger.LogInformation("Amount with growth mod: {amount} * {mod} = {amountEff}; rounded to {rounded}", amount, growthMod, amountEff, rounded);
         return rounded;

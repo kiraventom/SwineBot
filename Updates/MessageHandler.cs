@@ -89,6 +89,10 @@ public class MessageHandler(ILogger<MessageHandler> logger, UserContext context,
         {
             // Игнор вызова дольше TTL = отказ: применяем лениво, при первой активности в чате
             await TryRunAsync(
+                    async () => await DuelExpiry.DecayGloryAsync(context, dtProvider.UtcNow),
+                    "Failed to decay duel glory", UpdateHandleResult.DatabaseFail);
+
+            await TryRunAsync(
                     async () => await DuelExpiry.ApplyOverdueAsync(context, dtProvider.UtcNow),
                     "Failed to apply overdue duel requests", UpdateHandleResult.DatabaseFail);
 
