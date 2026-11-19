@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SwineBot.Actions.Commands.Duel;
 using SwineBot.Updates;
 using SwineBot.ViewModels;
 
@@ -38,20 +39,26 @@ public class DuelRequestMessage : BotMessage<DuelRequestViewModel>, ICustomRecep
         else if (viewModel.WinChance >= 100)
             winChanceStr = "огромные";
 
-        var penaltyStr = string.Empty;
-        if (viewModel.DeclinePenalty < 0)
-            penaltyStr = "Бафф за отказ: ";
-        else if (viewModel.DeclinePenalty > 0)
-            penaltyStr = "Штраф за отказ: ";
-
         Text.Verbatim("Шанс на победу: ").Monospace(winChanceStr).LineBreak();
 
-        if (viewModel.DeclinePenalty != 0)
-            Text.Verbatim(penaltyStr).Monospace(Math.Abs(viewModel.DeclinePenalty)).Monospace("%").LineBreak();
+        Text.Verbatim("Ставка: ").Monospace($"{viewModel.StakePercent}%")
+            .Verbatim(" веса проигравшего, для вас это ")
+            .Monospace($"{viewModel.StakeKg} кг")
+            .LineBreak();
+
+        if (viewModel.DefenderBonus != 0 || viewModel.AttackerBonus != 0)
+        {
+            Text.Italic("Опыт: ").Monospace($"{viewModel.DefenderBonus:+0;-0}")
+                .Verbatim(" у вас, ").Monospace($"{viewModel.AttackerBonus:+0;-0}")
+                .Verbatim(" у вызывающего")
+                .LineBreak();
+        }
+
+        Text.Italic(DuelDeclineText.Describe(DuelBalance.Debuff)).LineBreak().LineBreak();
 
         Text.Italic("Принять вызов?");
 
-        Keyboard.AddButton("✅", $"{AcceptCallbackDataPrefix}{viewModel.DuelRequestId}");
-        Keyboard.AddButton("❌", $"{DeclineCallbackDataPrefix}{viewModel.DuelRequestId}");
+        Keyboard.AddButton("\u2705", $"{AcceptCallbackDataPrefix}{viewModel.DuelRequestId}");
+        Keyboard.AddButton("\u274c", $"{DeclineCallbackDataPrefix}{viewModel.DuelRequestId}");
     }
 }

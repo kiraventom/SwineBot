@@ -18,6 +18,11 @@ public class DuelReminderMessage : BotMessage<DuelReminderViewModel>
                 .Verbatim(")")
                 .LineBreak().LineBreak();
         }
+        else if (viewModel.LinkToMessage is null)
+        {
+            Text.Verbatim("Вас вызвали на дуэль!").LineBreak();
+            Text.Verbatim("Дата вызова: ").Monospace(dateTimeStr).LineBreak().LineBreak();
+        }
         else
         {
             Text.Verbatim("Вас вызвали на ").InlineUrl("дуэль!", viewModel.LinkToMessage).LineBreak();
@@ -27,4 +32,3 @@ public class DuelReminderMessage : BotMessage<DuelReminderViewModel>
         Text.Italic("Примите или отклоните вызов, чтобы вернуться к управлению свином");
     }
 }
-

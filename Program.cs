@@ -48,6 +48,7 @@ public class Program
             .AddSingleton<IMessageFactory, MessageFactory>()
             .AddSingleton<ITelegramBotClient, TelegramBotClient>()
             .AddSingleton<IMessageEditor, MessageEditor>()
+            .AddSingleton<ICallbackQueryAnswerer, CallbackQueryAnswerer>()
             .AddSingleton<IBotMessageSender, BotMessageSender>()
             .AddSingleton<IQueryResultsSender, QueryResultsSender>()
             .AddSingleton<ICommandInfos, CommandInfos>()
@@ -68,9 +69,11 @@ public class Program
             .AddScoped<IFeedGeneratorFactory, FeedGeneratorFactory>()
             .AddScoped<IThrowupCalculatorFactory, ThrowupCalculatorFactory>()
             .AddScoped<UserContextHelpers>()
+            .AddScoped<SwineBot.Actions.Commands.Duel.DuelStatsProvider>()
             .AddScoped<ICommandFactory, CommandFactory>()
             .AddScoped<MessageHandler>()
             .AddScoped<InlineQueryHandler>()
+            .AddScoped<CallbackQueryHandler>()
             .AddScoped<IUpdateHandler, UpdateHandler>();
     }
 

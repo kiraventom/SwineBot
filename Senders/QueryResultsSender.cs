@@ -14,7 +14,7 @@ public interface IQueryResultsSender
     Task Send(string inlineQueryId, IEnumerable<IQueryResult> results);
 }
 
-public class QueryResultsSender(ILogger<QueryResultsSender> logger, ITelegramBotClient client) : IQueryResultsSender
+public class QueryResultsSender(ITelegramBotClient client) : IQueryResultsSender
 {
     public async Task Send(string inlineQueryId, IEnumerable<IQueryResult> results)
     {

@@ -23,6 +23,8 @@ public enum UpdateHandleResult
     CallbackQueryOK,
     CallbackQueryUnknownData,
     CallbackQueryInvalidDuelRequestId,
+    CallbackQueryDuelNotYourCall,
+    CallbackQueryDuelRequestExpired,
 
     // General
     SendMessageFail,

@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace SwineBot;
 
-public class Config(string token, string username, string connectionString, string achievDataFile = null)
+public class Config(string token, string username, string connectionString, string achievDataFile = null, int? duelCooldownHours = null)
 {
     /// <summary>
     /// Telegram bot token. Received from <a href="https://t.me/BotFather">BotFather</a>
@@ -23,6 +23,12 @@ public class Config(string token, string username, string connectionString, stri
     /// Achievement data file path. Optional
     /// </summary>
     public string AchievDataFile { get; } = achievDataFile;
+
+    /// <summary>
+    /// Duel cooldown in hours. Optional, overrides the default from DuelBalance.
+    /// Set to 0 to disable the cooldown (handy for testing)
+    /// </summary>
+    public int? DuelCooldownHours { get; } = duelCooldownHours;
 
     public static Config Load(string filepath)
     {

@@ -18,7 +18,8 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
     {
         var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
 
-        var duels = context.DuelResults;
+        // Declines give a cooldown but are not fights, so they stay out of the win/loss stats
+        var duels = context.DuelResults.Where(d => !d.IsDecline);
         var wonDuels = await duels.CountAsync(d => (d.AttackerWon && d.AttackerId == update.SwineId || !d.AttackerWon && d.DefenderId == update.SwineId));
         var lostDuels = await duels.CountAsync(d => (d.AttackerWon && d.DefenderId == update.SwineId || !d.AttackerWon && d.AttackerId == update.SwineId));
 
@@ -43,22 +44,27 @@ public class InfoCommand(UserContext context, IDateTimeNowProvider dtnProvider, 
 
         var slaughtersCount = await slaughters.CountAsync();
 
-        var growthMod = User.GetGrowthModifier(totalSlaughteredWeight);
+        var effectiveSlaughterWeight = await context.GetSlaughterWeightAsync(swine.OwnerId, swine.GroupId);
+        var growthMod = User.GetGrowthModifier(effectiveSlaughterWeight);
 
         Swine outcomingDuelTarget = null;
-        var outcomingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.AttackerId == swine.SwineId);
+        var outcomingDuelRequest = await context.GetActiveOutgoingDuelRequest(swine.SwineId, utcNow);
         if (outcomingDuelRequest is not null)
             outcomingDuelTarget = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == outcomingDuelRequest.DefenderId);
 
         string incomingDuelRequestLink = null;
         Swine incomingDuelSource = null;
-        var incomingDuelRequest = await context.DuelRequests.FirstOrDefaultAsync(dr => dr.DefenderId == swine.SwineId);
+        var incomingDuelRequest = await context.GetActiveIncomingDuelRequest(swine.SwineId, utcNow);
         if (incomingDuelRequest is not null)
         {
             incomingDuelSource = await context.Swines.FirstOrDefaultAsync(s => s.SwineId == incomingDuelRequest.AttackerId);
-            incomingDuelRequestLink = await DuelReminderCommand.BuildLink(context, update);
+
+            var group = swine.GroupId is {} groupId
+                ? await context.Groups.FirstOrDefaultAsync(g => g.GroupId == groupId)
+                : null;
+            incomingDuelRequestLink = group is null ? null : DuelReminderCommand.BuildLink(group.TelegramId, incomingDuelRequest.MessageId);
         }
 
-        return new InfoViewModel(recentFeeds.Select(f => f.DateTime).ToList(), recentThrowups.Select(t => t.DateTime).ToList(), utcNow, owner, swine, consecutiveOverfeeds, consecutiveNoOverfeeds, 0, 0, slaughtersCount, (int)Math.Round((growthMod - 1) * 100), outcomingDuelTarget?.Name, incomingDuelSource?.Name, incomingDuelRequestLink);
+        return new InfoViewModel(recentFeeds.Select(f => f.DateTime).ToList(), recentThrowups.Select(t => t.DateTime).ToList(), utcNow, owner, swine, consecutiveOverfeeds, consecutiveNoOverfeeds, wonDuels, lostDuels, slaughtersCount, (int)Math.Round((growthMod - 1) * 100), outcomingDuelTarget?.Name, incomingDuelSource?.Name, incomingDuelRequestLink);
     }
 }

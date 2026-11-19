@@ -87,6 +87,12 @@ namespace SwineBot.Migrations
                     b.Property<int?>("DefenderId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDecline")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("LoserWeightAfter")
                         .HasColumnType("INTEGER");
 
@@ -183,11 +189,56 @@ namespace SwineBot.Migrations
                     b.ToTable("Slaughters");
                 });
 
+            modelBuilder.Entity("SwineBot.Model.SlaughterBonus", b =>
+                {
+                    b.Property<int>("SlaughterBonusId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DateTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Weight")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("SlaughterBonusId");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SlaughterBonuses");
+                });
+
             modelBuilder.Entity("SwineBot.Model.Swine", b =>
                 {
                     b.Property<int>("SwineId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
+
+                    b.Property<int>("Declines")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("FeedStealSwineId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FeedStealUntil")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Glory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("GloryDecayedAt")
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("GroupId")
                         .HasColumnType("INTEGER");
@@ -338,6 +389,21 @@ namespace SwineBot.Migrations
                         .WithMany()
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("SwineBot.Model.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SwineBot.Model.SlaughterBonus", b =>
+                {
+                    b.HasOne("SwineBot.Model.Group", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("SwineBot.Model.User", null)
                         .WithMany()

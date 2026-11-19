@@ -44,8 +44,8 @@ public class InfoMessage : BotMessage<InfoViewModel>
 
         if (viewModel.WonDuels != 0 || viewModel.LostDuels != 0)
         {
-            Text.Italic("Статистика дуэлей: ").Verbatim(viewModel.LostDuels).Verbatim(" ")
-                .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.LostDuels, Unit.Win))
+            Text.Italic("Статистика дуэлей: ").Verbatim(viewModel.WonDuels).Verbatim(" ")
+                .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.WonDuels, Unit.Win))
                 .Verbatim(", ")
                 .Verbatim(viewModel.LostDuels).Verbatim(" ")
                 .Verbatim(MessageTextUtils.GetDeclinatedNoun(viewModel.LostDuels, Unit.Loss))

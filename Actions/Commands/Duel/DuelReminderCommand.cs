@@ -4,33 +4,38 @@ using SwineBot.Updates;
 using SwineBot.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using SwineBot.BotMessages.Duels;
-using Microsoft.Extensions.Logging;
 using SwineBot.Achievements;
 
 namespace SwineBot.Actions.Commands.Duel;
 
 [CommandInfo("/duelremind", "service command", Type = CommandType.Service)]
-public class DuelReminderCommand(ILogger<DuelReminderCommand> logger, UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<DuelReminderMessage, DuelReminderViewModel>(messageFactory, achievController)
+public class DuelReminderCommand(UserContext context, IMessageFactory messageFactory, AchievementController achievController) : Command<DuelReminderMessage, DuelReminderViewModel>(messageFactory, achievController)
 {
-    public static async Task<string> BuildLink(UserContext context, Update update)
-    {
-        var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
-        var duelRequest = await context.DuelRequests.FirstAsync(dr => dr.DefenderId == update.SwineId);
-        var group = await context.Groups.FirstAsync(g => g.GroupId == swine.GroupId);
-        var groupTelegramIdStr = group.TelegramId.ToString();
+    /// <summary>
+    /// Only supergroups have the <c>t.me/c/</c> message links, i.e. negative ids with the -100 prefix.
+    /// </summary>
+    public static bool IsSupergroup(long groupTelegramId) => groupTelegramId.ToString().StartsWith("-100");
 
-        if (groupTelegramIdStr.StartsWith("-100"))
-            groupTelegramIdStr = groupTelegramIdStr[4..];
-        else
+    public static string BuildLink(long groupTelegramId, int? messageId)
+    {
+        if (messageId is not { } id || !IsSupergroup(groupTelegramId))
             return null;
 
-        return $"https://t.me/c/{groupTelegramIdStr}/{duelRequest.MessageId}";
+        var groupTelegramIdStr = groupTelegramId.ToString();
+        return $"https://t.me/c/{groupTelegramIdStr[4..]}/{id}";
     }
 
     protected override async Task<DuelReminderViewModel> ExecuteInternal(Update update, string parameter)
     {
-        var link = await BuildLink(context, update);
+        var swine = await context.Swines.FirstAsync(s => s.SwineId == update.SwineId);
         var duelRequest = await context.DuelRequests.FirstAsync(dr => dr.DefenderId == update.SwineId);
-        return new DuelReminderViewModel(link, duelRequest.DateTime);
+        var group = swine.GroupId is { } groupId
+            ? await context.Groups.FirstOrDefaultAsync(g => g.GroupId == groupId)
+            : null;
+        var isSupergroup = group is not null && IsSupergroup(group.TelegramId);
+
+        var link = isSupergroup ? BuildLink(group.TelegramId, duelRequest.MessageId) : null;
+
+        return new DuelReminderViewModel(link, duelRequest.DateTime, IsNotSupergroup: !isSupergroup);
     }
 }

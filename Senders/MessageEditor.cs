@@ -1,7 +1,8 @@
-using Microsoft.Extensions.Logging;
-using SwineBot.BotMessages;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
+using SwineBot.BotMessages;
 
 namespace SwineBot.Senders;
 
@@ -13,7 +14,7 @@ public interface IMessageEditor
     Task EditMessage(long chatId, int messageId, IBotMessage message);
 }
 
-public class MessageEditor(ILogger<MessageEditor> logger, ITelegramBotClient client) : IMessageEditor
+public class MessageEditor(ITelegramBotClient client) : IMessageEditor
 {
     public async Task EditReplyMarkup(long chatId, int messageId, InlineKeyboardMarkup markup)
     {
@@ -22,13 +23,24 @@ public class MessageEditor(ILogger<MessageEditor> logger, ITelegramBotClient cli
 
     public async Task EditText(long chatId, int messageId, string text)
     {
-        await client.EditMessageText(chatId, messageId, text, parseMode: Telegram.Bot.Types.Enums.ParseMode.MarkdownV2);
+        await client.EditMessageText(chatId, messageId, text, parseMode: ParseMode.MarkdownV2);
     }
 
+    /// <summary>
+    /// Text and keyboard in a single request: a separate <c>EditMessageReplyMarkup</c>
+    /// after a text edit fails with "message is not modified", because the text edit
+    /// already drops the keyboard.
+    /// </summary>
     public async Task EditMessage(long chatId, int messageId, IBotMessage message)
     {
-        await EditText(chatId, messageId, message.Text);
-        await EditReplyMarkup(chatId, messageId, message.Keyboard);
+        try
+        {
+            await client.EditMessageText(chatId, messageId, message.Text, parseMode: ParseMode.MarkdownV2, replyMarkup: message.Keyboard);
+        }
+        catch (ApiRequestException e) when (e.Message.Contains("message is not modified"))
+        {
+            // Повторное нажатие по той же кнопке: сообщение уже ровно такое, каким его хотят видеть
+        }
     }
 
     public async Task RemoveReplyMarkup(long chatId, int messageId)
@@ -37,4 +49,3 @@ public class MessageEditor(ILogger<MessageEditor> logger, ITelegramBotClient cli
         await client.EditMessageReplyMarkup(chatId, messageId, empty);
     }
 }
-

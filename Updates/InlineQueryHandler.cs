@@ -8,7 +8,7 @@ using SwineBot.Actions.Commands.Duel;
 
 namespace SwineBot.Updates;
 
-public class InlineQueryHandler(ILogger<InlineQueryHandler> logger, UserContext context, IQueryResultsSender sender) : UpdateTypeHandler<Telegram.Bot.Types.InlineQuery>
+public class InlineQueryHandler(ILogger<InlineQueryHandler> logger, UserContext context, IQueryResultsSender sender, IDateTimeNowProvider dtProvider) : UpdateTypeHandler<Telegram.Bot.Types.InlineQuery>
 {
     public override async Task<UpdateHandleResult> Handle(InlineQuery query, CancellationToken token)
     {
@@ -41,7 +41,7 @@ public class InlineQueryHandler(ILogger<InlineQueryHandler> logger, UserContext 
 
         try
         {
-            var opps = await context.GetOpponents(user.UserId, group.GroupId);
+            var opps = await context.GetOpponents(user.UserId, group.GroupId, dtProvider.UtcNow);
 
             results = opps
                 .Select(x => new DuelOpponent(x.Owner.TelegramId, x.Swine.Weight, x.Owner.FirstName, x.Swine.Name))

@@ -16,6 +16,7 @@ public class UserContext : DbContext
     public DbSet<DuelResult> DuelResults { get; set; }
     public DbSet<Achievement> Achievements { get; set; }
     public DbSet<Slaughter> Slaughters { get; set; }
+    public DbSet<SlaughterBonus> SlaughterBonuses { get; set; }
 
     public UserContext(DbContextOptions<UserContext> options) : base(options)
     {
@@ -69,6 +70,12 @@ public class UserContext : DbContext
             s.Property(e => e.Type).HasConversion<int>();
         });
 
+        modelBuilder.Entity<SlaughterBonus>(s =>
+        {
+            s.HasOne<User>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Cascade);
+            s.HasOne<Group>().WithMany().HasForeignKey(i => i.GroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Slaughter>(s =>
         {
             s.HasOne<User>().WithMany().HasForeignKey(i => i.UserId).OnDelete(DeleteBehavior.Cascade);
@@ -88,8 +95,6 @@ public class Group
 
 public class User
 {
-    private const double GROWTH_MOD_MULT = 0.0002;
-
     [Key] public int UserId { get; set; }
 
     public long TelegramId { get; set; }
@@ -98,7 +103,14 @@ public class User
 
     public int? PrivateSwineId { get; set; }
 
-    public static double GetGrowthModifier(double totalWeightSlaughtered) => Math.Round(1 + (totalWeightSlaughtered * GROWTH_MOD_MULT), 2);
+    public static double GetGrowthModifier(double totalWeightSlaughtered)
+    {
+        var bonus = GrowthBalance.SubLinear
+            ? GrowthBalance.PerSqrtKg * Math.Sqrt(Math.Max(0, totalWeightSlaughtered))
+            : GrowthBalance.PerKg * totalWeightSlaughtered;
+
+        return Math.Round(1 + bonus, 2);
+    }
 }
 
 public class Swine
@@ -109,6 +121,21 @@ public class Swine
 
     [Required] public string Name { get; set; }
     public int Weight { get; set; } // kg
+
+    /// <summary>Сколько раз свин отказался от дуэли: ценность для забоя падает вдвое за отказ.</summary>
+    public int Declines { get; set; }
+
+    /// <summary>Очки славы: начисляются за принятые вызовы, тратятся на отказ.</summary>
+    public int Glory { get; set; }
+
+    /// <summary>Когда отвага последний раз затухала на единицу.</summary>
+    public DateTime? GloryDecayedAt { get; set; }
+
+    /// <summary>До какого времени корм этого свина может съесть вызывавший.</summary>
+    public DateTime? FeedStealUntil { get; set; }
+
+    /// <summary>Кому именно достаётся корм (свин, которого этот свин вызвал или который его вызвал).</summary>
+    public int? FeedStealSwineId { get; set; }
 }
 
 public class SwineInfo
@@ -156,7 +183,17 @@ public class DuelResult
 
     public int? AttackerId { get; set; }
     public int? DefenderId { get; set; }
+
+    /// <summary>Беседа, в которой была дуэль: по ней считается лимит «вызов на беседу».</summary>
+    public int? GroupId { get; set; }
+
     public bool AttackerWon { get; set; }
+
+    /// <summary>
+    /// Дуэль не состоялась: защитник отказался и заплатил штраф. Такая запись
+    /// даёт кулдаун обеим сторонам, но не считается победой/поражением в статистике.
+    /// </summary>
+    public bool IsDecline { get; set; }
 
     public DateTime DateTime { get; set; }
 
@@ -188,6 +225,25 @@ public class Achievement
 
     public AchievementType Type { get; set; }
     public int Value { get; set; }
+}
+
+/// <summary>
+/// Поправка к slaughter-бонусу: дуэль может передать часть бонуса от одного свина другому.
+/// Сумма Slaughters.SwineWeight и этих поправок даёт вес, из которого считается
+/// множитель кормления (см. User.GetGrowthModifier).
+/// </summary>
+public class SlaughterBonus
+{
+    [Key] public int SlaughterBonusId { get; set; }
+
+    public int UserId { get; set; }
+    public int GroupId { get; set; }
+
+    /// <summary>Может быть отрицательным: столько бонуса свин отдал.</summary>
+    public int Weight { get; set; }
+
+    public DateTime DateTime { get; set; }
+    public string Reason { get; set; }
 }
 
 public class Slaughter
