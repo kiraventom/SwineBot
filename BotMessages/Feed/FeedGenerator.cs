@@ -84,6 +84,7 @@ public class FeedGenerator : IFeedGenerator
 
         double luck = await RollLuck();
         int absAmount = await RollAmount(luck);
+        var baseAmount = (int)Math.Round(Math.Max(1, MAX_FEED_AMOUNT * luck));
         int amount = await ApplyResult(recentFeeds, absAmount, result);
         Logger.LogInformation("Final amount: {amount}", amount);
 
@@ -93,6 +94,7 @@ public class FeedGenerator : IFeedGenerator
         {
             Luck = luck,
             Amount = amount,
+            BaseAmount = baseAmount,
             Result = result,
             OldWeight = oldWeight,
             RecentFeedsCount = recentFeeds.Count + 1,

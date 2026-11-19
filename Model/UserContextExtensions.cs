@@ -119,10 +119,11 @@ public static class UserContextExtensions
 
     /// <summary>
     /// Трата запаса за кормёжку: пока свин ниже порога веса, множитель не трогаем —
-    /// это его разгон. Забрался выше половины лидера — за каждую кормёжку шаг вниз.
-    /// Возвращает множитель, который действовал на съеденную порцию.
+    /// это его разгон. Забрался выше порога — каждая кормёжка со съеденной бонусной
+    /// массой сжигает запас. Возвращает множитель, который действовал на порцию.
     /// </summary>
-    public static async Task<double> ApplyFeedMultiplierDecayAsync(this UserContext context, Swine swine)
+    public static async Task<double> ApplyFeedMultiplierDecayAsync(this UserContext context, Swine swine,
+        int baseAmount, int actualAmount)
     {
         var fuel = await context.GetMultiplierFuelAsync(swine);
         var modifier = GrowthBalance.ModifierFor(fuel);
@@ -138,8 +139,9 @@ public static class UserContextExtensions
         if (swine.Weight < threshold)
             return modifier;
 
-        var decayed = GrowthBalance.DecayedModifier(modifier);
-        swine.MultiplierFuel = GrowthBalance.FuelForModifier(decayed);
+        // Бонусная часть порции — та, что дал именно множитель (или слава)
+        var bonusKg = Math.Max(0, actualAmount - baseAmount);
+        swine.MultiplierFuel = Math.Max(0, fuel - GrowthBalance.FuelSpentForBonus(bonusKg));
         return modifier;
     }
 }

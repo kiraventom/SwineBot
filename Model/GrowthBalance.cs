@@ -16,8 +16,14 @@ public static class GrowthBalance
     /// <summary>Растёт ли бонус суб-линейно (корень) или линейно (старое поведение).</summary>
     public static bool SubLinear { get; set; } = true;
 
-    /// <summary>Бонус за корень из забитых килограммов (суб-линейная модель).</summary>
-    public static double PerSqrtKg { get; set; } = 0.010;
+    /// <summary>
+    /// Бонус за корень из забитых килограммов (суб-линейная модель).
+    ///
+    /// 0.03 подобран под цель «забил X — вырос до X»: банк 10 000 кг даёт множитель 4.00,
+    /// который выгорает примерно за полгода, оставляя свина на ~11 100 кг (см. §8
+    /// в GROWTH-MULTIPLIER.md).
+    /// </summary>
+    public static double PerSqrtKg { get; set; } = 0.03;
 
     /// <summary>Бонус за килограмм (линейная модель, оставлена для сравнения).</summary>
     public const double PerKg = 0.0002;
@@ -32,22 +38,15 @@ public static class GrowthBalance
     public static double EliteThresholdShare { get; set; } = 0.75;
 
     /// <summary>
-    /// Насколько уменьшается множитель за каждую кормёжку выше порога — **доля излишка**
-    /// над 1.0, а не абсолютная величина.
+    /// Сколько запаса тратится на один килограмм бонусной массы.
     ///
-    /// Почему именно доля: приход от забоя в единицах множителя — всего ~0.002–0.003
-    /// в сутки (забой раз в месяц по 1 000–1 500 кг даёт +0.06…0.11 к множителю). Любой
-    /// фиксированный шаг больше этого прихода (а «4.0 → 3.8 за кормёжку» больше в 60 раз)
-    /// прибивает множитель к 1.0 у всех, кто выше порога, и забой теряет смысл.
-    ///
-    /// При доле p равновесие считается так: `излишек = приход_в_сутки / (p · кормёжек_в_сутки)`,
-    /// т.е. вершина садится на предсказуемый уровень: p = 0.004 → ~1.4, p = 0.01 → ~1.17.
-    ///
-    /// Порог 0.75 подобран прогонами: при 0.5 разгон сгорает ровно там, где идёт борьба за
-    /// первое место (разрыв +5 904 кг), при 0.75 — баланс лучше всего (+1 605 при sd 3 730),
-    /// при 0.9 лидер меняется чаще, но убийца слабеет (+3 114).
+    /// Именно так, а не «долей излишка за кормёжку»: при трате, привязанной к полученной
+    /// массе, суммарный бонус за весь разгон становится предсказуемым — при 1.0 свин
+    /// выменивает ровно столько, сколько забил. При 1.5 на килограмм бонуса уходит
+    /// полтора килограмма забитого, и банк 10 000 даёт около 6 700 кг бонусной массы,
+    /// а остальное до обычного роста добирает кормёжка — в сумме те самые ~10–11 тыс.
     /// </summary>
-    public static double MultiplierDecayShare { get; set; } = 0.004;
+    public static double FuelPerBonusKg { get; set; } = 1.5;
 
     /// <summary>Множитель, который даёт накопленный запас.</summary>
     public static double ModifierFor(double fuel)
@@ -64,14 +63,10 @@ public static class GrowthBalance
         return SubLinear ? Math.Pow(bonus / PerSqrtKg, 2) : bonus / PerKg;
     }
 
-    /// <summary>Множитель после одной кормёжки выше порога: тратится доля излишка над 1.0.</summary>
-    public static double DecayedModifier(double modifier)
-    {
-        if (modifier <= MinMultiplier)
-            return MinMultiplier;
-
-        var excess = modifier - MinMultiplier;
-        var left = excess * (1 - Math.Clamp(MultiplierDecayShare, 0, 1));
-        return MinMultiplier + left;
-    }
+    /// <summary>
+    /// Сколько запаса съедает кормёжка с бонусной массой <paramref name="bonusKg"/>.
+    /// Заодно это и есть механика «X в X»: сумма бонусной массы за разгон ≈ банк / FuelPerBonusKg.
+    /// </summary>
+    public static double FuelSpentForBonus(double bonusKg)
+        => Math.Max(0, bonusKg) * FuelPerBonusKg;
 }
